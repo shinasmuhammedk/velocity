@@ -1,0 +1,7 @@
+app:
+  name: Velocity
+  env: development
+
+server:
+  host: localhost
+  port: 3000
