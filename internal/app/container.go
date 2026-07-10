@@ -1,12 +1,12 @@
 package app
 
 import (
-	"database/sql"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	"velocity/internal/config"
+	"velocity/internal/persistence/postgres/repository"
 )
 
 // Container holds all shared application dependencies.
@@ -21,10 +21,12 @@ type Container struct {
 	Logger *zap.Logger
 
 	// Infrastructure
-	DB *sql.DB
+	DB *pgxpool.Pool
 
 	// Transport
 	HTTP *fiber.App
+    
+    UserRepository repository.UserRepository
 
 	// Future
 	//
