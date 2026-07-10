@@ -1,36 +1,42 @@
 package constants
 
+type OrderSide string
+type OrderType string
+type TimeInForce string
+type OrderStatus string
+type TradeSide string
+
 // Order Side
 const (
-	OrderSideBuy  = "BUY"
-	OrderSideSell = "SELL"
+	OrderSideBuy  OrderSide = "BUY"
+	OrderSideSell OrderSide = "SELL"
 )
 
 // Order Type
 const (
-	OrderTypeLimit  = "LIMIT"
-	OrderTypeMarket = "MARKET"
+	OrderTypeLimit  OrderType = "LIMIT"
+	OrderTypeMarket OrderType = "MARKET"
 )
 
 // Time In Force
 const (
-	TimeInForceGTC = "GTC" // Good Till Cancelled
-	TimeInForceIOC = "IOC" // Immediate Or Cancel
-	TimeInForceFOK = "FOK" // Fill Or Kill
+	TimeInForceGTC TimeInForce = "GTC"
+	TimeInForceIOC TimeInForce = "IOC"
+	TimeInForceFOK TimeInForce = "FOK"
 )
 
 // Order Status
 const (
-	OrderStatusPending         = "PENDING"
-	OrderStatusOpen            = "OPEN"
-	OrderStatusPartiallyFilled = "PARTIALLY_FILLED"
-	OrderStatusFilled          = "FILLED"
-	OrderStatusCancelled       = "CANCELLED"
-	OrderStatusRejected        = "REJECTED"
+	OrderStatusPending         OrderStatus = "PENDING"
+	OrderStatusOpen            OrderStatus = "OPEN"
+	OrderStatusPartiallyFilled OrderStatus = "PARTIALLY_FILLED"
+	OrderStatusFilled          OrderStatus = "FILLED"
+	OrderStatusCancelled       OrderStatus = "CANCELLED"
+	OrderStatusRejected        OrderStatus = "REJECTED"
 )
 
 // Trade Side
 const (
-	TradeSideBuy  = "BUY"
-	TradeSideSell = "SELL"
+	TradeSideBuy  TradeSide = "BUY"
+	TradeSideSell TradeSide = "SELL"
 )

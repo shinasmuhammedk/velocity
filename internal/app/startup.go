@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"velocity/internal/config"
+	"velocity/internal/persistence/postgres"
+	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/logger"
 )
 
@@ -39,9 +41,26 @@ func Startup() (*Container, error) {
 	// --------------------------------------------------
 	// Database
 	// --------------------------------------------------
-	// TODO:
-	// container.DB = postgres.New(cfg.Database)
+	db, err := postgres.New(cfg.Database)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"initialize postgres: %w",
+			err,
+		)
+	}
 
+	container.DB = db
+
+	container.Logger.Info(
+		"postgres connection established",
+	)
+
+	container.UserRepository = repository.NewUserRepository(
+		container.DB,
+	)
+
+    container.Logger.Info("user repository initialized")
+    
 	// --------------------------------------------------
 	// HTTP Server
 	// --------------------------------------------------
