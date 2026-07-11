@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,7 +25,7 @@ func Validate(v interface{}) error {
 				messages = append(messages, formatError(fieldErr))
 			}
 
-			return fmt.Errorf(strings.Join(messages, ", "))
+			return errors.New(strings.Join(messages, ", "))
 		}
 
 		return err

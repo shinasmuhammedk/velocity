@@ -7,6 +7,7 @@ import (
 	"velocity/internal/domain/order"
 	"velocity/internal/engine"
 	"velocity/pkg/constants"
+	"velocity/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,4 +175,69 @@ func TestPlaceOrderPartialFill(t *testing.T) {
 	require.NotNil(t, bestBid)
 
 	assert.Equal(t, int64(1000), bestBid.Price)
+}
+
+
+func TestEngineCancelOrder(t *testing.T) {
+	e := engine.New("BTCUSDT")
+
+	o := &order.Order{
+		ID:          "1",
+		UserID:      "user-1",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideBuy,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForceGTC,
+		Status:      constants.OrderStatusOpen,
+		Price:       1000,
+		Quantity:    100,
+		Remaining:   100,
+		CreatedAt:   time.Now(),
+	}
+
+	e.OrderBook().AddOrder(o)
+
+	err := e.CancelOrder(o.ID)
+
+	require.NoError(t, err)
+
+	assert.Equal(t, constants.OrderStatusCancelled, o.Status)
+	assert.Nil(t, e.OrderBook().BestBid())
+}
+
+func TestEngineCancelUnknownOrder(t *testing.T) {
+	e := engine.New("BTCUSDT")
+
+	err := e.CancelOrder("does-not-exist")
+
+	require.Error(t, err)
+	assert.Equal(t, errors.ErrOrderNotFound, err)
+}
+
+func TestEngineCancelRemovesPriceLevel(t *testing.T) {
+	e := engine.New("BTCUSDT")
+
+	o := &order.Order{
+		ID:          "1",
+		UserID:      "user-1",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideSell,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForceGTC,
+		Status:      constants.OrderStatusOpen,
+		Price:       1010,
+		Quantity:    100,
+		Remaining:   100,
+		CreatedAt:   time.Now(),
+	}
+
+	e.OrderBook().AddOrder(o)
+
+	require.NotNil(t, e.OrderBook().BestAsk())
+
+	err := e.CancelOrder(o.ID)
+
+	require.NoError(t, err)
+
+	assert.Nil(t, e.OrderBook().BestAsk())
 }

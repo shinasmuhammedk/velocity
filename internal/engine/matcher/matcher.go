@@ -25,12 +25,26 @@ func (m *Matcher) Match(
 	order *order.Order,
 ) ([]*trade.Trade, error) {
 
+	if order.TimeInForce == constants.TimeInForceFOK {
+
+		if order.Side == constants.OrderSideBuy && !m.canFullyFill(order) {
+
+			order.Status = constants.OrderStatusCancelled
+			return nil, nil
+		}
+
+		if order.Side == constants.OrderSideSell && !m.canFullyFill(order) {
+
+			order.Status = constants.OrderStatusCancelled
+			return nil, nil
+		}
+	}
+
 	if order.Side == constants.OrderSideBuy {
 		return m.matchBuyOrder(order), nil
 	}
 
 	return m.matchSellOrder(order), nil
-
 }
 
 func (m *Matcher) matchBuyOrder(
@@ -93,12 +107,12 @@ func (m *Matcher) matchBuyOrder(
 
 		if resting.Remaining == 0 {
 			resting.Status = constants.OrderStatusFilled
+
+			bestAsk.Remove(resting)
+
+			m.book.RemoveOrderIndex(resting.ID)
 		} else {
 			resting.Status = constants.OrderStatusPartiallyFilled
-		}
-
-		if resting.Remaining == 0 {
-			bestAsk.Remove(resting)
 		}
 
 		if bestAsk.IsEmpty() {
@@ -109,13 +123,21 @@ func (m *Matcher) matchBuyOrder(
 
 	if incoming.Remaining == 0 {
 		incoming.Status = constants.OrderStatusFilled
+
 	} else if incoming.Remaining < incoming.Quantity {
 		incoming.Status = constants.OrderStatusPartiallyFilled
+
+	} else if incoming.TimeInForce == constants.TimeInForceIOC {
+		incoming.Status = constants.OrderStatusCancelled
+
 	} else {
 		incoming.Status = constants.OrderStatusOpen
 	}
 
-	if incoming.Remaining > 0 && incoming.Type != constants.OrderTypeMarket {
+	if incoming.Remaining > 0 &&
+		incoming.Type != constants.OrderTypeMarket &&
+		incoming.TimeInForce == constants.TimeInForceGTC {
+
 		m.book.AddOrder(incoming)
 	}
 
@@ -187,13 +209,12 @@ func (m *Matcher) matchSellOrder(
 		// Update resting order status
 		if resting.Remaining == 0 {
 			resting.Status = constants.OrderStatusFilled
+
+			bestBid.Remove(resting)
+
+			m.book.RemoveOrderIndex(resting.ID)
 		} else {
 			resting.Status = constants.OrderStatusPartiallyFilled
-		}
-
-		// Remove fully filled resting order
-		if resting.Remaining == 0 {
-			bestBid.Remove(resting)
 		}
 
 		// Remove empty price level
@@ -205,16 +226,94 @@ func (m *Matcher) matchSellOrder(
 	// Update incoming order status
 	if incoming.Remaining == 0 {
 		incoming.Status = constants.OrderStatusFilled
+
 	} else if incoming.Remaining < incoming.Quantity {
 		incoming.Status = constants.OrderStatusPartiallyFilled
+
+	} else if incoming.TimeInForce == constants.TimeInForceIOC {
+		incoming.Status = constants.OrderStatusCancelled
+
 	} else {
 		incoming.Status = constants.OrderStatusOpen
 	}
 
 	// Add remaining quantity back to book
-	if incoming.Remaining > 0 && incoming.Type != constants.OrderTypeMarket {
+	if incoming.Remaining > 0 &&
+		incoming.Type != constants.OrderTypeMarket &&
+		incoming.TimeInForce == constants.TimeInForceGTC {
+
 		m.book.AddOrder(incoming)
 	}
 
 	return trades
+}
+
+func (m *Matcher) canFullyFill(incoming *order.Order) bool {
+	var available int64
+
+	exhausted := make(map[int64]bool)
+
+	if incoming.Side == constants.OrderSideBuy {
+		for {
+			level := m.book.BestAskExcluding(exhausted)
+
+			if level == nil {
+				break
+			}
+
+			// Respect limit price
+			if incoming.Type != constants.OrderTypeMarket &&
+				level.Price > incoming.Price {
+				break
+			}
+
+			for e := level.Orders.Front(); e != nil; e = e.Next() {
+				o := e.Value.(*order.Order)
+
+				if o.UserID == incoming.UserID {
+					continue
+				}
+
+				available += o.Remaining
+
+				if available >= incoming.Quantity {
+					return true
+				}
+			}
+
+			exhausted[level.Price] = true
+
+		}
+	} else {
+		for {
+			level := m.book.BestBidExcluding(exhausted)
+
+			if level == nil {
+				break
+			}
+
+			if incoming.Type != constants.OrderTypeMarket &&
+				level.Price < incoming.Price {
+				break
+			}
+
+			for e := level.Orders.Front(); e != nil; e = e.Next() {
+				o := e.Value.(*order.Order)
+
+				if o.UserID == incoming.UserID {
+					continue
+				}
+
+				available += o.Remaining
+
+				if available >= incoming.Quantity {
+					return true
+				}
+			}
+
+			exhausted[level.Price] = true
+		}
+	}
+
+	return false
 }
