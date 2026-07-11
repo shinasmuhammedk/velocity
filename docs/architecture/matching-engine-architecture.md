@@ -1,307 +1,670 @@
-# Matching Engine Architecture
+# Velocity Matching Engine Architecture
 
-## Purpose
+## Overview
 
-The Velocity Matching Engine is a dedicated microservice responsible for
-order matching inside the Velocity trading platform.
+Velocity is a high-performance, event-driven matching engine written in Go and designed to simulate the core architecture of modern electronic exchanges such as NASDAQ, Binance, Coinbase, and NSE.
 
-It is designed as a low-latency, in-memory, deterministic matching
-engine implementing a Price-Time Priority algorithm similar to modern
-centralized exchanges.
+The project aims to achieve low-latency order matching, deterministic execution, and horizontal scalability across multiple trading symbols.
 
-The engine service is isolated from authentication, user management, and
-persistence concerns.
+The architecture separates the system into independent services:
 
-------------------------------------------------------------------------
+- Velocity Engine
+- Velocity API
 
-## Service Boundaries
+This document describes the design and implementation of the Engine component only.
 
-``` text
-velocity-api
-    │
-    │ gRPC
-    ▼
-velocity-engine
+---
+
+# Vision
+
+To build a production-grade matching engine capable of handling:
+
+- 100,000+ requests per second
+- Low-latency order matching
+- Multi-symbol trading
+- Horizontal scaling
+- Event-driven processing
+
+while maintaining deterministic execution and exchange-grade correctness.
+
+---
+
+# Goals
+
+## Functional Goals
+
+- Limit Orders
+- Market Orders
+- Full Fills
+- Partial Fills
+- Price-Time Priority
+- Multi Symbol Support
+- Trade Generation
+- Order Book Management
+- Event Driven Architecture
+
+## Non Functional Goals
+
+- Low latency
+- High throughput
+- Deterministic execution
+- Horizontal scalability
+- Fault tolerance
+- Testability
+- Clean architecture
+
+---
+
+# Non Goals
+
+The following are intentionally excluded from the engine itself:
+
+- Authentication
+- Authorization
+- User Management
+- REST APIs
+- WebSocket APIs
+- Database Persistence
+- Risk Management
+- Portfolio Management
+- Margin Calculation
+- Settlement
+
+These responsibilities belong to the API service.
+
+---
+
+# High Level Architecture
+
 ```
-
-### velocity-api Responsibilities
-
--   Authentication
--   User management
--   Wallets and balances
--   Position tracking
--   Order persistence
--   Trade persistence
--   Risk checks
-
-### velocity-engine Responsibilities
-
--   Order matching
--   Order book management
--   Trade generation
--   Price-time priority execution
-
-------------------------------------------------------------------------
-
-## Architecture Overview
-
-``` text
+Client
+   │
+   ▼
+Velocity API
+   │
+   ▼
 Registry
-    ↓
-Engine
-    ↓
+   │
+   ├──────── BTCUSDT Engine
+   │
+   ├──────── ETHUSDT Engine
+   │
+   ├──────── AAPL Engine
+   │
+   └──────── RELIANCE Engine
+```
+
+Each symbol receives its own isolated engine instance.
+
+---
+
+# Component Architecture
+
+```
+Order
+   │
+   ▼
+Order Queue
+   │
+   ▼
 Matcher
-    ↓
-OrderBook
-    ↓
-PriceLevel
+   │
+   ▼
+Order Book
+   │
+   ├── Bid Side
+   │
+   └── Ask Side
+   │
+   ▼
+Trade Generation
+   │
+   ▼
+Trade Queue
 ```
 
-------------------------------------------------------------------------
+---
 
-## Registry
-
-The Registry owns every trading engine instance in memory.
-
-Example:
-
-``` text
-BTCUSDT → Engine
-ETHUSDT → Engine
-AAPL    → Engine
-RELIANCE → Engine
-```
-
-Orders belonging to one symbol never interact with another symbol.
-
-------------------------------------------------------------------------
+# Core Components
 
 ## Engine
 
-The Engine represents a single trading symbol.
+Responsible for:
 
-Responsibilities:
+- Accepting incoming orders
+- Managing asynchronous order processing
+- Managing trade streams
+- Delegating matching to the matcher
+- Owning the order book
 
--   Receive orders
--   Delegate matching to Matcher
--   Return generated trades
--   Expose OrderBook access
+### Responsibilities
 
-The engine contains no matching logic.
+- Own order queue
+- Own trade queue
+- Start matching worker
+- Process incoming orders
 
-------------------------------------------------------------------------
+---
 
 ## Matcher
 
-The Matcher is responsible for exchange rules.
+Responsible for:
 
-Responsibilities:
+- Matching incoming orders
+- Applying price-time priority
+- Updating order states
+- Creating trades
 
--   Match incoming orders
--   Apply price priority
--   Apply time priority
--   Generate trades
--   Update order states
--   Remove filled orders
--   Keep partially filled orders resting
+### Supported Matching
 
-### Buy Matching
+- Full fill
+- Partial fill
+- Multi-level matching
+- Multiple trade generation
 
-Buy orders consume liquidity from the lowest ask first.
-
-Matching stops when:
-
-``` text
-BestAsk > BuyPrice
-```
-
-### Sell Matching
-
-Sell orders consume liquidity from the highest bid first.
-
-Matching stops when:
-
-``` text
-BestBid < SellPrice
-```
-
-------------------------------------------------------------------------
+---
 
 ## OrderBook
 
-The OrderBook owns all bid and ask price levels.
+Responsible for:
 
-``` text
-OrderBook
-├── Bids
-└── Asks
-```
+- Maintaining bid side
+- Maintaining ask side
+- Managing price levels
+- Finding best bid
+- Finding best ask
 
-Implementation:
-
-``` text
-map[int64]*PriceLevel
-```
-
-### Bid Side
-
-Highest price wins.
-
-### Ask Side
-
-Lowest price wins.
-
-------------------------------------------------------------------------
+---
 
 ## PriceLevel
 
-PriceLevel is a FIFO queue for orders sharing the same price.
-
-Implementation:
-
-``` text
-container/list
-```
-
-Responsibilities:
-
--   AddOrder()
--   Front()
--   RemoveFront()
--   IsEmpty()
--   Size()
-
-Orders at the same price are executed in arrival order.
-
-------------------------------------------------------------------------
-
-## Price-Time Priority
-
-Priority order:
-
-1.  Price Priority
-2.  Time Priority
+Represents a single price in the order book.
 
 Example:
 
-``` text
-SELL 50 @1000
-SELL 30 @1005
-SELL 100 @1010
-
-BUY 120 @1010
+```
+1000
+ ├── Order A
+ ├── Order B
+ └── Order C
 ```
 
-Results:
+Orders are stored using FIFO ordering.
 
-``` text
-50 @1000
-30 @1005
-40 @1010
+---
+
+## Registry
+
+Responsible for:
+
+- Managing engine instances
+- Creating engines lazily
+- Returning existing engines
+- Supporting multi-symbol trading
+
+Example:
+
+```
+BTCUSDT -> Engine
+ETHUSDT -> Engine
+AAPL -> Engine
 ```
 
-------------------------------------------------------------------------
+---
 
-## Domain Models
+# Order Lifecycle
 
-### Order
+## Step 1
 
-Fields:
+API receives order.
 
--   ID
--   UserID
--   Symbol
--   Side
--   Type
--   TimeInForce
--   Status
--   Price
--   Quantity
--   Remaining
--   Filled
--   CreatedAt
--   UpdatedAt
+Example:
 
-### Trade
+```
+BUY BTCUSDT
+100 Quantity
+1000 Price
+```
 
-Fields:
+---
 
--   ID
--   BuyOrderID
--   SellOrderID
--   BuyerID
--   SellerID
--   Symbol
--   Price
--   Quantity
--   ExecutedAt
+## Step 2
 
-------------------------------------------------------------------------
+Registry selects engine.
 
-## Current Implementation Status
+```
+registry.Get("BTCUSDT")
+```
 
-### Completed
+---
 
--   Buy matching
--   Sell matching
--   Full fills
--   Partial fills
--   FIFO execution
--   Multiple price levels
--   Trade generation
+## Step 3
 
-### Test Coverage
+Order is pushed into order queue.
 
-#### Matcher
+```
+orderQueue <- order
+```
 
--   Full fill
--   Partial fill
--   FIFO
--   Multi-level matching
+---
 
-#### PriceLevel
+## Step 4
 
--   AddOrder
--   RemoveFront
--   FIFO
--   Size
--   IsEmpty
+Matching worker consumes order.
 
-#### OrderBook
+```
+for order := range orderQueue
+```
 
--   BestBid
--   BestAsk
--   RemoveBidLevel
--   RemoveAskLevel
+---
 
-#### Engine
+## Step 5
 
--   Full fill flow
--   Partial fill flow
--   Resting order flow
+Matcher processes order.
 
-------------------------------------------------------------------------
+Possible outcomes:
 
-## Future Expansion
+- Full Fill
+- Partial Fill
+- Resting Order
 
--   Registry implementation
--   gRPC API
--   Persistence layer
--   Market data streaming
--   Redis
--   Kafka/NATS
--   Risk engine
--   Replay engine
--   Metrics and tracing
+---
 
-------------------------------------------------------------------------
+## Step 6
 
-## Design Principles
+Trades are generated.
 
--   Single Responsibility Principle
--   Dependency Injection
--   Constructor-based initialization
--   Thread safety
--   Deterministic behavior
--   Horizontal scalability
--   In-memory execution
+```
+tradeQueue <- trade
+```
+
+---
+
+## Step 7
+
+Trade events become available for:
+
+- WebSocket streaming
+- Persistence
+- Analytics
+- Market data feeds
+
+---
+
+# Trade Lifecycle
+
+```
+Order
+   │
+   ▼
+Matcher
+   │
+   ▼
+Trade
+   │
+   ▼
+Trade Queue
+   │
+   ├── Database
+   ├── WebSocket
+   ├── Analytics
+   └── Risk Engine
+```
+
+---
+
+# Matching Rules
+
+Velocity uses strict price-time priority.
+
+## Buy Orders
+
+Buy orders execute against:
+
+- Lowest available ask price.
+
+Example:
+
+```
+BUY 100 @ 1000
+
+ASKS
+
+990
+995
+1000
+1005
+```
+
+Execution starts from:
+
+```
+990
+```
+
+---
+
+## Sell Orders
+
+Sell orders execute against:
+
+- Highest available bid price.
+
+Example:
+
+```
+SELL 100 @ 1000
+
+BIDS
+
+1010
+1005
+1000
+995
+```
+
+Execution starts from:
+
+```
+1010
+```
+
+---
+
+# FIFO Priority
+
+Orders with identical prices execute in arrival order.
+
+Example:
+
+```
+BUY 100 @ 1000 (09:00:01)
+BUY 100 @ 1000 (09:00:02)
+BUY 100 @ 1000 (09:00:03)
+```
+
+Execution order:
+
+```
+Order 1
+Order 2
+Order 3
+```
+
+---
+
+# Data Structures
+
+## Registry
+
+```
+map[string]*Engine
+```
+
+Complexity:
+
+```
+O(1)
+```
+
+---
+
+## Bid Side
+
+```
+map[int64]*PriceLevel
+```
+
+Current best price lookup:
+
+```
+O(N)
+```
+
+Future:
+
+```
+Max Heap
+O(log N)
+```
+
+---
+
+## Ask Side
+
+```
+map[int64]*PriceLevel
+```
+
+Current best price lookup:
+
+```
+O(N)
+```
+
+Future:
+
+```
+Min Heap
+O(log N)
+```
+
+---
+
+## Orders inside Price Level
+
+```
+container/list
+```
+
+Operations:
+
+| Operation | Complexity |
+|-----------|-----------|
+| Insert | O(1) |
+| Remove Front | O(1) |
+| Peek Front | O(1) |
+
+---
+
+# Concurrency Model
+
+Velocity uses:
+
+## Single Matching Goroutine Per Symbol
+
+Example:
+
+```
+BTCUSDT -> Goroutine #1
+ETHUSDT -> Goroutine #2
+AAPL -> Goroutine #3
+```
+
+This guarantees:
+
+- Deterministic execution
+- No race conditions
+- No matching locks
+
+---
+
+# Why Matching Is Not Parallel
+
+Modern exchanges typically avoid parallel matching for a single symbol because:
+
+- Ordering guarantees become difficult
+- Race conditions appear
+- Price-time priority breaks
+
+Velocity follows the same model.
+
+---
+
+# Current Architecture
+
+```
+API Thread
+    │
+    ▼
+Buffered Order Queue
+    │
+    ▼
+Single Matching Worker
+    │
+    ▼
+Buffered Trade Queue
+```
+
+---
+
+# Queue Sizes
+
+## Order Queue
+
+```
+100,000
+```
+
+## Trade Queue
+
+```
+100,000
+```
+
+---
+
+# Performance Targets
+
+## Current Target
+
+```
+100,000 requests/sec
+```
+
+---
+
+## Future Target
+
+```
+1,000,000+ requests/sec
+```
+
+---
+
+# Planned Optimizations
+
+- Heap based price discovery
+- Order indexing
+- Memory pooling
+- Object reuse
+- Lock free queues
+- Snapshot recovery
+- Persistence layer
+- NUMA awareness
+- CPU pinning
+- Kernel bypass networking
+
+---
+
+# Current Features
+
+## Implemented
+
+- Limit Orders
+- Market Orders
+- Full Fill
+- Partial Fill
+- Price-Time Priority
+- Registry
+- Event Driven Processing
+- Trade Queue
+- Unit Tests
+
+---
+
+## Planned
+
+- IOC Orders
+- FOK Orders
+- Order Cancellation
+- Self Trade Prevention
+- Snapshot Recovery
+- Persistence
+- WebSocket Market Data
+- Distributed Matching
+
+---
+
+# Testing
+
+Current test coverage includes:
+
+- PriceLevel
+- OrderBook
+- Matcher
+- Engine
+- Registry
+
+---
+
+# Future Architecture
+
+```
+Client
+   │
+   ▼
+API Gateway
+   │
+   ▼
+gRPC
+   │
+   ▼
+Registry
+   │
+   ├── BTCUSDT Engine
+   ├── ETHUSDT Engine
+   ├── AAPL Engine
+   └── RELIANCE Engine
+```
+
+---
+
+# Repository Structure
+
+```
+internal/
+│
+├── domain/
+│   ├── order
+│   └── trade
+│
+├── engine/
+│   ├── engine
+│   ├── matcher
+│   ├── orderbook
+│   ├── pricelevel
+│   └── registry
+│
+└── transport/
+```
+
+---
+
+# Conclusion
+
+Velocity Engine is designed around the same fundamental principles used by real-world exchanges:
+
+- Price-Time Priority
+- Single Writer Matching
+- Event Driven Processing
+- Symbol Isolation
+- Horizontal Scalability
+
+The current implementation forms the foundation for future development of:
+
+- Velocity API
+- Market Data Streaming
+- Persistence
+- Risk Management
+- Distributed Trading Infrastructure

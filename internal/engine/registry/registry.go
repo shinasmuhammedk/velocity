@@ -19,9 +19,7 @@ func New() *Registry {
 
 // Get returns the engine for a symbol.
 // If it does not exist, it creates one lazily.
-func (r *Registry) Get(
-	symbol string,
-) *engine.Engine {
+func (r *Registry) Get(symbol string) *engine.Engine {
 
 	// Fast path (read lock)
 	r.mu.RLock()
@@ -49,9 +47,7 @@ func (r *Registry) Get(
 }
 
 // Exists checks whether an engine exists for a symbol.
-func (r *Registry) Exists(
-	symbol string,
-) bool {
+func (r *Registry) Exists(symbol string) bool {
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -62,9 +58,7 @@ func (r *Registry) Exists(
 }
 
 // Remove removes an engine from the registry.
-func (r *Registry) Remove(
-	symbol string,
-) {
+func (r *Registry) Remove(symbol string) {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
