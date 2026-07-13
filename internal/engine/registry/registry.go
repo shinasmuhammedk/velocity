@@ -1,19 +1,24 @@
 package registry
 
 import (
+	"context"
 	"sync"
 
 	"velocity/internal/engine"
+	"velocity/internal/persistence/worker"
 )
 
 type Registry struct {
 	engines map[string]*engine.Engine
 	mu      sync.RWMutex
+
+	consumer *worker.TradeConsumer
 }
 
-func New() *Registry {
+func New(consumer *worker.TradeConsumer) *Registry {
 	return &Registry{
-		engines: make(map[string]*engine.Engine),
+		engines:  make(map[string]*engine.Engine),
+		consumer: consumer,
 	}
 }
 
@@ -40,6 +45,10 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	}
 
 	e = engine.New(symbol)
+	r.consumer.Start(
+		context.Background(),
+		e.Trades(),
+	)
 
 	r.engines[symbol] = e
 

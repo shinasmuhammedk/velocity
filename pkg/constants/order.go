@@ -16,13 +16,16 @@ const (
 const (
 	OrderTypeLimit  OrderType = "LIMIT"
 	OrderTypeMarket OrderType = "MARKET"
+	StopMarketOrder OrderType = "STOP_MARKET"
+	StopLimitOrder  OrderType = "STOP_LIMIT"
 )
 
 // Time In Force
 const (
-	TimeInForceGTC TimeInForce = "GTC"
-	TimeInForceIOC TimeInForce = "IOC"
-	TimeInForceFOK TimeInForce = "FOK"
+	TimeInForceGTC      TimeInForce = "GTC"
+	TimeInForceIOC      TimeInForce = "IOC"
+	TimeInForceFOK      TimeInForce = "FOK"
+	TimeInForcePostOnly TimeInForce = "POST_ONLY"
 )
 
 // Order Status

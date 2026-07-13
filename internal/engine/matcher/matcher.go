@@ -1,29 +1,33 @@
 package matcher
 
 import (
-	"time"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
 	"velocity/internal/engine/orderbook"
 	"velocity/pkg/constants"
 	"velocity/pkg/helpers"
-
-	"github.com/google/uuid"
+	"velocity/pkg/idgen"
+	"velocity/pkg/timeutil"
 )
 
 type Matcher struct {
-	book *orderbook.OrderBook
+	book      *orderbook.OrderBook
+	exhausted map[int64]bool
 }
 
 func New(book *orderbook.OrderBook) *Matcher {
 	return &Matcher{
-		book: book,
+		book:      book,
+		exhausted: make(map[int64]bool),
 	}
 }
 
-func (m *Matcher) Match(
-	order *order.Order,
-) ([]*trade.Trade, error) {
+func (m *Matcher) Match(order *order.Order) ([]*trade.Trade, error) {
+
+	if m.isPostOnlyCrossing(order) {
+		order.Status = constants.OrderStatusRejected
+		return nil, nil
+	}
 
 	if order.TimeInForce == constants.TimeInForceFOK {
 
@@ -47,15 +51,13 @@ func (m *Matcher) Match(
 	return m.matchSellOrder(order), nil
 }
 
-func (m *Matcher) matchBuyOrder(
-	incoming *order.Order,
-) []*trade.Trade {
+func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 
 	var trades []*trade.Trade
-	exhausted := make(map[int64]bool)
+	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {
-		bestAsk := m.book.BestAskExcluding(exhausted)
+		bestAsk := m.book.BestAskExcluding(m.exhausted)
 
 		if bestAsk == nil {
 			break
@@ -65,12 +67,10 @@ func (m *Matcher) matchBuyOrder(
 			break
 		}
 
-		resting := bestAsk.FindFirst(func(o *order.Order) bool {
-			return o.UserID != incoming.UserID
-		})
+		resting := bestAsk.FindFirstExcludingUser(incoming.UserID)
 
 		if resting == nil {
-			exhausted[bestAsk.Price] = true
+			m.exhausted[bestAsk.Price] = true
 			continue
 		}
 
@@ -80,7 +80,7 @@ func (m *Matcher) matchBuyOrder(
 		)
 
 		t := &trade.Trade{
-			ID: uuid.New().String(),
+			ID: idgen.UUID(),
 
 			BuyOrderID:  incoming.ID,
 			SellOrderID: resting.ID,
@@ -94,7 +94,7 @@ func (m *Matcher) matchBuyOrder(
 
 			Quantity: tradeQty,
 
-			ExecutedAt: time.Now().UTC(),
+			ExecutedAt: timeutil.UTCNow(),
 		}
 
 		trades = append(trades, t)
@@ -136,7 +136,8 @@ func (m *Matcher) matchBuyOrder(
 
 	if incoming.Remaining > 0 &&
 		incoming.Type != constants.OrderTypeMarket &&
-		incoming.TimeInForce == constants.TimeInForceGTC {
+		(incoming.TimeInForce == constants.TimeInForceGTC ||
+			incoming.TimeInForce == constants.TimeInForcePostOnly) {
 
 		m.book.AddOrder(incoming)
 	}
@@ -144,16 +145,14 @@ func (m *Matcher) matchBuyOrder(
 	return trades
 }
 
-func (m *Matcher) matchSellOrder(
-	incoming *order.Order,
-) []*trade.Trade {
+func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
 
 	var trades []*trade.Trade
-	exhausted := make(map[int64]bool)
+	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {
 
-		bestBid := m.book.BestBidExcluding(exhausted)
+		bestBid := m.book.BestBidExcluding(m.exhausted)
 
 		if bestBid == nil {
 			break
@@ -164,12 +163,10 @@ func (m *Matcher) matchSellOrder(
 			break
 		}
 
-		resting := bestBid.FindFirst(func(o *order.Order) bool {
-			return o.UserID != incoming.UserID
-		})
+		resting := bestBid.FindFirstExcludingUser(incoming.UserID)
 
 		if resting == nil {
-			exhausted[bestBid.Price] = true
+			m.exhausted[bestBid.Price] = true
 			continue
 		}
 
@@ -179,7 +176,7 @@ func (m *Matcher) matchSellOrder(
 		)
 
 		t := &trade.Trade{
-			ID: uuid.New().String(),
+			ID: idgen.UUID(),
 
 			BuyOrderID:  resting.ID,
 			SellOrderID: incoming.ID,
@@ -194,7 +191,7 @@ func (m *Matcher) matchSellOrder(
 
 			Quantity: tradeQty,
 
-			ExecutedAt: time.Now().UTC(),
+			ExecutedAt: timeutil.UTCNow(),
 		}
 
 		trades = append(trades, t)
@@ -240,7 +237,8 @@ func (m *Matcher) matchSellOrder(
 	// Add remaining quantity back to book
 	if incoming.Remaining > 0 &&
 		incoming.Type != constants.OrderTypeMarket &&
-		incoming.TimeInForce == constants.TimeInForceGTC {
+		(incoming.TimeInForce == constants.TimeInForceGTC ||
+			incoming.TimeInForce == constants.TimeInForcePostOnly) {
 
 		m.book.AddOrder(incoming)
 	}
@@ -251,11 +249,11 @@ func (m *Matcher) matchSellOrder(
 func (m *Matcher) canFullyFill(incoming *order.Order) bool {
 	var available int64
 
-	exhausted := make(map[int64]bool)
+	clear(m.exhausted)
 
 	if incoming.Side == constants.OrderSideBuy {
 		for {
-			level := m.book.BestAskExcluding(exhausted)
+			level := m.book.BestAskExcluding(m.exhausted)
 
 			if level == nil {
 				break
@@ -281,12 +279,12 @@ func (m *Matcher) canFullyFill(incoming *order.Order) bool {
 				}
 			}
 
-			exhausted[level.Price] = true
+			m.exhausted[level.Price] = true
 
 		}
 	} else {
 		for {
-			level := m.book.BestBidExcluding(exhausted)
+			level := m.book.BestBidExcluding(m.exhausted)
 
 			if level == nil {
 				break
@@ -311,9 +309,55 @@ func (m *Matcher) canFullyFill(incoming *order.Order) bool {
 				}
 			}
 
-			exhausted[level.Price] = true
+			m.exhausted[level.Price] = true
 		}
 	}
 
 	return false
+}
+
+func (m *Matcher) isPostOnlyCrossing(incoming *order.Order) bool {
+	if incoming.TimeInForce != constants.TimeInForcePostOnly {
+		return false
+	}
+
+	clear(m.exhausted)
+
+	if incoming.Side == constants.OrderSideBuy {
+		for {
+			level := m.book.BestAskExcluding(m.exhausted)
+			if level == nil {
+				return false
+			}
+			if level.Price > incoming.Price {
+				return false // no longer crosses — nothing behind this can cross either
+			}
+
+			resting := level.FindFirstExcludingUser(incoming.UserID)
+
+			if resting != nil {
+				return true // a real counterparty exists — this would actually trade
+			}
+
+			m.exhausted[level.Price] = true // this level is entirely self-orders, check the next one
+		}
+	}
+
+	for {
+		level := m.book.BestBidExcluding(m.exhausted)
+		if level == nil {
+			return false
+		}
+		if level.Price < incoming.Price {
+			return false
+		}
+
+		resting := level.FindFirstExcludingUser(incoming.UserID)
+
+		if resting != nil {
+			return true
+		}
+
+		m.exhausted[level.Price] = true
+	}
 }

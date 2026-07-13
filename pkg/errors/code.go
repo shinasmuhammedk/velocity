@@ -23,4 +23,7 @@ const (
 
 	// Engine
 	CodeEngine Code = "ENGINE_ERROR"
+    
+    // Stop Orders
+	CodeStopOrderNotFound Code = "STOP_ORDER_NOT_FOUND"
 )
