@@ -69,4 +69,11 @@ var (
 		CodeOrderCancelled,
 		"order already cancelled",
 	)
+
+	// Stop Orders
+
+	ErrStopOrderNotFound = New(
+		CodeStopOrderNotFound,
+		"stop order not found",
+	)
 )

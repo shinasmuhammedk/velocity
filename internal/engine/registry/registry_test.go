@@ -11,7 +11,7 @@ import (
 )
 
 func TestRegistryCreatesEngine(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	e := r.Get("BTCUSDT")
 
@@ -25,7 +25,7 @@ func TestRegistryCreatesEngine(t *testing.T) {
 }
 
 func TestRegistryReturnsSameEngine(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	e1 := r.Get("BTCUSDT")
 	e2 := r.Get("BTCUSDT")
@@ -38,7 +38,7 @@ func TestRegistryReturnsSameEngine(t *testing.T) {
 }
 
 func TestRegistryCreatesDifferentEngines(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	btc := r.Get("BTCUSDT")
 	eth := r.Get("ETHUSDT")
@@ -57,7 +57,7 @@ func TestRegistryCreatesDifferentEngines(t *testing.T) {
 }
 
 func TestRegistryExists(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	assert.False(
 		t,
@@ -73,7 +73,7 @@ func TestRegistryExists(t *testing.T) {
 }
 
 func TestRegistryRemove(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	r.Get("BTCUSDT")
 
@@ -97,7 +97,7 @@ func TestRegistryRemove(t *testing.T) {
 }
 
 func TestRegistrySymbols(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	r.Get("BTCUSDT")
 	r.Get("ETHUSDT")
@@ -131,7 +131,7 @@ func TestRegistrySymbols(t *testing.T) {
 }
 
 func TestRegistryConcurrentAccess(t *testing.T) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	var wg sync.WaitGroup
 
@@ -157,7 +157,7 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 func TestRegistryConcurrentDifferentSymbols(
 	t *testing.T,
 ) {
-	r := registry.New()
+	r := registry.New(nil)
 
 	symbols := []string{
 		"BTCUSDT",

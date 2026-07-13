@@ -241,3 +241,21 @@ func TestEngineCancelRemovesPriceLevel(t *testing.T) {
 
 	assert.Nil(t, e.OrderBook().BestAsk())
 }
+
+
+func TestPostOnlyMarketOrderRejected(t *testing.T) {
+	engine := engine.New("BTCUSDT")
+
+	err := engine.SubmitOrder(&order.Order{
+		ID:          "1",
+		UserID:      "user1",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideBuy,
+		Type:        constants.OrderTypeMarket,
+		TimeInForce: constants.TimeInForcePostOnly,
+		Quantity:    10,
+		Remaining:   10,
+	})
+
+	require.Error(t, err)
+}

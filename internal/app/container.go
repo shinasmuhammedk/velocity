@@ -6,7 +6,10 @@ import (
 	"go.uber.org/zap"
 
 	"velocity/internal/config"
+	"velocity/internal/engine/registry"
 	"velocity/internal/persistence/postgres/repository"
+	"velocity/internal/persistence/postgres/tx"
+	"velocity/internal/persistence/worker"
 )
 
 // Container holds all shared application dependencies.
@@ -25,9 +28,19 @@ type Container struct {
 
 	// Transport
 	HTTP *fiber.App
-    
-    UserRepository repository.UserRepository
 
+	UserRepository     repository.UserRepository
+	OrderRepository    repository.OrderRepository
+	TradeRepository    repository.TradeRepository
+	PositionRepository repository.PositionRepository
+	SymbolRepository   repository.SymbolRepository
+
+	TxManager tx.Manager
+
+	TradeWorker   worker.TradePersistenceWorker
+	TradeConsumer *worker.TradeConsumer
+
+	Registry *registry.Registry
 	// Future
 	//
 	// Engine     *registry.Registry

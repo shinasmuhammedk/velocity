@@ -332,13 +332,15 @@ func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
 }
 
 
-// RemoveFilledOrder removes a fully-filled order from both its price level
-// and the order index. Called by the matcher after a resting order is
-// completely consumed — keeps the index in sync with what matcher.go
-// already does directly on the PriceLevel.
-func (b *OrderBook) RemoveFilledOrder(o *order.Order) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 
-	delete(b.Orders, o.ID)
+
+func (b *OrderBook) GetOrder(orderID string) *order.Order {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	location, exists := b.Orders[orderID]
+	if !exists {
+		return nil
+	}
+	return location.Order
 }

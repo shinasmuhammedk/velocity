@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/config"
 	"velocity/internal/persistence/postgres"
-	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/logger"
 )
 
@@ -15,10 +14,7 @@ func Startup() (*Container, error) {
 
 	container := &Container{}
 
-	// --------------------------------------------------
-	// Load Configuration
-	// --------------------------------------------------
-
+	// Configuration
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
@@ -26,21 +22,21 @@ func Startup() (*Container, error) {
 
 	container.Config = cfg
 
-	// --------------------------------------------------
-	// Initialize Logger
-	// --------------------------------------------------
-
+	// Logger
 	if err := logger.Init(cfg.App.Environment); err != nil {
-		return nil, fmt.Errorf("initialize logger: %w", err)
+		return nil, fmt.Errorf(
+			"initialize logger: %w",
+			err,
+		)
 	}
 
 	container.Logger = logger.Logger()
 
-	container.Logger.Info("configuration loaded successfully")
+	container.Logger.Info(
+		"configuration loaded successfully",
+	)
 
-	// --------------------------------------------------
 	// Database
-	// --------------------------------------------------
 	db, err := postgres.New(cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -55,16 +51,7 @@ func Startup() (*Container, error) {
 		"postgres connection established",
 	)
 
-	container.UserRepository = repository.NewUserRepository(
-		container.DB,
-	)
-
-    container.Logger.Info("user repository initialized")
-    
-	// --------------------------------------------------
 	// HTTP Server
-	// --------------------------------------------------
-	// TODO:
 	// container.HTTP = server.New(cfg.Server)
 
 	return container, nil

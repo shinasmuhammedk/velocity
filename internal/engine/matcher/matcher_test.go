@@ -741,3 +741,166 @@ func TestFOKIgnoresSelfTradeLiquidity(t *testing.T) {
 	assert.Empty(t, trades)
 	assert.Equal(t, constants.OrderStatusCancelled, buy.Status)
 }
+
+
+func TestPostOnlyBuyCrossingIsRejected(t *testing.T) {
+	book := orderbook.New("BTCUSDT")
+	m := matcher.New(book)
+
+	resting := &order.Order{
+		ID:        "sell1",
+		UserID:    "seller",
+		Symbol:    "BTCUSDT",
+		Side:      constants.OrderSideSell,
+		Type:      constants.OrderTypeLimit,
+		Status:    constants.OrderStatusOpen,
+		Price:     1000,
+		Quantity:  10,
+		Remaining: 10,
+	}
+
+	book.AddOrder(resting)
+
+	incoming := &order.Order{
+		ID:          "buy1",
+		UserID:      "buyer",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideBuy,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForcePostOnly,
+		Price:       1000,
+		Quantity:    5,
+		Remaining:   5,
+	}
+
+	trades, err := m.Match(incoming)
+
+	require.NoError(t, err)
+	require.Len(t, trades, 0)
+	require.Equal(
+		t,
+		constants.OrderStatusRejected,
+		incoming.Status,
+	)
+}
+
+
+func TestPostOnlySellCrossingIsRejected(t *testing.T) {
+	book := orderbook.New("BTCUSDT")
+	m := matcher.New(book)
+
+	resting := &order.Order{
+		ID:        "buy1",
+		UserID:    "buyer",
+		Symbol:    "BTCUSDT",
+		Side:      constants.OrderSideBuy,
+		Type:      constants.OrderTypeLimit,
+		Status:    constants.OrderStatusOpen,
+		Price:     1000,
+		Quantity:  10,
+		Remaining: 10,
+	}
+
+	book.AddOrder(resting)
+
+	incoming := &order.Order{
+		ID:          "sell1",
+		UserID:      "seller",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideSell,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForcePostOnly,
+		Price:       1000,
+		Quantity:    5,
+		Remaining:   5,
+	}
+
+	trades, err := m.Match(incoming)
+
+	require.NoError(t, err)
+	require.Len(t, trades, 0)
+	require.Equal(
+		t,
+		constants.OrderStatusRejected,
+		incoming.Status,
+	)
+}
+
+
+func TestPostOnlyBuyRestsOnBook(t *testing.T) {
+	book := orderbook.New("BTCUSDT")
+	m := matcher.New(book)
+
+	book.AddOrder(&order.Order{
+		ID:        "sell1",
+		UserID:    "seller",
+		Symbol:    "BTCUSDT",
+		Side:      constants.OrderSideSell,
+		Type:      constants.OrderTypeLimit,
+		Status:    constants.OrderStatusOpen,
+		Price:     1000,
+		Quantity:  10,
+		Remaining: 10,
+	})
+
+	incoming := &order.Order{
+		ID:          "buy1",
+		UserID:      "buyer",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideBuy,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForcePostOnly,
+		Status:      constants.OrderStatusPending,
+		Price:       990,
+		Quantity:    5,
+		Remaining:   5,
+	}
+
+	trades, err := m.Match(incoming)
+
+	require.NoError(t, err)
+	require.Len(t, trades, 0)
+
+	require.Equal(
+		t,
+		constants.OrderStatusOpen,
+		incoming.Status,
+	)
+
+	require.NotNil(
+		t,
+		book.GetOrder(incoming.ID),
+	)
+}
+
+
+
+func TestPostOnlyAcceptedOnEmptyBook(t *testing.T) {
+	book := orderbook.New("BTCUSDT")
+	m := matcher.New(book)
+
+	incoming := &order.Order{
+		ID:          "buy1",
+		UserID:      "buyer",
+		Symbol:      "BTCUSDT",
+		Side:        constants.OrderSideBuy,
+		Type:        constants.OrderTypeLimit,
+		TimeInForce: constants.TimeInForcePostOnly,
+		Price:       1000,
+		Quantity:    10,
+		Remaining:   10,
+	}
+
+	trades, err := m.Match(incoming)
+
+	require.NoError(t, err)
+	require.Len(t, trades, 0)
+
+	require.Equal(
+		t,
+		constants.OrderStatusOpen,
+		incoming.Status,
+	)
+}
+
+
