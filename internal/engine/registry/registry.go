@@ -13,12 +13,19 @@ type Registry struct {
 	mu      sync.RWMutex
 
 	consumer *worker.TradeConsumer
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func New(consumer *worker.TradeConsumer) *Registry {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Registry{
 		engines:  make(map[string]*engine.Engine),
 		consumer: consumer,
+		ctx:      ctx,
+		cancel:   cancel,
 	}
 }
 
@@ -45,11 +52,7 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	}
 
 	e = engine.New(symbol)
-	r.consumer.Start(
-		context.Background(),
-		e.Trades(),
-	)
-
+	r.consumer.Start(r.ctx, e.Trades())
 	r.engines[symbol] = e
 
 	return e
@@ -72,10 +75,7 @@ func (r *Registry) Remove(symbol string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	delete(
-		r.engines,
-		symbol,
-	)
+	delete(r.engines, symbol)
 }
 
 // Count returns the total number of engines.
@@ -107,4 +107,19 @@ func (r *Registry) Symbols() []string {
 	}
 
 	return symbols
+}
+
+// Shutdown stops every engine and cancels all trade-consumer goroutines
+// started by this registry. Safe to call once, typically during
+// application shutdown.
+func (r *Registry) Shutdown() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.cancel() // signals every TradeConsumer goroutine (via r.ctx) to stop
+
+	for symbol, e := range r.engines {
+		e.Stop() // needs to exist on Engine — see below
+		delete(r.engines, symbol)
+	}
 }

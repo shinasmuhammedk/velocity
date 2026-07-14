@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"sync/atomic"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
 	"velocity/internal/engine/command"
@@ -19,11 +20,14 @@ type Engine struct {
 	commandQueue chan command.Command
 	tradeQueue   chan *trade.Trade
 
-	lastTradePrice int64
+	lastTradePrice atomic.Int64
+
+	done chan struct{} // new
 }
 
 func (e *Engine) start() {
 	go func() {
+		defer close(e.done)
 		for cmd := range e.commandQueue {
 			switch c := cmd.(type) {
 			case command.SubmitOrderCommand:
@@ -41,7 +45,7 @@ func (e *Engine) start() {
 					continue
 				}
 				for _, t := range trades {
-					e.lastTradePrice = t.Price
+					e.lastTradePrice.Store(t.Price)
 					e.tradeQueue <- t
 				}
 
@@ -76,7 +80,8 @@ func New(symbol string) *Engine {
 		stopBook:       stopbook.New(),
 		commandQueue:   make(chan command.Command, 100000),
 		tradeQueue:     make(chan *trade.Trade, 100000),
-		lastTradePrice: 0,
+		// lastTradePrice: 0,
+        done: make(chan struct{}),
 	}
 
 	e.start()
@@ -106,8 +111,8 @@ func (e *Engine) SubmitOrder(
 		}
 
 		if order.Side == constants.OrderSideBuy &&
-			e.lastTradePrice > 0 &&
-			order.StopPrice <= e.lastTradePrice {
+			e.lastTradePrice.Load() > 0 &&
+			order.StopPrice <= e.lastTradePrice.Load() {
 
 			return errors.New(
 				"buy stop must be above market price",
@@ -115,8 +120,8 @@ func (e *Engine) SubmitOrder(
 		}
 
 		if order.Side == constants.OrderSideSell &&
-			e.lastTradePrice > 0 &&
-			order.StopPrice >= e.lastTradePrice {
+			e.lastTradePrice.Load() > 0 &&
+			order.StopPrice >= e.lastTradePrice.Load() {
 
 			return errors.New(
 				"sell stop must be below market price",
@@ -130,7 +135,6 @@ func (e *Engine) SubmitOrder(
 
 	return nil
 }
-
 
 // read-only channel accessor.
 func (e *Engine) Trades() <-chan *trade.Trade {
@@ -164,7 +168,7 @@ func (e *Engine) ModifyOrder(orderID string, newPrice, newQuantity int64) error 
 
 func (e *Engine) processTriggeredStops() {
 	for {
-		triggered := e.stopBook.Trigger(e.lastTradePrice)
+		triggered := e.stopBook.Trigger(e.lastTradePrice.Load())
 
 		if len(triggered) == 0 {
 			return
@@ -188,7 +192,7 @@ func (e *Engine) processTriggeredStops() {
 			}
 
 			for _, trade := range trades {
-				e.lastTradePrice = trade.Price
+				e.lastTradePrice.Store(trade.Price)
 				e.tradeQueue <- trade
 			}
 		}
@@ -196,9 +200,14 @@ func (e *Engine) processTriggeredStops() {
 }
 
 func (e *Engine) LastTradePrice() int64 {
-	return e.lastTradePrice
+	return e.lastTradePrice.Load()
 }
 
 func (e *Engine) StopBook() *stopbook.StopBook {
 	return e.stopBook
+}
+
+func (e *Engine) Stop() {
+	close(e.commandQueue) // range loop in start()'s goroutine exits once the channel is closed and drained
+    <-e.done
 }

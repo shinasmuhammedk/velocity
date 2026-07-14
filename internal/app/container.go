@@ -10,6 +10,8 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
+	"velocity/internal/service/orderservice"
+	"velocity/internal/transport/http/handler"
 )
 
 // Container holds all shared application dependencies.
@@ -42,7 +44,16 @@ type Container struct {
 
 	Registry *registry.Registry
 	// Future
-	//
+	
+    
+    //Service
+    OrderService *orderservice.Service
+    
+    
+    //Handler
+    OrderHandler *handler.OrderHandler
+    
+    
 	// Engine     *registry.Registry
 	// EventBus   eventbus.Bus
 	// Redis      *redis.Client
