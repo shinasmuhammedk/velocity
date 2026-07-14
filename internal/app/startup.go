@@ -3,6 +3,9 @@ package app
 import (
 	"fmt"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+
 	"velocity/internal/config"
 	"velocity/internal/persistence/postgres"
 	"velocity/pkg/logger"
@@ -52,7 +55,8 @@ func Startup() (*Container, error) {
 	)
 
 	// HTTP Server
-	// container.HTTP = server.New(cfg.Server)
+	container.HTTP = fiber.New()
+	container.HTTP.Use(recover.New())
 
 	return container, nil
 }

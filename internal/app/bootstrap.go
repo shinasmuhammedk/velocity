@@ -5,6 +5,9 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
+	"velocity/internal/service/orderservice"
+	"velocity/internal/transport/http/handler"
+	"velocity/internal/transport/http/router"
 )
 
 // Bootstrap creates and initializes the application.
@@ -29,7 +32,6 @@ func Bootstrap() (*Container, error) {
 
 	//Transaction Manager
 	container.TxManager = tx.NewManager(container.DB)
-
 	container.Logger.Info("transaction manager initialized")
 	// --------------------------------------------------
 	// Future Wiring
@@ -42,13 +44,11 @@ func Bootstrap() (*Container, error) {
 		container.TradeRepository,
 		container.PositionRepository,
 	)
-
 	container.Logger.Info("trade persistence worker initialized")
 
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.TradeWorker,
 	)
-
 	container.Logger.Info("trade consumer initialized")
 	// Register services
 	//
@@ -60,10 +60,31 @@ func Bootstrap() (*Container, error) {
 	//
 	// Matching Engine Registry
 	container.Registry = registry.New(
-        container.TradeConsumer,
-    )
-
+		container.TradeConsumer,
+	)
 	container.Logger.Info("engine registry initialized")
+
+	//OrderService
+	container.OrderService = orderservice.New(
+		container.OrderRepository,
+		container.SymbolRepository,
+		container.UserRepository,
+		container.Registry,
+		container.Logger,
+	)
+	container.Logger.Info("order service initialized")
+
+	//OrderHandler
+	container.OrderHandler = handler.NewOrderHandler(
+		container.OrderService,
+	)
+	container.Logger.Info("order handler initialized")
+
+	//router
+	router.Register(
+		container.HTTP,
+		container.OrderHandler,
+	)
 
 	container.Logger.Info("application bootstrap completed")
 

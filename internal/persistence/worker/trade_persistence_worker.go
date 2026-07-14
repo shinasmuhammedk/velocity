@@ -7,6 +7,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
+	"velocity/pkg/constants"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -59,6 +60,64 @@ func (w *tradePersistenceWorker) ProcessTrade(
 					Price:       t.Price,
 					Quantity:    t.Quantity,
 					ExecutedAt:  t.ExecutedAt,
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			buyOrder, err := queries.GetOrderByID(
+				ctx,
+				uuid.MustParse(t.BuyOrderID),
+			)
+			if err != nil {
+				return err
+			}
+
+			sellOrder, err := queries.GetOrderByID(
+				ctx,
+				uuid.MustParse(t.SellOrderID),
+			)
+			if err != nil {
+				return err
+			}
+
+			buyRemaining := buyOrder.Remaining - t.Quantity
+			buyFilled := buyOrder.Filled + t.Quantity
+
+			buyStatus := string(constants.OrderStatusPartiallyFilled)
+			if buyRemaining == 0 {
+				buyStatus = "FILLED"
+			}
+
+			err = queries.UpdateOrderAfterTrade(
+				ctx,
+				generated.UpdateOrderAfterTradeParams{
+					ID:        buyOrder.ID,
+					Remaining: buyRemaining,
+					Filled:    buyFilled,
+					Status:    buyStatus,
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			sellRemaining := sellOrder.Remaining - t.Quantity
+			sellFilled := sellOrder.Filled + t.Quantity
+
+			sellStatus := string(constants.OrderStatusPartiallyFilled)
+			if sellRemaining == 0 {
+				sellStatus = "FILLED"
+			}
+
+			err = queries.UpdateOrderAfterTrade(
+				ctx,
+				generated.UpdateOrderAfterTradeParams{
+					ID:        sellOrder.ID,
+					Remaining: sellRemaining,
+					Filled:    sellFilled,
+					Status:    sellStatus,
 				},
 			)
 			if err != nil {
