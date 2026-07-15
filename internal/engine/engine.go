@@ -75,13 +75,13 @@ func New(symbol string) *Engine {
 	book := orderbook.New(symbol)
 
 	e := &Engine{
-		book:           book,
-		matcher:        matcher.New(book),
-		stopBook:       stopbook.New(),
-		commandQueue:   make(chan command.Command, 100000),
-		tradeQueue:     make(chan *trade.Trade, 100000),
+		book:         book,
+		matcher:      matcher.New(book),
+		stopBook:     stopbook.New(),
+		commandQueue: make(chan command.Command, 100000),
+		tradeQueue:   make(chan *trade.Trade, 100000),
 		// lastTradePrice: 0,
-        done: make(chan struct{}),
+		done: make(chan struct{}),
 	}
 
 	e.start()
@@ -209,5 +209,20 @@ func (e *Engine) StopBook() *stopbook.StopBook {
 
 func (e *Engine) Stop() {
 	close(e.commandQueue) // range loop in start()'s goroutine exits once the channel is closed and drained
-    <-e.done
+	<-e.done
+}
+
+func (e *Engine) RecoverOrder(o *order.Order) {
+
+	switch o.Type {
+
+	case constants.StopMarketOrder,
+		constants.StopLimitOrder:
+
+		e.stopBook.Add(o)
+
+	default:
+
+		e.book.AddOrder(o)
+	}
 }

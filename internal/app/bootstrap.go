@@ -1,13 +1,19 @@
 package app
 
 import (
+	"context"
+	"velocity/internal/engine/orderbook"
+	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
+	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
 	"velocity/internal/service/orderservice"
 	"velocity/internal/transport/http/handler"
 	"velocity/internal/transport/http/router"
+	wsHandler "velocity/internal/transport/ws/handler"
+	wsRouter "velocity/internal/transport/ws/router"
 )
 
 // Bootstrap creates and initializes the application.
@@ -37,6 +43,11 @@ func Bootstrap() (*Container, error) {
 	// Future Wiring
 	// --------------------------------------------------
 
+	container.MarketHub = marketdata.NewHub()
+	container.Logger.Info("market data hub initialized ")
+
+	container.MarketPublisher = marketdata.NewPublisher(container.MarketHub)
+
 	//workers
 	container.TradeWorker = worker.NewTradePersistenceWorker(
 		container.TxManager,
@@ -46,23 +57,52 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("trade persistence worker initialized")
 
-	container.TradeConsumer = worker.NewTradeConsumer(
-		container.TradeWorker,
-	)
-	container.Logger.Info("trade consumer initialized")
 	// Register services
 	//
 	// Register HTTP handlers
 	//
+
 	// Register WebSocket hub
 	//
 	// Register background workers
 	//
 	// Matching Engine Registry
-	container.Registry = registry.New(
+	container.Registry = registry.New()
+	provider := func(symbol string) *orderbook.OrderBook {
+		engine := container.Registry.Get(symbol)
+
+		if engine == nil {
+			return nil
+		}
+
+		return engine.OrderBook()
+	}
+	container.Logger.Info("engine registry initialized")
+
+	container.TradeConsumer = worker.NewTradeConsumer(
+		container.TradeWorker,
+		container.MarketPublisher,
+		provider,
+	)
+	container.Logger.Info("trade consumer initialized")
+
+	// 4. Inject consumer into registry
+	container.Registry.SetConsumer(
 		container.TradeConsumer,
 	)
-	container.Logger.Info("engine registry initialized")
+
+	container.Recovery = recovery.New(
+		container.OrderRepository,
+		container.Registry,
+		container.Logger,
+	)
+	container.Logger.Info("recovery service initialized")
+
+	err = container.Recovery.Load(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	container.Logger.Info("recovery completed")
 
 	//OrderService
 	container.OrderService = orderservice.New(
@@ -74,6 +114,9 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("order service initialized")
 
+	container.WSHandler = wsHandler.NewHandler(container.MarketHub)
+	container.Logger.Info("websocket handler initialized")
+
 	//OrderHandler
 	container.OrderHandler = handler.NewOrderHandler(
 		container.OrderService,
@@ -84,6 +127,12 @@ func Bootstrap() (*Container, error) {
 	router.Register(
 		container.HTTP,
 		container.OrderHandler,
+	)
+
+	// WebSocket Routes
+	wsRouter.Register(
+		container.HTTP,
+		container.WSHandler,
 	)
 
 	container.Logger.Info("application bootstrap completed")

@@ -2,13 +2,16 @@ package orderbook
 
 import (
 	"container/heap"
+	"fmt"
+	"sort"
 	"sync"
 
-	"velocity/internal/domain/order"
 	"velocity/internal/engine/pricelevel"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
 	"velocity/pkg/timeutil"
+    "velocity/internal/domain/depth"
+	"velocity/internal/domain/order"
 )
 
 // askHeap is a min-heap of prices — lowest price is always at the root,
@@ -151,7 +154,20 @@ func (b *OrderBook) peekAsk(excluded map[int64]bool) *pricelevel.PriceLevel {
 	for b.askPrices.Len() > 0 {
 		price := b.askPrices[0]
 
+		fmt.Printf(
+			"ASK HEAP ROOT=%d ALL=%v\n",
+			price,
+			b.askPrices,
+		)
+
 		level, exists := b.Asks[price]
+		if exists {
+			fmt.Printf(
+				"FOUND ASK LEVEL price=%d level.Price=%d\n",
+				price,
+				level.Price,
+			)
+		}
 		if !exists {
 			heap.Pop(&b.askPrices)
 			continue
@@ -301,6 +317,21 @@ func (b *OrderBook) ModifyOrder(orderID string, newPrice int64, newQuantity int6
 }
 
 func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
+
+	fmt.Printf(
+		"BOOK ADD side=%s price=%d id=%s\n",
+		o.Side,
+		o.Price,
+		o.ID,
+	)
+
+	fmt.Printf(
+		"ADDING ORDER side=%s price=%d type=%s tif=%s\n",
+		o.Side,
+		o.Price,
+		o.Type,
+		o.TimeInForce,
+	)
 	var level *pricelevel.PriceLevel
 
 	if o.Side == constants.OrderSideBuy {
@@ -331,9 +362,6 @@ func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
 	}
 }
 
-
-
-
 func (b *OrderBook) GetOrder(orderID string) *order.Order {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -343,4 +371,100 @@ func (b *OrderBook) GetOrder(orderID string) *order.Order {
 		return nil
 	}
 	return location.Order
+}
+
+
+func (b *OrderBook) BidLevels(limit int) []depth.Level {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	levels := make([]depth.Level, 0, limit)
+
+	prices := make([]int64, 0, len(b.Bids))
+
+	for price := range b.Bids {
+		prices = append(prices, price)
+	}
+
+	sort.Slice(prices, func(i, j int) bool {
+		return prices[i] > prices[j]
+	})
+
+	for _, price := range prices {
+		if len(levels) >= limit {
+			break
+		}
+
+		level := b.Bids[price]
+
+		var qty int64
+
+		for e := level.Orders.Front(); e != nil; e = e.Next() {
+			o := e.Value.(*order.Order)
+			qty += o.Remaining
+		}
+
+		levels = append(levels, depth.Level{
+			Price:    price,
+			Quantity: qty,
+		})
+	}
+
+	return levels
+}
+
+
+func (b *OrderBook) AskLevels(limit int) []depth.Level {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	levels := make([]depth.Level, 0, limit)
+
+	prices := make([]int64, 0, len(b.Asks))
+
+	for price := range b.Asks {
+		prices = append(prices, price)
+	}
+
+	sort.Slice(prices, func(i, j int) bool {
+		return prices[i] < prices[j]
+	})
+
+	for _, price := range prices {
+		if len(levels) >= limit {
+			break
+		}
+
+		level := b.Asks[price]
+
+		var qty int64
+
+		for e := level.Orders.Front(); e != nil; e = e.Next() {
+			o := e.Value.(*order.Order)
+			qty += o.Remaining
+		}
+
+		levels = append(levels, depth.Level{
+			Price:    price,
+			Quantity: qty,
+		})
+	}
+
+	return levels
+}
+
+func (b *OrderBook) BestBidPrice() int64 {
+    if level := b.BestBid(); level != nil {
+        return level.Price
+    }
+
+    return 0
+}
+
+func (b *OrderBook) BestAskPrice() int64 {
+    if level := b.BestAsk(); level != nil {
+        return level.Price
+    }
+
+    return 0
 }
