@@ -3,9 +3,11 @@ package orderservice
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	"velocity/internal/domain/order"
@@ -106,6 +108,12 @@ func (s *Service) Submit(
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+	s.logger.Info(
+		"creating order",
+		zap.String("tif", string(o.TimeInForce)),
+		zap.String("type", string(o.Type)),
+		zap.String("side", string(o.Side)),
+	)
 
 	_, err = s.orderRepo.Create(
 		ctx,
@@ -117,15 +125,28 @@ func (s *Service) Submit(
 			OrderType:   string(o.Type),
 			TimeInForce: string(o.TimeInForce),
 			Status:      string(o.Status),
-			Quantity:    o.Quantity,
-			Remaining:   o.Remaining,
-			Filled:      o.Filled,
+
+			Price: pgtype.Int8{
+				Int64: o.Price,
+				Valid: true,
+			},
+
+			StopPrice: o.StopPrice,
+
+			Quantity:  o.Quantity,
+			Remaining: o.Remaining,
+			Filled:    o.Filled,
+
+			CreatedAt: o.CreatedAt,
+			UpdatedAt: o.UpdatedAt,
 		},
 	)
 
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("ORDER BEFORE ENGINE %+v\n", o)
 
 	eng := s.registry.Get(req.Symbol)
 

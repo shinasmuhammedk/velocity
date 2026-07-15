@@ -52,3 +52,15 @@ func (r *orderRepository) ListOpenOrders(
 ) ([]generated.Order, error) {
 	return r.queries.ListOpenOrders(ctx, symbol)
 }
+
+func (r *orderRepository) RecoveryOrders(
+    ctx context.Context,
+) ([]generated.Order, error) {
+    return r.queries.RecoveryOrders(ctx)
+}
+
+func (r *orderRepository) GetPendingStopOrders(
+    ctx context.Context,
+) ([]generated.Order, error) {
+    return r.queries.GetPendingStopOrders(ctx)
+}

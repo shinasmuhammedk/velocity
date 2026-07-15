@@ -19,6 +19,8 @@ type OrderRepository interface {
 	UpdateStatus(ctx context.Context, params generated.UpdateOrderStatusParams) error
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Order, error)
 	ListOpenOrders(ctx context.Context, symbol string) ([]generated.Order, error)
+	RecoveryOrders(ctx context.Context) ([]generated.Order, error)
+	GetPendingStopOrders(ctx context.Context) ([]generated.Order, error)
 }
 
 type TradeRepository interface {

@@ -18,14 +18,13 @@ type Registry struct {
 	cancel context.CancelFunc
 }
 
-func New(consumer *worker.TradeConsumer) *Registry {
+func New() *Registry {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Registry{
-		engines:  make(map[string]*engine.Engine),
-		consumer: consumer,
-		ctx:      ctx,
-		cancel:   cancel,
+		engines: make(map[string]*engine.Engine),
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 }
 
@@ -52,7 +51,14 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	}
 
 	e = engine.New(symbol)
-	r.consumer.Start(r.ctx, e.Trades())
+
+	if r.consumer != nil {
+		r.consumer.Start(
+			r.ctx,
+			e.Trades(),
+		)
+	}
+
 	r.engines[symbol] = e
 
 	return e
@@ -122,4 +128,10 @@ func (r *Registry) Shutdown() {
 		e.Stop() // needs to exist on Engine — see below
 		delete(r.engines, symbol)
 	}
+}
+
+func (r *Registry) SetConsumer(
+	consumer *worker.TradeConsumer,
+) {
+	r.consumer = consumer
 }

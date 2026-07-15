@@ -6,12 +6,15 @@ import (
 	"go.uber.org/zap"
 
 	"velocity/internal/config"
+	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
+	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
 	"velocity/internal/service/orderservice"
 	"velocity/internal/transport/http/handler"
+	wsHandler "velocity/internal/transport/ws/handler"
 )
 
 // Container holds all shared application dependencies.
@@ -42,17 +45,23 @@ type Container struct {
 	TradeWorker   worker.TradePersistenceWorker
 	TradeConsumer *worker.TradeConsumer
 
+	MarketHub *marketdata.Hub
+	WSHandler *wsHandler.Handler
+
 	Registry *registry.Registry
+
+	Recovery *recovery.Recovery
+
 	// Future
-	
+
+	//Service
+	OrderService *orderservice.Service
+
+	//Handler
+	OrderHandler *handler.OrderHandler
+
     
-    //Service
-    OrderService *orderservice.Service
-    
-    
-    //Handler
-    OrderHandler *handler.OrderHandler
-    
+    MarketPublisher *marketdata.Publisher
     
 	// Engine     *registry.Registry
 	// EventBus   eventbus.Bus
