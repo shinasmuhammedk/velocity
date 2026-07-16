@@ -56,6 +56,9 @@ func Startup() (*Container, error) {
 
 	// HTTP Server
 	container.HTTP = fiber.New()
+	container.HTTP.Use(func(c *fiber.Ctx) error {
+		return c.Next()
+	})
 	container.HTTP.Use(recover.New())
 
 	return container, nil

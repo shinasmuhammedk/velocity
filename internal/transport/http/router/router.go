@@ -13,4 +13,6 @@ func Register(
 	api := app.Group("/api")
 
 	api.Post("/orders", orderHandler.Submit)
+    api.Delete("/orders/:id", orderHandler.Cancel)
+    api.Patch("/orders/:id", orderHandler.Modify)
 }

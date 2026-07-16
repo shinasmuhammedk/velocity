@@ -117,7 +117,7 @@ Registry
 Engine
     │
     ▼
-Buffered Order Queue
+Buffered Command Queue
     │
     ▼
 Matching Worker
@@ -153,10 +153,12 @@ engine := registry.Get("BTCUSDT")
 
 ## Step 3
 
-Order enters order queue.
+Order enters Command Queue.
 
 ```go
-engine.orderQueue <- order
+engine.commandQueue <- command.SubmitOrderCommand{
+    Order: order,
+}
 ```
 
 ---
@@ -166,8 +168,23 @@ engine.orderQueue <- order
 Matching worker receives order.
 
 ```go
-for order := range orderQueue {
-    matcher.Match(order)
+for cmd := range commandQueue {
+
+    switch c := cmd.(type) {
+
+    case command.SubmitOrderCommand:
+        matcher.Match(c.Order)
+
+    case command.CancelOrderCommand:
+        orderBook.CancelOrder(c.OrderID)
+
+    case command.ModifyOrderCommand:
+        orderBook.ModifyOrder(
+            c.OrderID,
+            c.NewPrice,
+            c.NewQuantity,
+        )
+    }
 }
 ```
 
@@ -189,19 +206,50 @@ Current implementation:
 
 ```go
 func (e *Engine) start() {
-    go func() {
-        for order := range e.orderQueue {
+	go func() {
+		defer close(e.done)
 
-            trades, err := e.matcher.Match(order)
-            if err != nil {
-                continue
-            }
+		for cmd := range e.commandQueue {
 
-            for _, trade := range trades {
-                e.tradeQueue <- trade
-            }
-        }
-    }()
+			switch c := cmd.(type) {
+
+			case command.SubmitOrderCommand:
+
+				trades, err := e.matcher.Match(c.Order)
+				if err != nil {
+					continue
+				}
+
+				for _, trade := range trades {
+					e.lastTradePrice.Store(trade.Price)
+					e.tradeQueue <- trade
+				}
+
+				e.processTriggeredStops()
+
+			case command.CancelOrderCommand:
+
+				err := e.stopBook.CancelOrder(c.OrderID)
+				if err == nil {
+					c.Result <- nil
+					continue
+				}
+
+				err = e.book.CancelOrder(c.OrderID)
+				c.Result <- err
+
+			case command.ModifyOrderCommand:
+
+				err := e.book.ModifyOrder(
+					c.OrderID,
+					c.NewPrice,
+					c.NewQuantity,
+				)
+
+				c.Result <- err
+			}
+		}
+	}()
 }
 ```
 
@@ -218,12 +266,12 @@ Channels provide:
 
 ---
 
-# Order Queue
+# Command Queue
 
 Structure:
 
 ```go
-orderQueue chan *order.Order
+commandQueue chan command.Command
 ```
 
 Capacity:
@@ -236,7 +284,7 @@ Capacity:
 
 ## Purpose
 
-The order queue separates:
+The Command Queue separates:
 
 ```text
 API threads
@@ -260,7 +308,7 @@ This prevents the API layer from blocking matching operations.
 API Threads
      │
      ▼
-Order Queue
+Command Queue
      │
      ▼
 Single Matching Worker
@@ -305,6 +353,30 @@ Trade Queue
 ```
 
 ---
+
+----------------------------------
+
+# Stop Order Flow
+
+Submit Stop Order
+        │
+        ▼
+StopBook
+        │
+        ▼
+Wait For Trigger
+        │
+        ▼
+Convert To Active Order
+        │
+        ▼
+Matcher
+        │
+        ▼
+Trade Queue
+
+----------------------------------
+
 
 # Locking Strategy
 
@@ -604,7 +676,7 @@ Determinism is mandatory for exchanges.
 | Registry | RWMutex |
 | Order Book | RWMutex |
 | Matching | Single Goroutine |
-| Order Queue | Buffered Channel |
+| Command Queue | Buffered Channel |
 | Trade Queue | Buffered Channel |
 | Symbol Isolation | Separate Engine |
 
@@ -620,19 +692,15 @@ Registry
  │
  ├──── BTCUSDT Engine
  │         │
- │         ▼
- │    Order Queue
- │         │
- │         ▼
- │    Matching Worker
- │         │
- │         ▼
- │     Trade Queue
+ │         ├── Command Queue
+ │         ├── OrderBook
+ │         ├── Matcher
+ │         ├── StopBook
+ │         ├── Trade Queue
+ │         └── Last Trade Price
  │
  ├──── ETHUSDT Engine
- │
  ├──── AAPL Engine
- │
  └──── TSLA Engine
 ```
 

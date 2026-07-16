@@ -2,9 +2,6 @@ package orderservice
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -12,9 +9,12 @@ import (
 
 	"velocity/internal/domain/order"
 	"velocity/internal/engine/registry"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/constants"
+	"velocity/pkg/errors"
+	"velocity/pkg/timeutil"
 )
 
 type Service struct {
@@ -57,6 +57,11 @@ type SubmitOrderRequest struct {
 	Quantity  int64
 }
 
+type ModifyOrderRequest struct {
+	Price    int64 `json:"price"`
+	Quantity int64 `json:"quantity"`
+}
+
 func (s *Service) Submit(
 	ctx context.Context,
 	req SubmitOrderRequest,
@@ -72,7 +77,7 @@ func (s *Service) Submit(
 		userID,
 	)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return nil, errors.ErrUserNotFound
 	}
 
 	symbol, err := s.symbolRepo.Get(
@@ -80,11 +85,11 @@ func (s *Service) Submit(
 		req.Symbol,
 	)
 	if err != nil {
-		return nil, errors.New("symbol not found")
+		return nil, errors.ErrSymbolNotFound
 	}
 
 	if !symbol.IsActive {
-		return nil, errors.New("symbol inactive")
+		return nil, errors.ErrSymbolInactive
 	}
 
 	o := &order.Order{
@@ -105,8 +110,8 @@ func (s *Service) Submit(
 		Remaining: req.Quantity,
 		Filled:    0,
 
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: timeutil.UTCNow(),
+		UpdatedAt: timeutil.UTCNow(),
 	}
 	s.logger.Info(
 		"creating order",
@@ -146,20 +151,20 @@ func (s *Service) Submit(
 		return nil, err
 	}
 
-	fmt.Printf("ORDER BEFORE ENGINE %+v\n", o)
-
 	eng := s.registry.Get(req.Symbol)
 
 	err = eng.SubmitOrder(o)
 	if err != nil {
 		return nil, err
 	}
+	metrics.OrdersSubmitted.Inc()
 
 	return o, nil
 }
 
 func (s *Service) Cancel(
 	ctx context.Context,
+	// userID string,
 	orderID string,
 ) error {
 
@@ -172,18 +177,86 @@ func (s *Service) Cancel(
 		return err
 	}
 
-	eng := s.registry.Get(dbOrder.Symbol)
+	// eng := s.registry.Get(dbOrder.Symbol)
+
+	eng, ok := s.registry.Find(dbOrder.Symbol)
+	if !ok {
+		return errors.ErrEngineUnavailable
+	}
 
 	err = eng.CancelOrder(orderID)
 	if err != nil {
 		return err
+
 	}
+
+	switch dbOrder.Status {
+	case string(constants.OrderStatusFilled),
+		string(constants.OrderStatusCancelled),
+		string(constants.OrderStatusRejected):
+
+		return errors.ErrOrderNotCancelable
+	}
+
+	metrics.OrdersCancelled.Inc()
 
 	return s.orderRepo.UpdateStatus(
 		ctx,
 		generated.UpdateOrderStatusParams{
 			ID:     dbOrder.ID,
 			Status: string(constants.OrderStatusCancelled),
+		},
+	)
+}
+
+func (s *Service) Modify(
+	ctx context.Context,
+	orderID string,
+	req ModifyOrderRequest,
+) error {
+
+	dbOrder, err := s.orderRepo.GetByID(
+		ctx,
+		uuid.MustParse(orderID),
+	)
+	if err != nil {
+		return errors.ErrOrderNotFound
+	}
+
+	if dbOrder.Status != string(constants.OrderStatusOpen) {
+		return errors.ErrOrderModificationNotAllowed
+	}
+
+	if req.Quantity < dbOrder.Filled {
+		return errors.ErrQuantityTooLow
+	}
+
+	eng := s.registry.Get(dbOrder.Symbol)
+
+	err = eng.ModifyOrder(
+		orderID,
+		req.Price,
+		req.Quantity,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	remaining := req.Quantity - dbOrder.Filled
+
+	metrics.OrdersModified.Inc()
+
+	return s.orderRepo.UpdateOrderForModify(
+		ctx,
+		generated.UpdateOrderForModifyParams{
+			ID: dbOrder.ID,
+			Price: pgtype.Int8{
+				Int64: req.Price,
+				Valid: true,
+			},
+			Quantity:  req.Quantity,
+			Remaining: remaining,
 		},
 	)
 }

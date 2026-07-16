@@ -1,7 +1,6 @@
 package stopbook
 
 import (
-	// "errors"
     apperr "velocity/pkg/errors"
 	"sync"
 	"velocity/internal/domain/order"

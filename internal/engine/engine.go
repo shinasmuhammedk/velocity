@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"errors"
 	"sync/atomic"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
@@ -9,7 +8,9 @@ import (
 	"velocity/internal/engine/matcher"
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/stopbook"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/pkg/constants"
+	"velocity/pkg/errors"
 )
 
 type Engine struct {
@@ -46,6 +47,8 @@ func (e *Engine) start() {
 				}
 				for _, t := range trades {
 					e.lastTradePrice.Store(t.Price)
+					metrics.TradesExecuted.Inc()
+
 					e.tradeQueue <- t
 				}
 
@@ -97,9 +100,7 @@ func (e *Engine) SubmitOrder(
 	if order.TimeInForce == constants.TimeInForcePostOnly &&
 		order.Type != constants.OrderTypeLimit {
 
-		return errors.New(
-			"post only orders must be limit orders",
-		)
+		return errors.ErrPostOnlyMustBeLimit
 	}
 
 	// STOP order validation
@@ -107,25 +108,21 @@ func (e *Engine) SubmitOrder(
 		order.Type == constants.StopLimitOrder {
 
 		if order.StopPrice <= 0 {
-			return errors.New("invalid stop price")
+			return errors.ErrInvalidStopPrice
 		}
 
 		if order.Side == constants.OrderSideBuy &&
 			e.lastTradePrice.Load() > 0 &&
 			order.StopPrice <= e.lastTradePrice.Load() {
 
-			return errors.New(
-				"buy stop must be above market price",
-			)
+			return errors.ErrBuyStopBelowMarket
 		}
 
 		if order.Side == constants.OrderSideSell &&
 			e.lastTradePrice.Load() > 0 &&
 			order.StopPrice >= e.lastTradePrice.Load() {
 
-			return errors.New(
-				"sell stop must be below market price",
-			)
+			return errors.ErrSellStopAboveMarket
 		}
 	}
 
@@ -154,15 +151,21 @@ func (e *Engine) CancelOrder(orderID string) error {
 	return <-resultCh // blocks until the background goroutine actually processes it
 }
 
-// Engine.ModifyOrder
-func (e *Engine) ModifyOrder(orderID string, newPrice, newQuantity int64) error {
+func (e *Engine) ModifyOrder(
+	orderID string,
+	newPrice int64,
+	newQuantity int64,
+) error {
+
 	resultCh := make(chan error, 1)
+
 	e.commandQueue <- command.ModifyOrderCommand{
 		OrderID:     orderID,
 		NewPrice:    newPrice,
 		NewQuantity: newQuantity,
 		Result:      resultCh,
 	}
+
 	return <-resultCh
 }
 

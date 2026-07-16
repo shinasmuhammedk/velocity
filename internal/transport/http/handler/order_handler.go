@@ -3,6 +3,7 @@ package handler
 import (
 	"velocity/internal/service/orderservice"
 	"velocity/pkg/constants"
+	"velocity/pkg/response"
 
 	httprequest "velocity/internal/transport/http/dto/request"
 	httpresponse "velocity/internal/transport/http/dto/response"
@@ -65,5 +66,71 @@ func (h *OrderHandler) Submit(c *fiber.Ctx) error {
 			Status:  string(order.Status),
 			Symbol:  order.Symbol,
 		},
+	)
+}
+
+func (h *OrderHandler) Cancel(c *fiber.Ctx) error {
+
+	// userID := middleware.GetUserID(c)
+
+	orderID := c.Params("id")
+
+	err := h.orderService.Cancel(c.Context(), orderID)
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"failed to cancel order",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"order cancelled successfully",
+		nil,
+	)
+}
+
+
+
+func (h *OrderHandler) Modify(
+	c *fiber.Ctx,
+) error {
+
+	orderID := c.Params("id")
+
+	var req orderservice.ModifyOrderRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid request body",
+			err.Error(),
+		)
+	}
+
+	err := h.orderService.Modify(
+		c.Context(),
+		orderID,
+		req,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"failed to modify order",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"order modified successfully",
+		nil,
 	)
 }

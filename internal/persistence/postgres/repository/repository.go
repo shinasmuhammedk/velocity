@@ -21,6 +21,7 @@ type OrderRepository interface {
 	ListOpenOrders(ctx context.Context, symbol string) ([]generated.Order, error)
 	RecoveryOrders(ctx context.Context) ([]generated.Order, error)
 	GetPendingStopOrders(ctx context.Context) ([]generated.Order, error)
+	UpdateOrderForModify(ctx context.Context, params generated.UpdateOrderForModifyParams) error
 }
 
 type TradeRepository interface {

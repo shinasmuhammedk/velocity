@@ -25,6 +25,12 @@ The bootstrap process is responsible for:
 * Registering routes and middleware
 * Starting the server
 * Handling graceful shutdown
+* Stop HTTP server
+* Drain request queue
+* Stop symbol engines
+* Flush persistence buffers
+* Close database connections
+* Flush logs
 
 ---
 
@@ -43,6 +49,9 @@ Initialize Logger
 Connect PostgreSQL
         │
         ▼
+Initialize Metrics
+        │
+        ▼
 Initialize Infrastructure
         │
         ▼
@@ -53,6 +62,18 @@ Create Service Layer
         │
         ▼
 Create Engine Registry
+        │
+        ▼
+Load Active Symbols
+        │
+        ▼
+Create One Engine Per Symbol
+        │
+        ▼
+Recover Open Orders
+        │
+        ▼
+Recover Stop Orders
         │
         ▼
 Create HTTP Server
@@ -77,6 +98,10 @@ Accept Client Requests
 * Fail Fast on startup errors
 * Graceful shutdown
 * No global mutable state
+* One matching engine per symbol
+* Single-threaded deterministic matching
+* In-memory hot path
+* Database outside matching path
 
 ---
 
@@ -85,6 +110,8 @@ Accept Client Requests
 ```text
 cmd/api/
 internal/app/
+internal/bootstrap/
+internal/engine/registry/
 ```
 
 ---
@@ -95,13 +122,14 @@ The bootstrap process will later initialize:
 
 * Redis
 * Kafka/NATS
-* Prometheus
 * WebSocket Hub
 * Worker Pool
 * Background Jobs
 * Distributed Tracing
-* Metrics
-* Authentication
 * Risk Engine
+* Snapshot Recovery
+* Event Sourcing
+* Persistence Worker
+* Market Data Service
 
 These components should be added without changing the startup philosophy.
