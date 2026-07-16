@@ -6,6 +6,8 @@ Logging provides visibility into the behavior of Velocity during development, te
 
 Logs help engineers understand request flow, detect failures, diagnose issues, and monitor system health.
 
+Logs complement metrics by providing contextual information that metrics alone cannot provide.
+
 The logging system must be lightweight, structured, and reusable.
 
 ---
@@ -41,6 +43,7 @@ Each level should be used consistently across the application.
 * Errors should contain enough information for debugging.
 * Sensitive information must never be logged.
 * Logging should not affect request latency.
+* Logs should be machine parseable.
 
 ---
 
@@ -50,16 +53,16 @@ Each level should be used consistently across the application.
 Application Event
         │
         ▼
-Logger
+Structured Logger (Zap)
         │
         ▼
-Structured Log Entry
+JSON Log Entry
         │
-        ▼
-Console / File
+        ├────────► Console Output
         │
-        ▼
-Monitoring System (Future)
+        ├────────► File Output (Future)
+        │
+        └────────► Log Aggregation (Future)
 ```
 
 ---
@@ -72,6 +75,7 @@ The logger will be used by:
 * HTTP Server
 * Middleware
 * Services
+* Repositories
 * Matching Engine
 * Worker Pool
 * Persistence Layer
@@ -93,7 +97,6 @@ pkg/logger/
 
 The logging system may later support:
 
-* JSON logs
 * Log rotation
 * Correlation IDs
 * Request IDs

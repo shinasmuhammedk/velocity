@@ -1,11 +1,10 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/go-playground/validator/v10"
+	"strings"
+	velocityerrors "velocity/pkg/errors"    
 )
 
 var validate *validator.Validate
@@ -25,7 +24,10 @@ func Validate(v interface{}) error {
 				messages = append(messages, formatError(fieldErr))
 			}
 
-			return errors.New(strings.Join(messages, ", "))
+			return velocityerrors.New(
+				velocityerrors.CodeValidation,
+				strings.Join(messages, ", "),
+			)
 		}
 
 		return err

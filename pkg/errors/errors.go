@@ -76,4 +76,71 @@ var (
 		CodeStopOrderNotFound,
 		"stop order not found",
 	)
+
+	ErrInvalidStopPrice = New(
+		CodeInvalidStopPrice,
+		"invalid stop price",
+	)
+
+	ErrPostOnlyMustBeLimit = New(
+		CodePostOnlyViolation,
+		"post only orders must be limit orders",
+	)
+
+	ErrBuyStopBelowMarket = New(
+		CodeInvalidStopTrigger,
+		"buy stop must be above market price",
+	)
+
+	ErrSellStopAboveMarket = New(
+		CodeInvalidStopTrigger,
+		"sell stop must be below market price",
+	)
+
+	ErrUserNotFound = New(
+		CodeUserNotFound,
+		"user not found",
+	)
+
+	// Symbols
+
+	ErrSymbolNotFound = New(
+		CodeSymbolNotFound,
+		"symbol not found",
+	)
+
+	ErrSymbolInactive = New(
+		CodeSymbolInactive,
+		"symbol inactive",
+	)
+
+	ErrEngineUnavailable = New(
+		CodeEngineUnavailable,
+		"symbol engine unavailable",
+	)
+
+	ErrOrderNotCancelable = New(
+		CodeOrderNotCancelable,
+		"order cannot be cancelled",
+	)
+
+	ErrOrderModificationNotAllowed = New(
+		CodeOrderModificationNotAllowed,
+		"only open orders can be modified",
+	)
+
+	ErrQuantityTooLow = New(
+		CodeQuantityTooLow,
+		"quantity cannot be less than filled quantity",
+	)
+
+	ErrConfigInvalid = New(
+		CodeConfigInvalid,
+		"invalid configuration",
+	)
+
+	ErrConfigMissing = New(
+		CodeConfigMissing,
+		"required configuration missing",
+	)
 )

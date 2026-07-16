@@ -31,3 +31,17 @@ func Wrap(code Code, message string, err error) *Error {
 		Err:     err,
 	}
 }
+
+func NewConfigMissing(field string) *Error {
+    return &Error{
+        Code:    CodeConfigMissing,
+        Message: field + " is required",
+    }
+}
+
+func NewConfigInvalid(field string, reason string) *Error {
+	return &Error{
+		Code:    CodeConfigInvalid,
+		Message: field + " " + reason,
+	}
+}

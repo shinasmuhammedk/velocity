@@ -45,7 +45,13 @@ Load Environment Variables
 Merge Configuration
         │
         ▼
-Validate
+Validate Configuration
+        │
+        ▼
+Fail Fast On Errors
+        │
+        ▼
+Expose Immutable Configuration
         │
         ▼
 Expose Configuration
@@ -64,7 +70,7 @@ Examples include:
 * Logging
 * Metrics
 * Redis (future)
-* Kafka (future)
+* Kafka/NATS (future)
 
 ---
 
@@ -75,6 +81,7 @@ Examples include:
 * Loaded once
 * Shared across the application
 * Fail Fast if invalid
+* Strong startup validation
 
 ---
 
@@ -97,3 +104,9 @@ Future configuration may include:
 * Cloud storage
 * External service configuration
 * Feature flags
+* Snapshot configuration
+* Recovery configuration
+* WebSocket configuration
+* Risk engine configuration
+* Persistence worker configuration
+* Event store configuration

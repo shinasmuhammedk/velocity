@@ -135,3 +135,11 @@ func (r *Registry) SetConsumer(
 ) {
 	r.consumer = consumer
 }
+
+func (r *Registry) Find(symbol string) (*engine.Engine, bool) {
+    r.mu.RLock()
+    defer r.mu.RUnlock()
+
+    e, ok := r.engines[symbol]
+    return e, ok
+}

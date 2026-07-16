@@ -2,7 +2,6 @@ package orderbook
 
 import (
 	"container/heap"
-	"fmt"
 	"sort"
 	"sync"
 
@@ -154,19 +153,11 @@ func (b *OrderBook) peekAsk(excluded map[int64]bool) *pricelevel.PriceLevel {
 	for b.askPrices.Len() > 0 {
 		price := b.askPrices[0]
 
-		fmt.Printf(
-			"ASK HEAP ROOT=%d ALL=%v\n",
-			price,
-			b.askPrices,
-		)
+
 
 		level, exists := b.Asks[price]
 		if exists {
-			fmt.Printf(
-				"FOUND ASK LEVEL price=%d level.Price=%d\n",
-				price,
-				level.Price,
-			)
+
 		}
 		if !exists {
 			heap.Pop(&b.askPrices)
@@ -318,20 +309,8 @@ func (b *OrderBook) ModifyOrder(orderID string, newPrice int64, newQuantity int6
 
 func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
 
-	fmt.Printf(
-		"BOOK ADD side=%s price=%d id=%s\n",
-		o.Side,
-		o.Price,
-		o.ID,
-	)
 
-	fmt.Printf(
-		"ADDING ORDER side=%s price=%d type=%s tif=%s\n",
-		o.Side,
-		o.Price,
-		o.Type,
-		o.TimeInForce,
-	)
+
 	var level *pricelevel.PriceLevel
 
 	if o.Side == constants.OrderSideBuy {

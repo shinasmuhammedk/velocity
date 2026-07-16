@@ -64,3 +64,13 @@ func (r *orderRepository) GetPendingStopOrders(
 ) ([]generated.Order, error) {
     return r.queries.GetPendingStopOrders(ctx)
 }
+
+func (r *orderRepository) UpdateOrderForModify(
+    ctx context.Context,
+    params generated.UpdateOrderForModifyParams,
+) error {
+    return r.queries.UpdateOrderForModify(
+        ctx,
+        params,
+    )
+}

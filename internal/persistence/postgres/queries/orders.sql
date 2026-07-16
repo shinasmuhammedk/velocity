@@ -137,3 +137,12 @@ AND status IN (
     'PENDING'
 )
 ORDER BY created_at ASC;
+
+-- name: UpdateOrderForModify :exec
+UPDATE orders
+SET
+    price = $2,
+    quantity = $3,
+    remaining = $4,
+    updated_at = NOW()
+WHERE id = $1;

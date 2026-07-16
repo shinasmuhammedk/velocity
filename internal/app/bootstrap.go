@@ -5,6 +5,7 @@ import (
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -14,6 +15,9 @@ import (
 	"velocity/internal/transport/http/router"
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
+
+	"github.com/gofiber/adaptor/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Bootstrap creates and initializes the application.
@@ -61,6 +65,12 @@ func Bootstrap() (*Container, error) {
 	//
 	// Register HTTP handlers
 	//
+
+	//metrics
+	metrics.Register()
+	container.Logger.Info(
+		"prometheus metrics registered",
+	)
 
 	// Register WebSocket hub
 	//
@@ -127,6 +137,11 @@ func Bootstrap() (*Container, error) {
 	router.Register(
 		container.HTTP,
 		container.OrderHandler,
+	)
+
+	container.HTTP.Get(
+		"/metrics",
+		adaptor.HTTPHandler(promhttp.Handler()),
 	)
 
 	// WebSocket Routes
