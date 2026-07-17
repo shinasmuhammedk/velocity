@@ -5,13 +5,16 @@ import (
 	"testing"
 
 	"velocity/internal/engine/registry"
+	"velocity/internal/engine/snapshot"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRegistryCreatesEngine(t *testing.T) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	e := r.Get("BTCUSDT")
 
@@ -25,7 +28,9 @@ func TestRegistryCreatesEngine(t *testing.T) {
 }
 
 func TestRegistryReturnsSameEngine(t *testing.T) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	e1 := r.Get("BTCUSDT")
 	e2 := r.Get("BTCUSDT")
@@ -38,7 +43,9 @@ func TestRegistryReturnsSameEngine(t *testing.T) {
 }
 
 func TestRegistryCreatesDifferentEngines(t *testing.T) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	btc := r.Get("BTCUSDT")
 	eth := r.Get("ETHUSDT")
@@ -57,8 +64,9 @@ func TestRegistryCreatesDifferentEngines(t *testing.T) {
 }
 
 func TestRegistryExists(t *testing.T) {
-	r := registry.New()
-
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 	assert.False(
 		t,
 		r.Exists("BTCUSDT"),
@@ -73,8 +81,9 @@ func TestRegistryExists(t *testing.T) {
 }
 
 func TestRegistryRemove(t *testing.T) {
-	r := registry.New()
-
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 	r.Get("BTCUSDT")
 
 	assert.True(
@@ -97,7 +106,9 @@ func TestRegistryRemove(t *testing.T) {
 }
 
 func TestRegistrySymbols(t *testing.T) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	r.Get("BTCUSDT")
 	r.Get("ETHUSDT")
@@ -131,7 +142,9 @@ func TestRegistrySymbols(t *testing.T) {
 }
 
 func TestRegistryConcurrentAccess(t *testing.T) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	var wg sync.WaitGroup
 
@@ -157,7 +170,9 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 func TestRegistryConcurrentDifferentSymbols(
 	t *testing.T,
 ) {
-	r := registry.New()
+	r := registry.New(
+		&snapshot.MockWriter{},
+	)
 
 	symbols := []string{
 		"BTCUSDT",

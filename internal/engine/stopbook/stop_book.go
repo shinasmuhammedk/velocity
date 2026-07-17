@@ -1,20 +1,18 @@
 package stopbook
 
 import (
-    apperr "velocity/pkg/errors"
 	"sync"
 	"velocity/internal/domain/order"
 	"velocity/pkg/constants"
-
+	apperr "velocity/pkg/errors"
 )
-
 
 type StopBook struct {
 	buyStops  map[int64][]*order.Order
 	sellStops map[int64][]*order.Order
 
 	orderIndex map[string]*order.Order
-    mu sync.Mutex
+	mu         sync.Mutex
 }
 
 func New() *StopBook {
@@ -26,9 +24,9 @@ func New() *StopBook {
 }
 
 func (s *StopBook) Add(o *order.Order) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if o.Side == constants.OrderSideBuy {
 		s.buyStops[o.StopPrice] =
 			append(s.buyStops[o.StopPrice], o)
@@ -41,9 +39,9 @@ func (s *StopBook) Add(o *order.Order) {
 }
 
 func (s *StopBook) Trigger(price int64) []*order.Order {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var triggered []*order.Order
 
 	for stopPrice, orders := range s.buyStops {
@@ -74,9 +72,9 @@ func (s *StopBook) Trigger(price int64) []*order.Order {
 }
 
 func (s *StopBook) CancelOrder(orderID string) error {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	o, ok := s.orderIndex[orderID]
 	if !ok {
 		return apperr.ErrStopOrderNotFound
@@ -114,4 +112,33 @@ func (s *StopBook) CancelOrder(orderID string) error {
 	}
 
 	return apperr.ErrStopOrderNotFound
+}
+
+func (s *StopBook) Orders() []*order.Order {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	orders := make(
+		[]*order.Order,
+		0,
+		len(s.orderIndex),
+	)
+
+	// Buy stops
+	for _, stopOrders := range s.buyStops {
+		orders = append(
+			orders,
+			stopOrders...,
+		)
+	}
+
+	// Sell stops
+	for _, stopOrders := range s.sellStops {
+		orders = append(
+			orders,
+			stopOrders...,
+		)
+	}
+
+	return orders
 }

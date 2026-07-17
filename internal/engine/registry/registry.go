@@ -3,8 +3,10 @@ package registry
 import (
 	"context"
 	"sync"
+	"time"
 
 	"velocity/internal/engine"
+	"velocity/internal/engine/snapshot"
 	"velocity/internal/persistence/worker"
 )
 
@@ -14,17 +16,24 @@ type Registry struct {
 
 	consumer *worker.TradeConsumer
 
+	snapshotWriter snapshot.SnapshotWriter
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func New() *Registry {
+func New(
+	snapshotWriter snapshot.SnapshotWriter,
+) *Registry {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Registry{
 		engines: make(map[string]*engine.Engine),
-		ctx:     ctx,
-		cancel:  cancel,
+
+		snapshotWriter: snapshotWriter,
+
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
@@ -51,6 +60,14 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	}
 
 	e = engine.New(symbol)
+
+	manager := snapshot.NewManager(
+		r.snapshotWriter,
+		30*time.Second,
+		100000,
+	)
+
+	manager.Start(e)
 
 	if r.consumer != nil {
 		r.consumer.Start(
@@ -137,9 +154,9 @@ func (r *Registry) SetConsumer(
 }
 
 func (r *Registry) Find(symbol string) (*engine.Engine, bool) {
-    r.mu.RLock()
-    defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-    e, ok := r.engines[symbol]
-    return e, ok
+	e, ok := r.engines[symbol]
+	return e, ok
 }
