@@ -5,12 +5,12 @@ import (
 	"sort"
 	"sync"
 
+	"velocity/internal/domain/depth"
+	"velocity/internal/domain/order"
 	"velocity/internal/engine/pricelevel"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
 	"velocity/pkg/timeutil"
-    "velocity/internal/domain/depth"
-	"velocity/internal/domain/order"
 )
 
 // askHeap is a min-heap of prices — lowest price is always at the root,
@@ -152,8 +152,6 @@ func (b *OrderBook) peekAsk(excluded map[int64]bool) *pricelevel.PriceLevel {
 
 	for b.askPrices.Len() > 0 {
 		price := b.askPrices[0]
-
-
 
 		level, exists := b.Asks[price]
 		if exists {
@@ -309,8 +307,6 @@ func (b *OrderBook) ModifyOrder(orderID string, newPrice int64, newQuantity int6
 
 func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
 
-
-
 	var level *pricelevel.PriceLevel
 
 	if o.Side == constants.OrderSideBuy {
@@ -352,7 +348,6 @@ func (b *OrderBook) GetOrder(orderID string) *order.Order {
 	return location.Order
 }
 
-
 func (b *OrderBook) BidLevels(limit int) []depth.Level {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -391,7 +386,6 @@ func (b *OrderBook) BidLevels(limit int) []depth.Level {
 
 	return levels
 }
-
 
 func (b *OrderBook) AskLevels(limit int) []depth.Level {
 	b.mu.RLock()
@@ -433,17 +427,70 @@ func (b *OrderBook) AskLevels(limit int) []depth.Level {
 }
 
 func (b *OrderBook) BestBidPrice() int64 {
-    if level := b.BestBid(); level != nil {
-        return level.Price
-    }
+	if level := b.BestBid(); level != nil {
+		return level.Price
+	}
 
-    return 0
+	return 0
 }
 
 func (b *OrderBook) BestAskPrice() int64 {
-    if level := b.BestAsk(); level != nil {
-        return level.Price
-    }
+	if level := b.BestAsk(); level != nil {
+		return level.Price
+	}
 
-    return 0
+	return 0
+}
+
+func (b *OrderBook) ActiveOrders() []*order.Order {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	orders := make([]*order.Order, 0, len(b.Orders))
+
+	// -----------------------------
+	// Bids (highest price first)
+	// -----------------------------
+	bidPrices := make([]int64, 0, len(b.Bids))
+
+	for price := range b.Bids {
+		bidPrices = append(bidPrices, price)
+	}
+
+	sort.Slice(bidPrices, func(i, j int) bool {
+		return bidPrices[i] > bidPrices[j]
+	})
+
+	for _, price := range bidPrices {
+		level := b.Bids[price]
+
+		for e := level.Orders.Front(); e != nil; e = e.Next() {
+			o := e.Value.(*order.Order)
+			orders = append(orders, o)
+		}
+	}
+
+	// -----------------------------
+	// Asks (lowest price first)
+	// -----------------------------
+	askPrices := make([]int64, 0, len(b.Asks))
+
+	for price := range b.Asks {
+		askPrices = append(askPrices, price)
+	}
+
+	sort.Slice(askPrices, func(i, j int) bool {
+		return askPrices[i] < askPrices[j]
+	})
+
+	for _, price := range askPrices {
+		level := b.Asks[price]
+
+		for e := level.Orders.Front(); e != nil; e = e.Next() {
+			o := e.Value.(*order.Order)
+			orders = append(orders, o)
+		}
+	}
+
+	return orders
 }

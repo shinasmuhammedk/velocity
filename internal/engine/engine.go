@@ -7,13 +7,17 @@ import (
 	"velocity/internal/engine/command"
 	"velocity/internal/engine/matcher"
 	"velocity/internal/engine/orderbook"
+	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/stopbook"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
+	"velocity/pkg/timeutil"
 )
 
 type Engine struct {
+	symbol string
+
 	book     *orderbook.OrderBook
 	matcher  *matcher.Matcher
 	stopBook *stopbook.StopBook
@@ -22,6 +26,7 @@ type Engine struct {
 	tradeQueue   chan *trade.Trade
 
 	lastTradePrice atomic.Int64
+	sequence       atomic.Uint64
 
 	done chan struct{} // new
 }
@@ -38,6 +43,9 @@ func (e *Engine) start() {
 
 					e.stopBook.Add(c.Order)
 					c.Order.Status = constants.OrderStatusPending
+
+					e.incrementSequence()
+
 					continue
 				}
 
@@ -45,29 +53,47 @@ func (e *Engine) start() {
 				if err != nil {
 					continue
 				}
+
+				e.incrementSequence()
+
 				for _, t := range trades {
 					e.lastTradePrice.Store(t.Price)
 					metrics.TradesExecuted.Inc()
 
 					e.tradeQueue <- t
 				}
-
 				e.processTriggeredStops()
 
 			case command.CancelOrderCommand:
 
 				err := e.stopBook.CancelOrder(c.OrderID)
+
 				if err == nil {
+					e.incrementSequence()
 					c.Result <- nil
 					continue
 				}
 
 				err = e.book.CancelOrder(c.OrderID)
+
+				if err == nil {
+					e.incrementSequence()
+				}
+
 				c.Result <- err
 
 				// in engine.go's start()
 			case command.ModifyOrderCommand:
-				err := e.book.ModifyOrder(c.OrderID, c.NewPrice, c.NewQuantity)
+				err := e.book.ModifyOrder(
+					c.OrderID,
+					c.NewPrice,
+					c.NewQuantity,
+				)
+
+				if err == nil {
+					e.incrementSequence()
+				}
+
 				c.Result <- err
 			}
 		}
@@ -78,6 +104,7 @@ func New(symbol string) *Engine {
 	book := orderbook.New(symbol)
 
 	e := &Engine{
+		symbol:       symbol,
 		book:         book,
 		matcher:      matcher.New(book),
 		stopBook:     stopbook.New(),
@@ -179,6 +206,8 @@ func (e *Engine) processTriggeredStops() {
 
 		for _, stopOrder := range triggered {
 
+			e.incrementSequence()
+
 			switch stopOrder.Type {
 
 			case constants.StopMarketOrder:
@@ -227,5 +256,59 @@ func (e *Engine) RecoverOrder(o *order.Order) {
 	default:
 
 		e.book.AddOrder(o)
+	}
+}
+
+func (e *Engine) Sequence() uint64 {
+	return e.sequence.Load()
+}
+
+func (e *Engine) SetSequence(seq uint64) {
+	e.sequence.Store(seq)
+}
+
+func (e *Engine) SetLastTradePrice(price int64) {
+	e.lastTradePrice.Store(price)
+}
+
+func (e *Engine) incrementSequence() uint64 {
+	return e.sequence.Add(1)
+}
+
+func (e *Engine) SnapshotState() *snapshot.Snapshot {
+	return &snapshot.Snapshot{
+		Symbol:         e.symbol,
+		Sequence:       e.Sequence(),
+		LastTradePrice: e.LastTradePrice(),
+		ActiveOrders:   e.book.ActiveOrders(),
+		StopOrders:     e.stopBook.Orders(),
+		CreatedAt:      timeutil.UTCNow(),
+	}
+}
+
+func (e *Engine) RestoreSnapshot(
+	s *snapshot.Snapshot,
+) {
+
+	e.sequence.Store(
+		s.Sequence,
+	)
+
+	e.lastTradePrice.Store(
+		s.LastTradePrice,
+	)
+
+
+	for _, o := range s.ActiveOrders {
+
+		e.book.AddOrder(o)
+
+	}
+
+
+	for _, o := range s.StopOrders {
+
+		e.stopBook.Add(o)
+
 	}
 }

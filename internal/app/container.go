@@ -63,6 +63,8 @@ type Container struct {
     
     MarketPublisher *marketdata.Publisher
     
+    SnapshotRecovery *recovery.SnapshotRecovery
+    
 	// Engine     *registry.Registry
 	// EventBus   eventbus.Bus
 	// Redis      *redis.Client

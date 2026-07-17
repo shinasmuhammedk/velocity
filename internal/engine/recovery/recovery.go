@@ -6,20 +6,27 @@ import (
 	"velocity/internal/domain/order"
 	"velocity/internal/engine/registry"
 	"velocity/internal/persistence/postgres/generated"
-	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/constants"
 
 	"go.uber.org/zap"
 )
 
 type Recovery struct {
-	orderRepo repository.OrderRepository
+	orderRepo RecoveryOrderRepository
 	registry  *registry.Registry
 	logger    *zap.Logger
 }
 
+type RecoveryOrderRepository interface {
+	RecoveryOrders(
+		ctx context.Context,
+	) ([]generated.Order, error)
+}
+
+
+
 func New(
-	orderRepo repository.OrderRepository,
+	orderRepo RecoveryOrderRepository,
 	registry *registry.Registry,
 	logger *zap.Logger,
 ) *Recovery {
@@ -30,8 +37,14 @@ func New(
 	}
 }
 
+// Load replays open orders from Postgres into their engines.
+// alreadyRestored marks symbols whose order book was already fully
+// rebuilt from a snapshot this startup — those symbols are skipped here
+// entirely, since replaying them too would insert every open order a
+// second time (see recovery double-insertion bug).
 func (r *Recovery) Load(
 	ctx context.Context,
+	alreadyRestored map[string]bool,
 ) error {
 
 	orders, err := r.orderRepo.RecoveryOrders(ctx)
@@ -39,23 +52,29 @@ func (r *Recovery) Load(
 		return err
 	}
 
+	recoveredCount := 0
+	skippedCount := 0
+
 	for _, dbOrder := range orders {
 
-		engine := r.registry.Get(
-			dbOrder.Symbol,
-		)
+		if alreadyRestored[dbOrder.Symbol] {
+			skippedCount++
+			continue
+		}
+
+		engine := r.registry.Get(dbOrder.Symbol)
 
 		engine.RecoverOrder(
 			toDomainOrder(dbOrder),
 		)
+
+		recoveredCount++
 	}
 
 	r.logger.Info(
 		"recovery completed",
-		zap.Int(
-			"orders_recovered",
-			len(orders),
-		),
+		zap.Int("orders_recovered", recoveredCount),
+		zap.Int("orders_skipped_snapshot_already_restored", skippedCount),
 	)
 
 	return nil

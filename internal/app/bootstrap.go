@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
+	"velocity/internal/engine/snapshot"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
@@ -74,10 +76,19 @@ func Bootstrap() (*Container, error) {
 
 	// Register WebSocket hub
 	//
+
+	serializer := snapshot.NewJSONSerializer()
+
+	writer := snapshot.NewWriter(
+		"./snapshots",
+		serializer,
+	)
+
 	// Register background workers
 	//
 	// Matching Engine Registry
-	container.Registry = registry.New()
+	container.Registry = registry.New(writer)
+
 	provider := func(symbol string) *orderbook.OrderBook {
 		engine := container.Registry.Get(symbol)
 
@@ -88,6 +99,16 @@ func Bootstrap() (*Container, error) {
 		return engine.OrderBook()
 	}
 	container.Logger.Info("engine registry initialized")
+
+	snapshotLoader := snapshot.NewLoader(
+		"./snapshots",
+		snapshot.NewJSONSerializer(),
+	)
+
+	snapshotRecovery := recovery.NewSnapshotRecovery(
+		snapshotLoader,
+		container.Registry,
+	)
 
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.TradeWorker,
@@ -108,11 +129,37 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("recovery service initialized")
 
-	err = container.Recovery.Load(context.Background())
+	symbols, err := container.SymbolRepository.List(
+		context.Background(),
+	)
+
 	if err != nil {
 		return nil, err
 	}
-	container.Logger.Info("recovery completed")
+
+	// Snapshot restore runs FIRST, per symbol. Any symbol successfully
+	// restored from a snapshot is recorded here, so the DB-based recovery
+	// pass below skips it entirely — otherwise every open order for that
+	// symbol would be inserted a second time (see recovery bug notes).
+	alreadyRestored := make(map[string]bool, len(symbols))
+
+	for _, symbol := range symbols {
+
+		restored, err := snapshotRecovery.Restore(symbol.Symbol)
+		if err != nil {
+			return nil, err
+		}
+
+		alreadyRestored[symbol.Symbol] = restored
+	}
+
+	container.Logger.Info("snapshot recovery completed")
+
+	if err := container.Recovery.Load(context.Background(), alreadyRestored); err != nil {
+		return nil, err
+	}
+
+	container.Logger.Info("database recovery completed")
 
 	//OrderService
 	container.OrderService = orderservice.New(
