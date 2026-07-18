@@ -13,7 +13,7 @@ func Register(
 ) {
 
 	app.Use(
-		"/ws/:symbol",
+		"/ws",
 		func(c *fiber.Ctx) error {
 			if websocket.IsWebSocketUpgrade(c) {
 				return c.Next()
@@ -24,7 +24,7 @@ func Register(
 	)
 
 	app.Get(
-		"/ws/:symbol",
+		"/ws",
 		websocket.New(handler.Handle),
 	)
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"velocity/internal/marketdata"
+	"velocity/pkg/constants"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -21,26 +22,56 @@ func NewHandler(
 func (h *Handler) Handle(
 	c *websocket.Conn,
 ) {
-	symbol := c.Params("symbol")
 
 	client := &marketdata.Client{
 		Conn: c,
 	}
 
-	h.hub.Subscribe(
-		symbol,
-		client,
-	)
-
-	defer h.hub.Unsubscribe(
-		symbol,
-		client,
-	)
-
 	for {
-		_, _, err := c.ReadMessage()
-		if err != nil {
+
+		var req marketdata.ClientRequest
+
+		if err := c.ReadJSON(&req); err != nil {
 			break
+		}
+
+		switch req.Action {
+
+		case constants.ActionSubscribe:
+
+			h.hub.Subscribe(
+				req.Symbol,
+				client,
+			)
+
+			client.Send(
+				marketdata.ServerResponse{
+					Type: constants.ResponseSubscribed,
+					Data: req.Symbol,
+				},
+			)
+
+		case constants.ActionUnsubscribe:
+
+			h.hub.Unsubscribe(
+				req.Symbol,
+				client,
+			)
+
+			client.Send(
+				marketdata.ServerResponse{
+					Type: constants.ResponseUnsubscribed,
+					Data: req.Symbol,
+				},
+			)
+
+		case constants.ActionPing:
+
+			client.Send(
+				marketdata.ServerResponse{
+					Type: constants.ResponsePong,
+				},
+			)
 		}
 	}
 }

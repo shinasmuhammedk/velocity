@@ -2,7 +2,7 @@ package marketdata
 
 import (
 	"velocity/internal/domain/trade"
-	"velocity/internal/engine/orderbook"
+	"velocity/pkg/constants"
 )
 
 type Publisher struct {
@@ -24,7 +24,7 @@ func (p *Publisher) PublishTrade(
 	p.hub.Broadcast(
 		t.Symbol,
 		Message{
-			Type:   "trade",
+			Type:   constants.MessageTrade,
 			Symbol: t.Symbol,
 			Data: TradeMessage{
 				TradeID:  t.ID.String(),
@@ -39,51 +39,43 @@ func (p *Publisher) PublishTrade(
 
 func (p *Publisher) PublishTicker(
 	symbol string,
-	book *orderbook.OrderBook,
+	lastPrice int64,
+	book MarketDataProvider,
 ) {
 
-	bestBid := int64(0)
-	bestAsk := int64(0)
+	bestBid := book.BestBidPrice()
+	bestAsk := book.BestAskPrice()
 
-	if bid := book.BestBid(); bid != nil {
-		bestBid = bid.Price
-	}
-
-	if ask := book.BestAsk(); ask != nil {
-		bestAsk = ask.Price
-	}
+	msg := NewTickerMessage(
+		symbol,
+		lastPrice,
+		bestBid,
+		bestAsk,
+	)
 
 	p.hub.Broadcast(
 		symbol,
-		Message{
-			Type:   "ticker",
-			Symbol: symbol,
-			Data: TickerMessage{
-				BestBid: bestBid,
-				BestAsk: bestAsk,
-			},
-		},
+		msg,
 	)
 }
 
-
 func (p *Publisher) PublishDepth(
 	symbol string,
-	book DepthProvider,
+	book MarketDataProvider,
 ) {
 	bids := make([]DepthLevel, 0)
 	asks := make([]DepthLevel, 0)
 
 	for _, l := range book.BidLevels(10) {
 		bids = append(bids, DepthLevel{
-			Price: l.Price,
+			Price:    l.Price,
 			Quantity: l.Quantity,
 		})
 	}
 
 	for _, l := range book.AskLevels(10) {
 		asks = append(asks, DepthLevel{
-			Price: l.Price,
+			Price:    l.Price,
 			Quantity: l.Quantity,
 		})
 	}
@@ -91,7 +83,7 @@ func (p *Publisher) PublishDepth(
 	p.hub.Broadcast(
 		symbol,
 		Message{
-			Type:   "depth",
+			Type:  constants.MessageDepth,
 			Symbol: symbol,
 			Data: DepthMessage{
 				Bids: bids,

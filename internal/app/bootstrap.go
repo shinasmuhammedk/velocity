@@ -53,7 +53,18 @@ func Bootstrap() (*Container, error) {
 	container.MarketHub = marketdata.NewHub()
 	container.Logger.Info("market data hub initialized ")
 
-	container.MarketPublisher = marketdata.NewPublisher(container.MarketHub)
+	container.MarketHub = marketdata.NewHub()
+	container.Logger.Info("market data hub initialized")
+
+	container.MarketPublisher = marketdata.NewPublisher(
+		container.MarketHub,
+	)
+	container.Logger.Info("market data publisher initialized")
+
+	container.Dispatcher = marketdata.NewDispatcher(
+		container.MarketPublisher,
+	)
+	container.Logger.Info("market data dispatcher initialized")
 
 	//workers
 	container.TradeWorker = worker.NewTradePersistenceWorker(
@@ -84,6 +95,15 @@ func Bootstrap() (*Container, error) {
 		"./snapshots",
 		serializer,
 	)
+
+	walSerializer := wal.NewJSONSerializer()
+
+	container.WALManager = wal.NewManager(
+		"./wal",
+		walSerializer,
+	)
+
+	container.Logger.Info("WAL Manager initialized")
 
 	// Register background workers
 	//
@@ -116,7 +136,7 @@ func Bootstrap() (*Container, error) {
 
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.TradeWorker,
-		container.MarketPublisher,
+		container.Dispatcher,
 		provider,
 	)
 	container.Logger.Info("trade consumer initialized")
@@ -183,10 +203,6 @@ func Bootstrap() (*Container, error) {
 		container.OrderService,
 	)
 	container.Logger.Info("order handler initialized")
-
-	walSerializer := wal.NewJSONSerializer()
-	container.WALManager = wal.NewManager("./wal", walSerializer)
-	container.Logger.Info("WAL Manager initialized")
 
 	//router
 	router.Register(

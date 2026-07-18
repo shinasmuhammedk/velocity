@@ -61,11 +61,13 @@ type Container struct {
 	//Handler
 	OrderHandler *handler.OrderHandler
 
-	MarketPublisher *marketdata.Publisher
 
 	SnapshotRecovery *recovery.SnapshotRecovery
 
-	WALManager *wal.Manager
+	WALManager      *wal.Manager
+	MarketPublisher *marketdata.Publisher
+	Dispatcher      *marketdata.Dispatcher
+
 	// Engine     *registry.Registry
 	// EventBus   eventbus.Bus
 	// Redis      *redis.Client
