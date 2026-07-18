@@ -9,6 +9,7 @@ import (
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/stopbook"
+	"velocity/internal/engine/wal"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
@@ -24,6 +25,8 @@ type Engine struct {
 
 	commandQueue chan command.Command
 	tradeQueue   chan *trade.Trade
+
+	walWriter *wal.Writer
 
 	lastTradePrice atomic.Int64
 	sequence       atomic.Uint64
@@ -100,11 +103,15 @@ func (e *Engine) start() {
 	}()
 }
 
-func New(symbol string) *Engine {
+func New(
+	symbol string,
+	walWriter *wal.Writer,
+) *Engine {
 	book := orderbook.New(symbol)
 
 	e := &Engine{
 		symbol:       symbol,
+		walWriter:    walWriter,
 		book:         book,
 		matcher:      matcher.New(book),
 		stopBook:     stopbook.New(),
@@ -240,8 +247,12 @@ func (e *Engine) StopBook() *stopbook.StopBook {
 }
 
 func (e *Engine) Stop() {
-	close(e.commandQueue) // range loop in start()'s goroutine exits once the channel is closed and drained
+	close(e.commandQueue)
 	<-e.done
+
+	if e.walWriter != nil {
+		_ = e.walWriter.Close()
+	}
 }
 
 func (e *Engine) RecoverOrder(o *order.Order) {
@@ -298,13 +309,11 @@ func (e *Engine) RestoreSnapshot(
 		s.LastTradePrice,
 	)
 
-
 	for _, o := range s.ActiveOrders {
 
 		e.book.AddOrder(o)
 
 	}
-
 
 	for _, o := range s.StopOrders {
 

@@ -14,7 +14,7 @@ import (
 )
 
 func TestPlaceOrderFullFill(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	sell := &order.Order{
 		ID:          "sell-1",
@@ -80,7 +80,7 @@ func TestPlaceOrderFullFill(t *testing.T) {
 }
 
 func TestPlaceOrderRestingOrder(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	buy := &order.Order{
 		ID:          "buy-1",
@@ -112,7 +112,7 @@ func TestPlaceOrderRestingOrder(t *testing.T) {
 }
 
 func TestPlaceOrderPartialFill(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	sell := &order.Order{
 		ID:          "sell-1",
@@ -179,7 +179,7 @@ func TestPlaceOrderPartialFill(t *testing.T) {
 
 
 func TestEngineCancelOrder(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	o := &order.Order{
 		ID:          "1",
@@ -206,7 +206,7 @@ func TestEngineCancelOrder(t *testing.T) {
 }
 
 func TestEngineCancelUnknownOrder(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	err := e.CancelOrder("does-not-exist")
 
@@ -215,7 +215,7 @@ func TestEngineCancelUnknownOrder(t *testing.T) {
 }
 
 func TestEngineCancelRemovesPriceLevel(t *testing.T) {
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	o := &order.Order{
 		ID:          "1",
@@ -244,7 +244,7 @@ func TestEngineCancelRemovesPriceLevel(t *testing.T) {
 
 
 func TestPostOnlyMarketOrderRejected(t *testing.T) {
-	engine := engine.New("BTCUSDT")
+	engine := engine.New("BTCUSDT",nil)
 
 	err := engine.SubmitOrder(&order.Order{
 		ID:          "1",

@@ -7,6 +7,7 @@ import (
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/snapshot"
+	"velocity/internal/engine/wal"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
@@ -87,7 +88,10 @@ func Bootstrap() (*Container, error) {
 	// Register background workers
 	//
 	// Matching Engine Registry
-	container.Registry = registry.New(writer)
+	container.Registry = registry.New(
+		writer,
+		container.WALManager,
+	)
 
 	provider := func(symbol string) *orderbook.OrderBook {
 		engine := container.Registry.Get(symbol)
@@ -179,6 +183,10 @@ func Bootstrap() (*Container, error) {
 		container.OrderService,
 	)
 	container.Logger.Info("order handler initialized")
+
+	walSerializer := wal.NewJSONSerializer()
+	container.WALManager = wal.NewManager("./wal", walSerializer)
+	container.Logger.Info("WAL Manager initialized")
 
 	//router
 	router.Register(

@@ -7,6 +7,7 @@ import (
 
 	"velocity/internal/engine"
 	"velocity/internal/engine/snapshot"
+	"velocity/internal/engine/wal"
 	"velocity/internal/persistence/worker"
 )
 
@@ -17,6 +18,7 @@ type Registry struct {
 	consumer *worker.TradeConsumer
 
 	snapshotWriter snapshot.SnapshotWriter
+	walManager     *wal.Manager
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -24,6 +26,7 @@ type Registry struct {
 
 func New(
 	snapshotWriter snapshot.SnapshotWriter,
+	walManager *wal.Manager,
 ) *Registry {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -31,6 +34,7 @@ func New(
 		engines: make(map[string]*engine.Engine),
 
 		snapshotWriter: snapshotWriter,
+		walManager:     walManager,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -59,7 +63,15 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 		return existing
 	}
 
-	e = engine.New(symbol)
+	walWriter, err := r.walManager.Writer(symbol)
+	if err != nil {
+		return nil
+	}
+
+	e = engine.New(
+		symbol,
+		walWriter,
+	)
 
 	manager := snapshot.NewManager(
 		r.snapshotWriter,
@@ -94,11 +106,13 @@ func (r *Registry) Exists(symbol string) bool {
 
 // Remove removes an engine from the registry.
 func (r *Registry) Remove(symbol string) {
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	delete(r.engines, symbol)
+	if e, ok := r.engines[symbol]; ok {
+		e.Stop()
+		delete(r.engines, symbol)
+	}
 }
 
 // Count returns the total number of engines.
@@ -135,17 +149,24 @@ func (r *Registry) Symbols() []string {
 // Shutdown stops every engine and cancels all trade-consumer goroutines
 // started by this registry. Safe to call once, typically during
 // application shutdown.
-func (r *Registry) Shutdown() {
+func (r *Registry) Shutdown() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.cancel() // signals every TradeConsumer goroutine (via r.ctx) to stop
+	r.cancel()
 
 	for symbol, e := range r.engines {
-		e.Stop() // needs to exist on Engine — see below
+		e.Stop()
 		delete(r.engines, symbol)
 	}
+
+	if r.walManager != nil {
+		return r.walManager.Close()
+	}
+
+	return nil
 }
+
 
 func (r *Registry) SetConsumer(
 	consumer *worker.TradeConsumer,

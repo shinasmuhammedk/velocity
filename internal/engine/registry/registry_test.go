@@ -6,31 +6,43 @@ import (
 
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/snapshot"
+	"velocity/internal/engine/wal"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRegistryCreatesEngine(t *testing.T) {
-	r := registry.New(
-		&snapshot.MockWriter{},
-	)
 
-	e := r.Get("BTCUSDT")
+    walManager := wal.NewManager(
+        t.TempDir(),
+        wal.NewJSONSerializer(),
+    )
 
-	require.NotNil(t, e)
+    r := registry.New(
+        &snapshot.MockWriter{},
+        walManager,
+    )
+    defer r.Shutdown()
 
-	assert.Equal(
-		t,
-		1,
-		r.Count(),
-	)
+    e := r.Get("BTCUSDT")
+
+    require.NotNil(t, e)
+
+    assert.Equal(t, 1, r.Count())
 }
 
 func TestRegistryReturnsSameEngine(t *testing.T) {
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
 	r := registry.New(
 		&snapshot.MockWriter{},
+		walManager,
 	)
+    defer r.Shutdown()
 
 	e1 := r.Get("BTCUSDT")
 	e2 := r.Get("BTCUSDT")
@@ -43,10 +55,18 @@ func TestRegistryReturnsSameEngine(t *testing.T) {
 }
 
 func TestRegistryCreatesDifferentEngines(t *testing.T) {
-	r := registry.New(
-		&snapshot.MockWriter{},
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
 	)
 
+	r := registry.New(
+		&snapshot.MockWriter{},
+		walManager,
+	)
+
+    defer r.Shutdown()
+    
 	btc := r.Get("BTCUSDT")
 	eth := r.Get("ETHUSDT")
 
@@ -64,9 +84,17 @@ func TestRegistryCreatesDifferentEngines(t *testing.T) {
 }
 
 func TestRegistryExists(t *testing.T) {
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
 	r := registry.New(
 		&snapshot.MockWriter{},
+		walManager,
 	)
+    defer r.Shutdown()
+    
 	assert.False(
 		t,
 		r.Exists("BTCUSDT"),
@@ -81,9 +109,17 @@ func TestRegistryExists(t *testing.T) {
 }
 
 func TestRegistryRemove(t *testing.T) {
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
 	r := registry.New(
 		&snapshot.MockWriter{},
+		walManager,
 	)
+    defer r.Shutdown()
+    
 	r.Get("BTCUSDT")
 
 	assert.True(
@@ -106,9 +142,16 @@ func TestRegistryRemove(t *testing.T) {
 }
 
 func TestRegistrySymbols(t *testing.T) {
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
 	r := registry.New(
 		&snapshot.MockWriter{},
+		walManager,
 	)
+    defer r.Shutdown()
 
 	r.Get("BTCUSDT")
 	r.Get("ETHUSDT")
@@ -142,10 +185,17 @@ func TestRegistrySymbols(t *testing.T) {
 }
 
 func TestRegistryConcurrentAccess(t *testing.T) {
-	r := registry.New(
-		&snapshot.MockWriter{},
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
 	)
 
+	r := registry.New(
+		&snapshot.MockWriter{},
+		walManager,
+	)
+    defer r.Shutdown()
+    
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -170,9 +220,16 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 func TestRegistryConcurrentDifferentSymbols(
 	t *testing.T,
 ) {
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
 	r := registry.New(
 		&snapshot.MockWriter{},
+		walManager,
 	)
+    defer r.Shutdown()
 
 	symbols := []string{
 		"BTCUSDT",
