@@ -8,6 +8,7 @@ import (
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/snapshot"
+	"velocity/internal/engine/wal"
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
@@ -36,7 +37,17 @@ func TestRecoverySkipsSnapshotRestoredSymbols(
 		serializer,
 	)
 
-	reg := registry.New(writer)
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
+	reg := registry.New(
+		writer,
+		walManager,
+	)
+
+	defer reg.Shutdown()
 
 	repo := &mockOrderRepository{
 		orders: []generated.Order{
@@ -103,7 +114,17 @@ func TestRecoveryLoadsOrdersForSymbolsWithoutSnapshots(
 		serializer,
 	)
 
-	reg := registry.New(writer)
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
+
+	reg := registry.New(
+		writer,
+		walManager,
+	)
+
+	defer reg.Shutdown()
 
 	repo := &mockOrderRepository{
 		orders: []generated.Order{
@@ -154,4 +175,53 @@ func TestRecoveryLoadsOrdersForSymbolsWithoutSnapshots(
 		1,
 		len(engine.OrderBook().Orders),
 	)
+}
+
+
+func (m *mockOrderRepository) Create(
+	context.Context,
+	generated.CreateOrderParams,
+) (generated.Order, error) {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) GetByID(
+	context.Context,
+	uuid.UUID,
+) (generated.Order, error) {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) UpdateStatus(
+	context.Context,
+	generated.UpdateOrderStatusParams,
+) error {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) ListByUser(
+	context.Context,
+	uuid.UUID,
+) ([]generated.Order, error) {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) ListOpenOrders(
+	context.Context,
+	string,
+) ([]generated.Order, error) {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) GetPendingStopOrders(
+	context.Context,
+) ([]generated.Order, error) {
+	panic("not implemented")
+}
+
+func (m *mockOrderRepository) UpdateOrderForModify(
+	context.Context,
+	generated.UpdateOrderForModifyParams,
+) error {
+	panic("not implemented")
 }

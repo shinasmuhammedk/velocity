@@ -1,9 +1,5 @@
 package wal
 
-import (
-	"velocity/internal/engine"
-)
-
 type Replayer struct {
 	reader *Reader
 }
@@ -16,51 +12,25 @@ func NewReplayer(
 	}
 }
 
-func (r *Replayer) Replay(
-	e *engine.Engine,
+// Events returns all WAL events whose sequence is greater than fromSequence.
+func (r *Replayer) Events(
 	fromSequence uint64,
-) error {
+) ([]*Event, error) {
 
 	events, err := r.reader.ReadAll()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for _, event := range events {
+	filtered := make([]*Event, 0, len(events))
 
-		// Skip events already included in snapshot
+	for _, event := range events {
 		if event.Sequence <= fromSequence {
 			continue
 		}
 
-		switch event.Type {
-
-		case EventSubmit:
-			if event.Order != nil {
-				e.RecoverOrder(event.Order)
-			}
-
-		case EventCancel:
-			if event.OrderID != "" {
-				// Recovery-only path
-				_ = e.OrderBook().CancelOrder(
-					event.OrderID,
-				)
-			}
-
-		case EventModify:
-			if event.OrderID != "" {
-				_ = e.OrderBook().ModifyOrder(
-					event.OrderID,
-					event.NewPrice,
-					event.NewQuantity,
-				)
-			}
-		}
-
-		// Keep sequence in sync with replay progress
-		e.SetSequence(event.Sequence)
+		filtered = append(filtered, event)
 	}
 
-	return nil
+	return filtered, nil
 }

@@ -8,6 +8,7 @@ import (
 	"velocity/internal/config"
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
+	"velocity/internal/engine/wal"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -60,11 +61,11 @@ type Container struct {
 	//Handler
 	OrderHandler *handler.OrderHandler
 
-    
-    MarketPublisher *marketdata.Publisher
-    
-    SnapshotRecovery *recovery.SnapshotRecovery
-    
+	MarketPublisher *marketdata.Publisher
+
+	SnapshotRecovery *recovery.SnapshotRecovery
+
+	WALManager *wal.Manager
 	// Engine     *registry.Registry
 	// EventBus   eventbus.Bus
 	// Redis      *redis.Client

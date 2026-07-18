@@ -47,7 +47,7 @@ func BenchmarkEngineMatching(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	b.Cleanup(func() {
 		e.Stop()
@@ -88,7 +88,7 @@ func BenchmarkEngineMatchingDeepBook(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 
-	e := engine.New("BTCUSDT")
+	e := engine.New("BTCUSDT",nil)
 
 	b.Cleanup(func() {
 		e.Stop()
