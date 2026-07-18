@@ -9,19 +9,19 @@ import (
 
 type TradeConsumer struct {
 	worker       TradePersistenceWorker
-	publisher    *marketdata.Publisher
+	dispatcher   *marketdata.Dispatcher
 	orderBookFor OrderBookProvider
 }
 
 func NewTradeConsumer(
 	worker TradePersistenceWorker,
-	publisher *marketdata.Publisher,
+	dispatcher *marketdata.Dispatcher,
 	provider OrderBookProvider,
 ) *TradeConsumer {
 
 	return &TradeConsumer{
 		worker:       worker,
-		publisher:    publisher,
+		dispatcher:   dispatcher,
 		orderBookFor: provider,
 	}
 }
@@ -52,19 +52,11 @@ func (c *TradeConsumer) Start(
 				}
 
 				// Publish trade event
-				c.publisher.PublishTrade(t)
-
-				// Publish market data updates
 				book := c.orderBookFor(t.Symbol)
 
 				if book != nil {
-					c.publisher.PublishTicker(
-						t.Symbol,
-						book,
-					)
-
-					c.publisher.PublishDepth(
-						t.Symbol,
+					c.dispatcher.DispatchTrade(
+						t,
 						book,
 					)
 				}

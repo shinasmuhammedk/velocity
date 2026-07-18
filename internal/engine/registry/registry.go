@@ -167,7 +167,6 @@ func (r *Registry) Shutdown() error {
 	return nil
 }
 
-
 func (r *Registry) SetConsumer(
 	consumer *worker.TradeConsumer,
 ) {
