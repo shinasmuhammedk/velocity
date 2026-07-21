@@ -18,6 +18,7 @@ import (
 	"velocity/internal/transport/http/router"
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
+	"velocity/internal/userstream"
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -65,6 +66,16 @@ func Bootstrap() (*Container, error) {
 		container.MarketPublisher,
 	)
 	container.Logger.Info("market data dispatcher initialized")
+
+	container.UserHub = userstream.NewHub()
+
+	container.UserPublisher = userstream.NewPublisher(
+		container.UserHub,
+	)
+
+	container.UserDispatcher = userstream.NewDispatcher(
+		container.UserPublisher,
+	)
 
 	//workers
 	container.TradeWorker = worker.NewTradePersistenceWorker(
@@ -192,6 +203,7 @@ func Bootstrap() (*Container, error) {
 		container.UserRepository,
 		container.Registry,
 		container.Logger,
+        container.UserDispatcher,
 	)
 	container.Logger.Info("order service initialized")
 

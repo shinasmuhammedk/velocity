@@ -16,6 +16,7 @@ import (
 	"velocity/internal/service/orderservice"
 	"velocity/internal/transport/http/handler"
 	wsHandler "velocity/internal/transport/ws/handler"
+	"velocity/internal/userstream"
 )
 
 // Container holds all shared application dependencies.
@@ -61,14 +62,18 @@ type Container struct {
 	//Handler
 	OrderHandler *handler.OrderHandler
 
-
 	SnapshotRecovery *recovery.SnapshotRecovery
 
 	WALManager      *wal.Manager
 	MarketPublisher *marketdata.Publisher
 	Dispatcher      *marketdata.Dispatcher
 
+	UserHub        *userstream.Hub
+	UserPublisher  *userstream.Publisher
+	UserDispatcher *userstream.Dispatcher
+
 	// Engine     *registry.Registry
+
 	// EventBus   eventbus.Bus
 	// Redis      *redis.Client
 	// Kafka      *kafka.Client

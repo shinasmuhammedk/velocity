@@ -12,6 +12,7 @@ import (
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
+	"velocity/internal/userstream"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
 	"velocity/pkg/timeutil"
@@ -24,6 +25,8 @@ type Service struct {
 
 	registry *registry.Registry
 	logger   *zap.Logger
+    
+    UserDispatcher *userstream.Dispatcher
 }
 
 func New(
@@ -33,6 +36,8 @@ func New(
 
 	registry *registry.Registry,
 	logger *zap.Logger,
+    
+    userDispatcher *userstream.Dispatcher,
 ) *Service {
 	return &Service{
 		orderRepo:  orderRepo,
@@ -40,6 +45,7 @@ func New(
 		userRepo:   userRepo,
 		registry:   registry,
 		logger:     logger,
+        UserDispatcher: userDispatcher,
 	}
 }
 
