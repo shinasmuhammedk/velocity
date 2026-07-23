@@ -19,22 +19,25 @@ import (
 	"velocity/internal/userstream"
 )
 
-// Container holds all shared application dependencies.
-//
-// It acts as the application's dependency injection container.
-// Every subsystem is initialized once during startup
-// and stored here for reuse throughout the application.
 type Container struct {
 
+	// --------------------------------------------------
 	// Core
+	// --------------------------------------------------
+
 	Config *config.Config
 	Logger *zap.Logger
 
+	// --------------------------------------------------
 	// Infrastructure
-	DB *pgxpool.Pool
+	// --------------------------------------------------
 
-	// Transport
+	DB *pgxpool.Pool
 	HTTP *fiber.App
+
+	// --------------------------------------------------
+	// Repositories
+	// --------------------------------------------------
 
 	UserRepository     repository.UserRepository
 	OrderRepository    repository.OrderRepository
@@ -42,40 +45,55 @@ type Container struct {
 	PositionRepository repository.PositionRepository
 	SymbolRepository   repository.SymbolRepository
 
+	// --------------------------------------------------
+	// Transactions
+	// --------------------------------------------------
+
 	TxManager tx.Manager
+
+	// --------------------------------------------------
+	// Workers
+	// --------------------------------------------------
 
 	TradeWorker   worker.TradePersistenceWorker
 	TradeConsumer *worker.TradeConsumer
 
-	MarketHub *marketdata.Hub
+	// --------------------------------------------------
+	// Market Data
+	// --------------------------------------------------
+
+	MarketHub         *marketdata.Hub
+	MarketPublisher   *marketdata.Publisher
+	MarketBroadcaster *marketdata.Broadcaster
+
 	WSHandler *wsHandler.Handler
 
-	Registry *registry.Registry
-
-	Recovery *recovery.Recovery
-
-	// Future
-
-	//Service
-	OrderService *orderservice.Service
-
-	//Handler
-	OrderHandler *handler.OrderHandler
-
-	SnapshotRecovery *recovery.SnapshotRecovery
-
-	WALManager      *wal.Manager
-	MarketPublisher *marketdata.Publisher
-	Dispatcher      *marketdata.Dispatcher
+	// --------------------------------------------------
+	// User Stream
+	// --------------------------------------------------
 
 	UserHub        *userstream.Hub
 	UserPublisher  *userstream.Publisher
 	UserDispatcher *userstream.Dispatcher
 
-	// Engine     *registry.Registry
+	// --------------------------------------------------
+	// Matching Engine
+	// --------------------------------------------------
 
-	// EventBus   eventbus.Bus
-	// Redis      *redis.Client
-	// Kafka      *kafka.Client
-	// Metrics    *metrics.Registry
+	Registry           *registry.Registry
+	Recovery           *recovery.Recovery
+	SnapshotRecovery   *recovery.SnapshotRecovery
+	WALManager         *wal.Manager
+
+	// --------------------------------------------------
+	// Services
+	// --------------------------------------------------
+
+	OrderService *orderservice.Service
+
+	// --------------------------------------------------
+	// HTTP Handlers
+	// --------------------------------------------------
+
+	OrderHandler *handler.OrderHandler
 }

@@ -25,8 +25,8 @@ type Service struct {
 
 	registry *registry.Registry
 	logger   *zap.Logger
-    
-    UserDispatcher *userstream.Dispatcher
+
+	UserDispatcher *userstream.Dispatcher
 }
 
 func New(
@@ -36,16 +36,16 @@ func New(
 
 	registry *registry.Registry,
 	logger *zap.Logger,
-    
-    userDispatcher *userstream.Dispatcher,
+
+	userDispatcher *userstream.Dispatcher,
 ) *Service {
 	return &Service{
-		orderRepo:  orderRepo,
-		symbolRepo: symbolRepo,
-		userRepo:   userRepo,
-		registry:   registry,
-		logger:     logger,
-        UserDispatcher: userDispatcher,
+		orderRepo:      orderRepo,
+		symbolRepo:     symbolRepo,
+		userRepo:       userRepo,
+		registry:       registry,
+		logger:         logger,
+		UserDispatcher: userDispatcher,
 	}
 }
 
@@ -164,6 +164,7 @@ func (s *Service) Submit(
 		return nil, err
 	}
 	metrics.OrdersSubmitted.Inc()
+	s.UserDispatcher.DispatchOrderAccepted(o)
 
 	return o, nil
 }
@@ -206,13 +207,32 @@ func (s *Service) Cancel(
 
 	metrics.OrdersCancelled.Inc()
 
-	return s.orderRepo.UpdateStatus(
+	err = s.orderRepo.UpdateStatus(
 		ctx,
 		generated.UpdateOrderStatusParams{
 			ID:     dbOrder.ID,
 			Status: string(constants.OrderStatusCancelled),
 		},
 	)
+
+	if err != nil {
+		return err
+	}
+
+	o := &order.Order{
+		ID:        dbOrder.ID.String(),
+		UserID:    dbOrder.UserID.String(),
+		Symbol:    dbOrder.Symbol,
+		Status:    constants.OrderStatusCancelled,
+		Price:     dbOrder.Price.Int64,
+		Quantity:  dbOrder.Quantity,
+		Filled:    dbOrder.Filled,
+		Remaining: dbOrder.Remaining,
+	}
+
+	s.UserDispatcher.DispatchOrderCancelled(o)
+
+	return nil
 }
 
 func (s *Service) Modify(
@@ -253,7 +273,7 @@ func (s *Service) Modify(
 
 	metrics.OrdersModified.Inc()
 
-	return s.orderRepo.UpdateOrderForModify(
+	err = s.orderRepo.UpdateOrderForModify(
 		ctx,
 		generated.UpdateOrderForModifyParams{
 			ID: dbOrder.ID,
@@ -265,4 +285,23 @@ func (s *Service) Modify(
 			Remaining: remaining,
 		},
 	)
+
+	if err != nil {
+		return err
+	}
+
+	o := &order.Order{
+		ID:        dbOrder.ID.String(),
+		UserID:    dbOrder.UserID.String(),
+		Symbol:    dbOrder.Symbol,
+		Status:    constants.OrderStatusOpen,
+		Price:     req.Price,
+		Quantity:  req.Quantity,
+		Filled:    dbOrder.Filled,
+		Remaining: remaining,
+	}
+
+	s.UserDispatcher.DispatchOrderModified(o)
+
+	return nil
 }

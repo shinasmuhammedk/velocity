@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"velocity/internal/engine"
+	"velocity/internal/engine/events"
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/wal"
 	"velocity/internal/persistence/worker"
@@ -14,6 +15,8 @@ import (
 type Registry struct {
 	engines map[string]*engine.Engine
 	mu      sync.RWMutex
+    
+    dispatcher *events.Dispatcher
 
 	consumer *worker.TradeConsumer
 
@@ -32,6 +35,8 @@ func New(
 
 	return &Registry{
 		engines: make(map[string]*engine.Engine),
+        
+        dispatcher: events.NewDispatcher(),
 
 		snapshotWriter: snapshotWriter,
 		walManager:     walManager,
@@ -71,6 +76,7 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	e = engine.New(
 		symbol,
 		walWriter,
+        r.dispatcher,
 	)
 
 	manager := snapshot.NewManager(
@@ -179,4 +185,8 @@ func (r *Registry) Find(symbol string) (*engine.Engine, bool) {
 
 	e, ok := r.engines[symbol]
 	return e, ok
+}
+
+func (r *Registry) Publisher() *events.Dispatcher {
+    return r.dispatcher
 }

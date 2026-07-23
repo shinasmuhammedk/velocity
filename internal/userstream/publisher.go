@@ -89,3 +89,14 @@ func (p *Publisher) PublishPositionUpdate(
 		},
 	)
 }
+
+
+func (p *Publisher) PublishOrderModified(
+	userID string,
+	report ExecutionReport,
+) {
+	p.hub.Broadcast(userID, Message{
+		Type: string(MessageTypeOrderModified),
+		Data: report,
+	})
+}

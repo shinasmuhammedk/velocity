@@ -5,6 +5,7 @@ import (
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
 	"velocity/internal/engine/command"
+	"velocity/internal/engine/events"
 	"velocity/internal/engine/matcher"
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/snapshot"
@@ -22,6 +23,8 @@ type Engine struct {
 	book     *orderbook.OrderBook
 	matcher  *matcher.Matcher
 	stopBook *stopbook.StopBook
+
+	publisher events.Publisher
 
 	commandQueue chan command.Command
 	tradeQueue   chan *trade.Trade
@@ -64,6 +67,23 @@ func (e *Engine) start() {
 					metrics.TradesExecuted.Inc()
 
 					e.tradeQueue <- t
+
+					e.publish(events.TradeExecutedEvent{
+						BaseEvent: events.NewBaseEvent(),
+
+						TradeID: t.ID.String(),
+
+						BuyOrderID:  t.BuyOrderID,
+						SellOrderID: t.SellOrderID,
+
+						BuyerID:  t.BuyerID,
+						SellerID: t.SellerID,
+
+						Symbol: t.Symbol,
+
+						Price:    t.Price,
+						Quantity: t.Quantity,
+					})
 				}
 				e.processTriggeredStops()
 
@@ -106,6 +126,7 @@ func (e *Engine) start() {
 func New(
 	symbol string,
 	walWriter *wal.Writer,
+	publisher events.Publisher,
 ) *Engine {
 	book := orderbook.New(symbol)
 
@@ -115,6 +136,7 @@ func New(
 		book:         book,
 		matcher:      matcher.New(book),
 		stopBook:     stopbook.New(),
+		publisher:    publisher,
 		commandQueue: make(chan command.Command, 100000),
 		tradeQueue:   make(chan *trade.Trade, 100000),
 		// lastTradePrice: 0,
@@ -319,5 +341,11 @@ func (e *Engine) RestoreSnapshot(
 
 		e.stopBook.Add(o)
 
+	}
+}
+
+func (e *Engine) publish(event events.Event) {
+	if e.publisher != nil {
+		e.publisher.Publish(event)
 	}
 }

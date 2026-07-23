@@ -51,8 +51,9 @@ func Bootstrap() (*Container, error) {
 	// Future Wiring
 	// --------------------------------------------------
 
-	container.MarketHub = marketdata.NewHub()
-	container.Logger.Info("market data hub initialized ")
+	// --------------------------------------------------
+	// Market Data
+	// --------------------------------------------------
 
 	container.MarketHub = marketdata.NewHub()
 	container.Logger.Info("market data hub initialized")
@@ -62,10 +63,12 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("market data publisher initialized")
 
-	container.Dispatcher = marketdata.NewDispatcher(
+	container.MarketBroadcaster = marketdata.NewBroadcaster(
 		container.MarketPublisher,
 	)
-	container.Logger.Info("market data dispatcher initialized")
+	container.Logger.Info("market data broadcaster initialized")
+
+	
 
 	container.UserHub = userstream.NewHub()
 
@@ -147,7 +150,7 @@ func Bootstrap() (*Container, error) {
 
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.TradeWorker,
-		container.Dispatcher,
+		container.MarketBroadcaster,
 		provider,
 	)
 	container.Logger.Info("trade consumer initialized")
@@ -203,7 +206,7 @@ func Bootstrap() (*Container, error) {
 		container.UserRepository,
 		container.Registry,
 		container.Logger,
-        container.UserDispatcher,
+		container.UserDispatcher,
 	)
 	container.Logger.Info("order service initialized")
 
