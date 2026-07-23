@@ -62,7 +62,7 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("market data publisher initialized")
 
-	container.Dispatcher = marketdata.NewDispatcher(
+	container.Dispatcher = marketdata.NewBroadcaster(
 		container.MarketPublisher,
 	)
 	container.Logger.Info("market data dispatcher initialized")

@@ -6,19 +6,19 @@ import (
 	"velocity/internal/engine/orderbook"
 )
 
-type Dispatcher struct {
+type Broadcaster struct {
 	publisher *Publisher
 }
 
-func NewDispatcher(
+func NewBroadcaster(
 	publisher *Publisher,
-) *Dispatcher {
-	return &Dispatcher{
+) *Broadcaster {
+	return &Broadcaster{
 		publisher: publisher,
 	}
 }
 
-func (d *Dispatcher) DispatchTrade(
+func (d *Broadcaster) DispatchTrade(
 	trade *trade.Trade,
 	book *orderbook.OrderBook,
 ) {

@@ -9,13 +9,13 @@ import (
 
 type TradeConsumer struct {
 	worker       TradePersistenceWorker
-	dispatcher   *marketdata.Dispatcher
+	dispatcher   *marketdata.Broadcaster
 	orderBookFor OrderBookProvider
 }
 
 func NewTradeConsumer(
 	worker TradePersistenceWorker,
-	dispatcher *marketdata.Dispatcher,
+	dispatcher *marketdata.Broadcaster,
 	provider OrderBookProvider,
 ) *TradeConsumer {
 

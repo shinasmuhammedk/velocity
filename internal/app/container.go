@@ -66,7 +66,7 @@ type Container struct {
 
 	WALManager      *wal.Manager
 	MarketPublisher *marketdata.Publisher
-	Dispatcher      *marketdata.Dispatcher
+	Dispatcher      *marketdata.Broadcaster
 
 	UserHub        *userstream.Hub
 	UserPublisher  *userstream.Publisher
