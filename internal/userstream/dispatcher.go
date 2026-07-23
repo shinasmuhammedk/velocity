@@ -97,3 +97,24 @@ func (d *Dispatcher) DispatchOrderRejected(
 		report,
 	)
 }
+
+
+func (d *Dispatcher) DispatchOrderModified(
+	o *order.Order,
+) {
+
+	report := ExecutionReport{
+		OrderID:           o.ID,
+		Symbol:            o.Symbol,
+		Status:            string(o.Status),
+		Price:             o.Price,
+		Quantity:          o.Quantity,
+		FilledQuantity:    o.Filled,
+		RemainingQuantity: o.Remaining,
+	}
+
+	d.publisher.PublishOrderModified(
+		fmt.Sprint(o.UserID),
+		report,
+	)
+}

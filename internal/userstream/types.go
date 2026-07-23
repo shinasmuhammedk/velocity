@@ -15,4 +15,6 @@ const (
 
 	EventPing EventType = "ping"
 	EventPong EventType = "pong"
+    
+    MessageTypeOrderModified EventType = "order.modified"
 )

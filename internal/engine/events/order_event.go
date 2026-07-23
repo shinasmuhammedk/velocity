@@ -1,16 +1,22 @@
 package events
 
+
 type OrderAcceptedEvent struct {
 	BaseEvent
 
 	OrderID string
 	UserID  string
 	Symbol  string
+
+	Price    int64
+	Quantity int64
 }
 
 func (e OrderAcceptedEvent) Type() EventType {
 	return OrderAcceptedEventType
 }
+
+// ----------------------------------------------------
 
 type OrderRejectedEvent struct {
 	BaseEvent
@@ -18,59 +24,55 @@ type OrderRejectedEvent struct {
 	OrderID string
 	UserID  string
 	Symbol  string
-	Reason  string
+
+	Reason string
 }
 
 func (e OrderRejectedEvent) Type() EventType {
 	return OrderRejectedEventType
 }
 
+// ----------------------------------------------------
+
 type OrderCancelledEvent struct {
 	BaseEvent
 
 	OrderID string
-	UserID  string
 	Symbol  string
+	UserID  string
 }
 
 func (e OrderCancelledEvent) Type() EventType {
 	return OrderCancelledEventType
+
 }
+
+// ----------------------------------------------------
 
 type OrderModifiedEvent struct {
 	BaseEvent
 
 	OrderID string
-	UserID  string
 	Symbol  string
+
+	NewPrice    int64
+	NewQuantity int64
 }
 
 func (e OrderModifiedEvent) Type() EventType {
 	return OrderModifiedEventType
+
 }
 
-type OrderPartiallyFilledEvent struct {
-	BaseEvent
+// ----------------------------------------------------
 
-	OrderID        string
-	UserID         string
-	Symbol         string
-	FilledQuantity int64
-	RemainingQty   int64
-}
-
-func (e OrderPartiallyFilledEvent) Type() EventType {
-	return OrderPartiallyFilledEventType
-}
-
-type OrderFilledEvent struct {
+type OrderTriggeredEvent struct {
 	BaseEvent
 
 	OrderID string
-	UserID  string
 	Symbol  string
 }
 
-func (e OrderFilledEvent) Type() EventType {
-	return OrderFilledEventType
+func (e OrderTriggeredEvent) Type() EventType {
+	return OrderTriggeredEventType
 }
