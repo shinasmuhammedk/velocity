@@ -14,6 +14,9 @@ import (
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
 	"velocity/internal/service/orderservice"
+	"velocity/internal/service/riskservice"
+	"velocity/internal/service/settlementservice" // <-- Add this
+	"velocity/internal/service/walletservice"
 	"velocity/internal/transport/http/handler"
 	"velocity/internal/transport/http/router"
 	wsHandler "velocity/internal/transport/ws/handler"
@@ -41,6 +44,7 @@ func Bootstrap() (*Container, error) {
 	container.TradeRepository = repository.NewTradeRepository(container.DB)
 	container.PositionRepository = repository.NewPositionRepository(container.DB)
 	container.SymbolRepository = repository.NewSymbolRepository(container.DB)
+	container.WalletRepository = repository.NewWalletRepository(container.DB)
 
 	container.Logger.Info("repositories initialized")
 
@@ -67,8 +71,6 @@ func Bootstrap() (*Container, error) {
 		container.MarketPublisher,
 	)
 	container.Logger.Info("market data broadcaster initialized")
-
-	
 
 	container.UserHub = userstream.NewHub()
 
@@ -148,18 +150,6 @@ func Bootstrap() (*Container, error) {
 		container.Registry,
 	)
 
-	container.TradeConsumer = worker.NewTradeConsumer(
-		container.TradeWorker,
-		container.MarketBroadcaster,
-		provider,
-	)
-	container.Logger.Info("trade consumer initialized")
-
-	// 4. Inject consumer into registry
-	container.Registry.SetConsumer(
-		container.TradeConsumer,
-	)
-
 	container.Recovery = recovery.New(
 		container.OrderRepository,
 		container.Registry,
@@ -199,11 +189,41 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("database recovery completed")
 
+	container.WalletService = walletservice.New(
+		container.WalletRepository,
+	)
+
+	//risk service
+	container.RiskService = riskservice.New(
+		riskservice.NewQuantityValidator(),
+		riskservice.NewPriceValidator(),
+		riskservice.NewBalanceValidator(container.WalletService),
+	)
+
+	container.SettlementService = settlementservice.New(
+		container.TxManager,
+	)
+
+	container.TradeConsumer = worker.NewTradeConsumer(
+		container.SettlementService,
+		container.SymbolRepository,
+		container.MarketBroadcaster,
+		provider,
+	)
+	container.Logger.Info("trade consumer initialized")
+
+	// 4. Inject consumer into registry
+	container.Registry.SetConsumer(
+		container.TradeConsumer,
+	)
+
 	//OrderService
 	container.OrderService = orderservice.New(
 		container.OrderRepository,
 		container.SymbolRepository,
 		container.UserRepository,
+		container.RiskService,
+		container.WalletService,
 		container.Registry,
 		container.Logger,
 		container.UserDispatcher,

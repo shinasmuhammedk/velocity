@@ -12,6 +12,8 @@ import (
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
+	"velocity/internal/service/riskservice"
+	"velocity/internal/service/walletservice"
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
@@ -22,6 +24,9 @@ type Service struct {
 	orderRepo  repository.OrderRepository
 	symbolRepo repository.SymbolRepository
 	userRepo   repository.UserRepository
+
+	risk   *riskservice.Service
+	wallet *walletservice.Service
 
 	registry *registry.Registry
 	logger   *zap.Logger
@@ -34,6 +39,9 @@ func New(
 	symbolRepo repository.SymbolRepository,
 	userRepo repository.UserRepository,
 
+	risk *riskservice.Service,
+	wallet *walletservice.Service,
+
 	registry *registry.Registry,
 	logger *zap.Logger,
 
@@ -43,6 +51,8 @@ func New(
 		orderRepo:      orderRepo,
 		symbolRepo:     symbolRepo,
 		userRepo:       userRepo,
+		risk:           risk,
+		wallet:         wallet,
 		registry:       registry,
 		logger:         logger,
 		UserDispatcher: userDispatcher,
@@ -125,6 +135,37 @@ func (s *Service) Submit(
 		zap.String("type", string(o.Type)),
 		zap.String("side", string(o.Side)),
 	)
+
+	_, err = s.risk.Validate(
+		ctx,
+		riskservice.ValidateOrderRequest{
+			Order: o,
+		},
+	)
+
+	if err != nil {
+		s.UserDispatcher.DispatchOrderRejected(o)
+		return nil, err
+	}
+
+	if o.Side == constants.OrderSideBuy {
+
+		amount := o.Price * o.Quantity
+
+		userID := uuid.MustParse(o.UserID)
+
+		err = s.wallet.LockFunds(
+			ctx,
+			userID,
+			"USD", // later this will come from the symbol
+			amount,
+		)
+
+		if err != nil {
+			s.UserDispatcher.DispatchOrderRejected(o)
+			return nil, err
+		}
+	}
 
 	_, err = s.orderRepo.Create(
 		ctx,

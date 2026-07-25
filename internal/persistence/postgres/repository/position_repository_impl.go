@@ -6,6 +6,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type positionRepository struct {
@@ -44,4 +45,11 @@ func (r *positionRepository) ListByUser(
 	userID uuid.UUID,
 ) ([]generated.Position, error) {
 	return r.queries.ListPositionsByUser(ctx, userID)
+}
+
+
+func (r *positionRepository) WithTx(tx pgx.Tx) PositionRepository {
+	return &positionRepository{
+		queries: generated.New(tx),
+	}
 }

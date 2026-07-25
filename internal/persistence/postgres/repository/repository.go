@@ -5,6 +5,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type UserRepository interface {
@@ -22,6 +23,7 @@ type OrderRepository interface {
 	RecoveryOrders(ctx context.Context) ([]generated.Order, error)
 	GetPendingStopOrders(ctx context.Context) ([]generated.Order, error)
 	UpdateOrderForModify(ctx context.Context, params generated.UpdateOrderForModifyParams) error
+	WithTx(tx pgx.Tx) OrderRepository
 }
 
 type TradeRepository interface {
@@ -29,6 +31,7 @@ type TradeRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Trade, error)
 	ListBySymbol(ctx context.Context, symbol string) ([]generated.Trade, error)
 	GetByID(ctx context.Context, id uuid.UUID) (generated.Trade, error)
+	WithTx(tx pgx.Tx) TradeRepository
 }
 
 type SymbolRepository interface {
@@ -36,10 +39,20 @@ type SymbolRepository interface {
 	Get(ctx context.Context, symbol string) (generated.Symbol, error)
 	List(ctx context.Context) ([]generated.Symbol, error)
 	ListActive(ctx context.Context) ([]generated.Symbol, error)
+	GetBySymbol(ctx context.Context, symbol string) (generated.Symbol, error)
 }
 
 type PositionRepository interface {
 	Upsert(ctx context.Context, params generated.UpsertPositionParams) error
 	Get(ctx context.Context, userID uuid.UUID, symbol string) (generated.Position, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Position, error)
+	WithTx(tx pgx.Tx) PositionRepository
+}
+
+type WalletRepository interface {
+	Create(ctx context.Context, params generated.CreateWalletParams) (generated.Wallet, error)
+	Get(ctx context.Context, userID uuid.UUID, asset string) (generated.Wallet, error)
+	Update(ctx context.Context, params generated.UpdateWalletParams) error
+	List(ctx context.Context, userID uuid.UUID) ([]generated.Wallet, error)
+	WithTx(tx pgx.Tx) WalletRepository
 }

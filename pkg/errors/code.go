@@ -45,9 +45,16 @@ const (
 	// Orders
 	CodeOrderModificationNotAllowed Code = "ORDER_MODIFICATION_NOT_ALLOWED"
 	CodeQuantityTooLow              Code = "QUANTITY_TOO_LOW"
-    
-    
-    // Configuration
-CodeConfigInvalid Code = "CONFIG_INVALID"
-CodeConfigMissing Code = "CONFIG_MISSING"
+
+	// Configuration
+	CodeConfigInvalid Code = "CONFIG_INVALID"
+	CodeConfigMissing Code = "CONFIG_MISSING"
+
+	CodeInsufficientBalance Code = "INSUFFICIENT_BALANCE"
+
+	// Wallet
+	CodeWalletNotFound      Code = "WALLET_NOT_FOUND"
+	CodeInvalidAsset        Code = "INVALID_ASSET"
+	CodeNegativeBalance     Code = "NEGATIVE_BALANCE"
+    CodeInsufficientLockedBalance Code = "INSUFFICIENT_LOCKED_BALANCE"
 )

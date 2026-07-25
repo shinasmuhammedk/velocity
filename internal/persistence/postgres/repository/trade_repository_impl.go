@@ -6,6 +6,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type tradeRepository struct {
@@ -44,4 +45,10 @@ func (r *tradeRepository) ListBySymbol(
 	symbol string,
 ) ([]generated.Trade, error) {
 	return r.queries.ListTradesBySymbol(ctx, symbol)
+}
+
+func (r *tradeRepository) WithTx(tx pgx.Tx) TradeRepository {
+	return &tradeRepository{
+		queries: generated.New(tx),
+	}
 }

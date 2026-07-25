@@ -2,6 +2,8 @@
 INSERT INTO symbols (
     symbol,
     display_name,
+    base_asset,
+    quote_asset,
     tick_size,
     lot_size,
     is_active,
@@ -13,6 +15,8 @@ VALUES (
     $3,
     $4,
     $5,
+    $6,
+    $7,
     NOW()
 )
 RETURNING *;
