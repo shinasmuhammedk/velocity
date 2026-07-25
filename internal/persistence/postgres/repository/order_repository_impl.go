@@ -6,6 +6,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type orderRepository struct {
@@ -17,6 +18,14 @@ func NewOrderRepository(db generated.DBTX) OrderRepository {
 		queries: generated.New(db),
 	}
 }
+
+
+func (r *orderRepository) WithTx(tx pgx .Tx) OrderRepository {
+	return &orderRepository{
+		queries: generated.New(tx),
+	}
+}
+
 
 func (r *orderRepository) Create(
 	ctx context.Context,

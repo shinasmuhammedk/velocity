@@ -143,4 +143,39 @@ var (
 		CodeConfigMissing,
 		"required configuration missing",
 	)
+	ErrInvalidQuantity = New(
+		CodeValidation,
+		"invalid quantity",
+	)
+
+	ErrQuantityTooLarge = New(
+		CodeValidation,
+		"order quantity exceeds maximum allowed",
+	)
+	ErrInvalidPrice = New(
+		CodeValidation,
+		"invalid price",
+	)
+	ErrInsufficientBalance = New(
+		CodeInsufficientBalance,
+		"insufficient balance",
+	)
+	ErrWalletNotFound = New(
+		CodeWalletNotFound,
+		"wallet not found",
+	)
+
+	ErrInvalidAsset = New(
+		CodeInvalidAsset,
+		"invalid asset",
+	)
+
+	ErrNegativeBalance = New(
+		CodeNegativeBalance,
+		"negative balance",
+	)
+    ErrInsufficientLockedBalance = New(
+	CodeInsufficientLockedBalance,
+	"insufficient locked balance",
+)
 )

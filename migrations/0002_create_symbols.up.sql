@@ -3,6 +3,9 @@ CREATE TABLE symbols (
 
     display_name TEXT NOT NULL,
 
+    base_asset TEXT NOT NULL,
+    quote_asset TEXT NOT NULL,
+
     tick_size BIGINT NOT NULL DEFAULT 1,
     lot_size BIGINT NOT NULL DEFAULT 1,
 

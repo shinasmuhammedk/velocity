@@ -14,6 +14,9 @@ import (
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
 	"velocity/internal/service/orderservice"
+	"velocity/internal/service/riskservice"
+	"velocity/internal/service/settlementservice"
+	"velocity/internal/service/walletservice"
 	"velocity/internal/transport/http/handler"
 	wsHandler "velocity/internal/transport/ws/handler"
 	"velocity/internal/userstream"
@@ -32,7 +35,7 @@ type Container struct {
 	// Infrastructure
 	// --------------------------------------------------
 
-	DB *pgxpool.Pool
+	DB   *pgxpool.Pool
 	HTTP *fiber.App
 
 	// --------------------------------------------------
@@ -44,7 +47,7 @@ type Container struct {
 	TradeRepository    repository.TradeRepository
 	PositionRepository repository.PositionRepository
 	SymbolRepository   repository.SymbolRepository
-
+	WalletRepository   repository.WalletRepository
 	// --------------------------------------------------
 	// Transactions
 	// --------------------------------------------------
@@ -80,17 +83,19 @@ type Container struct {
 	// Matching Engine
 	// --------------------------------------------------
 
-	Registry           *registry.Registry
-	Recovery           *recovery.Recovery
-	SnapshotRecovery   *recovery.SnapshotRecovery
-	WALManager         *wal.Manager
+	Registry         *registry.Registry
+	Recovery         *recovery.Recovery
+	SnapshotRecovery *recovery.SnapshotRecovery
+	WALManager       *wal.Manager
 
 	// --------------------------------------------------
 	// Services
 	// --------------------------------------------------
 
-	OrderService *orderservice.Service
-
+	RiskService       *riskservice.Service
+	WalletService     *walletservice.Service
+	OrderService      *orderservice.Service
+	SettlementService *settlementservice.Service
 	// --------------------------------------------------
 	// HTTP Handlers
 	// --------------------------------------------------

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"velocity/internal/persistence/postgres/generated"
-
 )
 
 type symbolRepository struct {
@@ -41,4 +40,15 @@ func (r *symbolRepository) ListActive(
 	ctx context.Context,
 ) ([]generated.Symbol, error) {
 	return r.queries.ListActiveSymbols(ctx)
+}
+
+func (r *symbolRepository) GetBySymbol(
+	ctx context.Context,
+	symbol string,
+) (generated.Symbol, error) {
+
+	return r.queries.GetSymbol(
+		ctx,
+		symbol,
+	)
 }
