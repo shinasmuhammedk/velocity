@@ -43,8 +43,7 @@ ORDER BY symbol;
 
 -- name: UpdateSymbolStatus :exec
 UPDATE symbols
-SET
-    is_active = $2
+SET is_active = $2
 WHERE symbol = $1;
 
 

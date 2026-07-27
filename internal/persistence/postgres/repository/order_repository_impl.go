@@ -83,3 +83,13 @@ func (r *orderRepository) UpdateOrderForModify(
         params,
     )
 }
+
+func (r *orderRepository) UpdateOrderAfterTrade(
+    ctx context.Context,
+    params generated.UpdateOrderAfterTradeParams,
+) error {
+    return r.queries.UpdateOrderAfterTrade(
+        ctx,
+        params,
+    )
+}
