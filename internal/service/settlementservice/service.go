@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/pkg/constants"
 
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -41,6 +42,20 @@ func (s *Service) Settle(
 
 			walletService := walletservice.New(walletRepo)
 
+			exists, err := tradeRepo.TradeExists(
+				ctx,
+				req.TradeID,
+			)
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				// Trade already settled.
+				// Safe to return because settlement has already completed.
+				return nil
+			}
+
 			// 1. Consume buyer's locked quote asset
 			if err := walletService.ConsumeLockedFunds(
 				ctx,
@@ -72,12 +87,14 @@ func (s *Service) Settle(
 			}
 
 			// 4. Credit seller with quote asset
-			walletService.Deposit(
+			if err := walletService.Deposit(
 				ctx,
 				req.SellerID,
 				req.QuoteAsset,
 				req.Price*req.Quantity,
-			)
+			); err != nil {
+				return err
+			}
 
 			// 5. Update buyer position
 			if err := positionRepo.Upsert(
@@ -121,22 +138,58 @@ func (s *Service) Settle(
 				return err
 			}
 
-			// 8. Update order status
-			if err := orderRepo.UpdateStatus(
+			buyOrder, err := orderRepo.GetByID(
 				ctx,
-				generated.UpdateOrderStatusParams{
-					ID:     req.BuyOrderID,
-					Status: "FILLED",
+				req.BuyOrderID,
+			)
+			if err != nil {
+				return err
+			}
+
+			sellOrder, err := orderRepo.GetByID(
+				ctx,
+				req.SellOrderID,
+			)
+			if err != nil {
+				return err
+			}
+
+			// 8. Update order status
+			buyRemaining := buyOrder.Remaining - req.Quantity
+			buyFilled := buyOrder.Filled + req.Quantity
+
+			buyStatus := string(constants.OrderStatusPartiallyFilled)
+			if buyRemaining == 0 {
+				buyStatus = string(constants.OrderStatusFilled)
+			}
+
+			if err := orderRepo.UpdateOrderAfterTrade(
+				ctx,
+				generated.UpdateOrderAfterTradeParams{
+					ID:        buyOrder.ID,
+					Remaining: buyRemaining,
+					Filled:    buyFilled,
+					Status:    buyStatus,
 				},
 			); err != nil {
 				return err
 			}
 
-			if err := orderRepo.UpdateStatus(
+			sellRemaining := sellOrder.Remaining - req.Quantity
+			sellFilled := sellOrder.Filled + req.Quantity
+
+			sellStatus := string(constants.OrderStatusPartiallyFilled)
+			if sellRemaining == 0 {
+				sellStatus = string(constants.OrderStatusFilled)
+			}
+
+			if err := orderRepo.UpdateOrderAfterTrade(
 				ctx,
-				generated.UpdateOrderStatusParams{
-					ID:     req.SellOrderID,
-					Status: "FILLED",
+				generated.UpdateOrderAfterTradeParams{
+					ID:        sellOrder.ID,
+					Remaining: sellRemaining,
+					Filled:    sellFilled,
+					Status:    sellStatus,
 				},
 			); err != nil {
 				return err

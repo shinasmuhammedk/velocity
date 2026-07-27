@@ -52,3 +52,10 @@ func (r *tradeRepository) WithTx(tx pgx.Tx) TradeRepository {
 		queries: generated.New(tx),
 	}
 }
+
+func (r *tradeRepository) TradeExists(
+    ctx context.Context,
+    id uuid.UUID,
+) (bool, error) {
+    return r.queries.TradeExists(ctx, id)
+}

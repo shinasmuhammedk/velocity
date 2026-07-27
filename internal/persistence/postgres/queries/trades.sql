@@ -110,3 +110,11 @@ SELECT *
 FROM trades
 WHERE symbol = $1
 ORDER BY executed_at DESC;
+
+
+-- name: TradeExists :one
+SELECT EXISTS(
+    SELECT 1
+    FROM trades
+    WHERE id = $1
+);

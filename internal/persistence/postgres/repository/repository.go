@@ -24,6 +24,7 @@ type OrderRepository interface {
 	GetPendingStopOrders(ctx context.Context) ([]generated.Order, error)
 	UpdateOrderForModify(ctx context.Context, params generated.UpdateOrderForModifyParams) error
 	WithTx(tx pgx.Tx) OrderRepository
+	UpdateOrderAfterTrade(ctx context.Context, params generated.UpdateOrderAfterTradeParams) error
 }
 
 type TradeRepository interface {
@@ -32,6 +33,7 @@ type TradeRepository interface {
 	ListBySymbol(ctx context.Context, symbol string) ([]generated.Trade, error)
 	GetByID(ctx context.Context, id uuid.UUID) (generated.Trade, error)
 	WithTx(tx pgx.Tx) TradeRepository
+	TradeExists(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 type SymbolRepository interface {
