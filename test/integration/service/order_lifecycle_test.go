@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/test/integration"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestCreateAndGetSymbol(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	symbolName := fmt.Sprintf("TEST_%d", time.Now().UnixNano())
 

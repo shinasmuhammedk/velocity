@@ -494,3 +494,4 @@ func (b *OrderBook) ActiveOrders() []*order.Order {
 
 	return orders
 }
+

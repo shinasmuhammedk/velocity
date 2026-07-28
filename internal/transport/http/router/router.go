@@ -9,10 +9,14 @@ import (
 func Register(
 	app *fiber.App,
 	orderHandler *handler.OrderHandler,
+	marketHandler *handler.MarketDataHandler,
+	walletHandler *handler.WalletHandler,
+	positionHandler *handler.PositionHandler,
 ) {
 	api := app.Group("/api")
 
-	api.Post("/orders", orderHandler.Submit)
-    api.Delete("/orders/:id", orderHandler.Cancel)
-    api.Patch("/orders/:id", orderHandler.Modify)
+	RegisterOrderRoutes(api, orderHandler)
+	RegisterMarketRoutes(api, marketHandler)
+	RegisterWalletRoutes(api, walletHandler)
+	RegisterPositionRoutes(api, positionHandler)
 }

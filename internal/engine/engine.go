@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sync/atomic"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
@@ -54,6 +55,7 @@ func (e *Engine) start() {
 
 					continue
 				}
+				fmt.Println("PROCESSING:", c.Order.Symbol, c.Order.ID)
 
 				trades, err := e.matcher.Match(c.Order)
 				if err != nil {
@@ -152,6 +154,7 @@ func (e *Engine) SubmitOrder(
 	order *order.Order,
 ) error {
 
+	fmt.Println("ENGINE RECEIVED:", order.Symbol, order.ID)
 	// POST_ONLY validation
 	if order.TimeInForce == constants.TimeInForcePostOnly &&
 		order.Type != constants.OrderTypeLimit {

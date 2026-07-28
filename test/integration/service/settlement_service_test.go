@@ -7,6 +7,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/service/settlementservice"
 	"velocity/pkg/constants"
+	"velocity/test/integration"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestSettlementService(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := settlementservice.New(tc.TxManager)
 

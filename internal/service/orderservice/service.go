@@ -11,6 +11,7 @@ import (
 	"velocity/internal/engine/registry"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/walletservice"
@@ -345,4 +346,53 @@ func (s *Service) Modify(
 	s.UserDispatcher.DispatchOrderModified(o)
 
 	return nil
+}
+
+
+func (s *Service) GetOpenOrders(
+	ctx context.Context,
+	userID string,
+) ([]*order.Order, error) {
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.ErrUserNotFound
+	}
+
+	rows, err := s.orderRepo.ListOpenOrdersByUser(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToDomainOrders(rows), nil
+}
+
+
+func (s *Service) ListOrderHistory(
+    ctx context.Context,
+    userID uuid.UUID,
+) ([]*order.Order, error) {
+
+    _, err := s.userRepo.GetByID(
+        ctx,
+        userID,
+    )
+    if err != nil {
+        return nil, errors.ErrUserNotFound
+    }
+
+    rows, err := s.orderRepo.ListOrdersByUser(
+        ctx,
+        userID,
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    return mapper.ToDomainOrders(rows), nil
 }

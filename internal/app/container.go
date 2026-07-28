@@ -13,7 +13,9 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
+	"velocity/internal/service/marketdataservice"
 	"velocity/internal/service/orderservice"
+	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/settlementservice"
 	"velocity/internal/service/walletservice"
@@ -96,9 +98,16 @@ type Container struct {
 	WalletService     *walletservice.Service
 	OrderService      *orderservice.Service
 	SettlementService *settlementservice.Service
+    MarketDataService *marketdataservice.Service
+    PositionService *positionservice.Service
+
+    
 	// --------------------------------------------------
 	// HTTP Handlers
 	// --------------------------------------------------
 
 	OrderHandler *handler.OrderHandler
+    MarketDataHandler *handler.MarketDataHandler
+    WalletHandler *handler.WalletHandler
+    PositionHandler *handler.PositionHandler
 }

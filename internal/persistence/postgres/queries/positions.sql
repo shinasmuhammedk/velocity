@@ -23,11 +23,6 @@ WHERE user_id = $1
 AND symbol = $2;
 
 
--- name: GetPositionsByUser :many
-SELECT *
-FROM positions
-WHERE user_id = $1
-ORDER BY symbol ASC;
 
 
 -- name: UpsertPosition :exec
