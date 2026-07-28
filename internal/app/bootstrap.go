@@ -13,7 +13,9 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
+	"velocity/internal/service/marketdataservice"
 	"velocity/internal/service/orderservice"
+	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/settlementservice" // <-- Add this
 	"velocity/internal/service/walletservice"
@@ -203,6 +205,15 @@ func Bootstrap() (*Container, error) {
 	container.SettlementService = settlementservice.New(
 		container.TxManager,
 	)
+	container.MarketDataService = marketdataservice.New(
+		container.Registry,
+		container.SymbolRepository,
+		container.TradeRepository,
+	)
+
+	container.PositionService = positionservice.New(
+		container.PositionRepository,
+	)
 
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.SettlementService,
@@ -239,10 +250,26 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("order handler initialized")
 
+	// MarketDataHandler
+	container.MarketDataHandler = handler.NewMarketDataHandler(
+		container.MarketDataService,
+	)
+	container.Logger.Info("market data handler initialized")
+
+	container.WalletHandler = handler.NewWalletHandler(
+		container.WalletService,
+	)
+	container.PositionHandler = handler.NewPositionHandler(
+		container.PositionService,
+	)
+
 	//router
 	router.Register(
 		container.HTTP,
 		container.OrderHandler,
+		container.MarketDataHandler,
+		container.WalletHandler,
+        container.PositionHandler,
 	)
 
 	container.HTTP.Get(

@@ -1,17 +1,18 @@
-package integration
+package repository
 
 import (
 	"testing"
 	"time"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/test/integration"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPositionRepository(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	// -----------------------------
 	// Create User

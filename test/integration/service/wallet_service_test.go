@@ -6,12 +6,13 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/service/walletservice"
 	"velocity/pkg/errors"
+	"velocity/test/integration"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func createWalletForServiceTest(t *testing.T, tc *TestContext) (uuid.UUID, string) {
+func createWalletForServiceTest(t *testing.T, tc *integration.TestContext) (uuid.UUID, string) {
 	userID := uuid.New()
 
 	_, err := tc.UserRepo.Create(
@@ -43,7 +44,7 @@ func createWalletForServiceTest(t *testing.T, tc *TestContext) (uuid.UUID, strin
 }
 
 func TestWalletServiceDeposit(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -71,7 +72,7 @@ func TestWalletServiceDeposit(t *testing.T) {
 }
 
 func TestWalletServiceWithdraw(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -89,7 +90,7 @@ func TestWalletServiceWithdraw(t *testing.T) {
 
 
 func TestWalletServiceLockFunds(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -107,7 +108,7 @@ func TestWalletServiceLockFunds(t *testing.T) {
 
 
 func TestWalletServiceUnlockFunds(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -130,7 +131,7 @@ func TestWalletServiceUnlockFunds(t *testing.T) {
 
 
 func TestWalletServiceConsumeLockedFunds(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -154,7 +155,7 @@ func TestWalletServiceConsumeLockedFunds(t *testing.T) {
 
 
 func TestWalletServiceWithdrawInsufficientBalance(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -173,7 +174,7 @@ func TestWalletServiceWithdrawInsufficientBalance(t *testing.T) {
 
 
 func TestWalletServiceLockInsufficientBalance(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -192,7 +193,7 @@ func TestWalletServiceLockInsufficientBalance(t *testing.T) {
 
 
 func TestWalletServiceConsumeInsufficientLockedBalance(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 
@@ -214,7 +215,7 @@ func TestWalletServiceConsumeInsufficientLockedBalance(t *testing.T) {
 
 
 func TestWalletServiceInvalidAmount(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	service := walletservice.New(tc.WalletRepo)
 

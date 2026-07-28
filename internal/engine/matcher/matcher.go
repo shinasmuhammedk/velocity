@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"fmt"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
 	"velocity/internal/engine/orderbook"
@@ -79,7 +80,6 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 			resting.Remaining,
 		)
 
-
 		t := &trade.Trade{
 			ID: idgen.UUID(),
 
@@ -97,7 +97,6 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 
 			ExecutedAt: timeutil.UTCNow(),
 		}
-
 
 		trades = append(trades, t)
 
@@ -243,7 +242,12 @@ func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
 			incoming.TimeInForce == constants.TimeInForcePostOnly) {
 
 		m.book.AddOrder(incoming)
+		fmt.Println("ORDER ADDED TO BOOK")
+		fmt.Println("ASK LEVELS:", len(m.book.AskLevels(10)))
+		fmt.Println("BID LEVELS:", len(m.book.BidLevels(10)))
 	}
+
+
 
 	return trades
 }

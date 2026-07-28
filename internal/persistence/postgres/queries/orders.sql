@@ -146,3 +146,11 @@ SET
     remaining = $4,
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: ListOpenOrdersByUser :many
+SELECT *
+FROM orders
+WHERE user_id = $1
+  AND status IN ('OPEN', 'PARTIALLY_FILLED')
+ORDER BY created_at DESC;
+

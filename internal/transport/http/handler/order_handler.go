@@ -9,6 +9,7 @@ import (
 	httpresponse "velocity/internal/transport/http/dto/response"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 type OrderHandler struct {
@@ -133,4 +134,53 @@ func (h *OrderHandler) Modify(
 		"order modified successfully",
 		nil,
 	)
+}
+
+
+func (h *OrderHandler) GetOpenOrders(c *fiber.Ctx) error {
+
+	userID := c.Params("userID")
+
+	orders, err := h.orderService.GetOpenOrders(
+		c.Context(),
+		userID,
+	)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(orders)
+}
+
+
+func (h *OrderHandler) OrderHistory(
+    c *fiber.Ctx,
+) error {
+
+    userID, err := uuid.Parse(
+        c.Params("userID"),
+    )
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).
+            JSON(fiber.Map{
+                "error": "invalid user id",
+            })
+    }
+
+    orders, err := h.orderService.ListOrderHistory(
+        c.Context(),
+        userID,
+    )
+
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).
+            JSON(fiber.Map{
+                "error": err.Error(),
+            })
+    }
+
+    return c.JSON(orders)
 }

@@ -1,17 +1,18 @@
-package integration
+package repository
 
 import (
 	"testing"
 	"time"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/test/integration"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCreateAndGetUser(t *testing.T) {
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	userID := uuid.New()
 	email := uuid.New().String() + "@velocity.dev"

@@ -1,10 +1,11 @@
-package integration
+package repository
 
 import (
 	"testing"
 	"time"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/test/integration"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -13,7 +14,7 @@ import (
 
 func TestOrderRepository(t *testing.T) {
 
-	tc := NewTestContext(t)
+	tc := integration.NewTestContext(t)
 
 	// ---------- Create User ----------
 	userID := uuid.New()

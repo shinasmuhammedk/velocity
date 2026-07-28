@@ -93,3 +93,26 @@ func (r *orderRepository) UpdateOrderAfterTrade(
         params,
     )
 }
+
+func (r *orderRepository) ListOpenOrdersByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+) ([]generated.Order, error) {
+
+	return r.queries.ListOpenOrdersByUser(
+		ctx,
+		userID,
+	)
+}
+
+
+func (r *orderRepository) ListOrdersByUser(
+    ctx context.Context,
+    userID uuid.UUID,
+) ([]generated.Order, error) {
+
+    return r.queries.ListOrdersByUser(
+        ctx,
+        userID,
+    )
+}
