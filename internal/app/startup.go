@@ -50,6 +50,7 @@ func Startup() (*Container, error) {
 
 	container.DB = db
 
+
 	container.Logger.Info(
 		"postgres connection established",
 	)

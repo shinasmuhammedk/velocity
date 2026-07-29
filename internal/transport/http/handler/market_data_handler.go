@@ -4,19 +4,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"velocity/internal/service/marketdataservice"
+	"velocity/internal/analytics/candles"
+	"velocity/internal/service/marketservice"
 	"velocity/internal/transport/http/dto/response"
 )
 
 type MarketDataHandler struct {
-	marketDataService *marketdataservice.Service
+	marketService *marketservice.Service
 }
 
 func NewMarketDataHandler(
-	marketDataService *marketdataservice.Service,
+	marketService *marketservice.Service,
 ) *MarketDataHandler {
 	return &MarketDataHandler{
-		marketDataService: marketDataService,
+		marketService: marketService,
 	}
 }
 
@@ -44,7 +45,7 @@ func (h *MarketDataHandler) GetOrderBook(c *fiber.Ctx) error {
 
 	limit := c.QueryInt("limit", 20)
 
-	orderBook, err := h.marketDataService.GetOrderBook(
+	orderBook, err := h.marketService.GetOrderBook(
 		symbol,
 		limit,
 	)
@@ -65,7 +66,7 @@ func (h *MarketDataHandler) GetTicker(c *fiber.Ctx) error {
 
 	symbol := c.Params("symbol")
 
-	ticker, err := h.marketDataService.GetTicker(symbol)
+	ticker, err := h.marketService.GetTicker(symbol)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),
@@ -79,7 +80,7 @@ func (h *MarketDataHandler) GetRecentTrades(c *fiber.Ctx) error {
 
 	symbol := c.Params("symbol")
 
-	trades, err := h.marketDataService.GetRecentTrades(
+	trades, err := h.marketService.GetRecentTrades(
 		c.Context(),
 		symbol,
 	)
@@ -95,7 +96,7 @@ func (h *MarketDataHandler) GetRecentTrades(c *fiber.Ctx) error {
 
 func (h *MarketDataHandler) Symbols(c *fiber.Ctx) error {
 
-    symbols, err := h.marketDataService.GetSymbols(
+    symbols, err := h.marketService.GetSymbols(
         c.Context(),
     )
 
@@ -122,7 +123,7 @@ func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 			})
 	}
 
-	trades, err := h.marketDataService.GetUserTrades(
+	trades, err := h.marketService.GetUserTrades(
 		c.Context(),
 		userID,
 	)
@@ -135,4 +136,52 @@ func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(trades)
+}
+
+
+func (h *MarketDataHandler) GetMarketStats(c *fiber.Ctx) error {
+
+	symbol := c.Params("symbol")
+
+	stats, err := h.marketService.GetMarketStats(symbol)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(stats)
+}
+
+
+func (h *MarketDataHandler) GetCandles(
+	c *fiber.Ctx,
+) error {
+
+	symbol := c.Params("symbol")
+
+	intervalStr := c.Query("interval")
+	if intervalStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "interval is required",
+			},
+		)
+	}
+
+	interval := candles.Interval(intervalStr)
+
+	candleData, err := h.marketService.GetCandles(
+		symbol,
+		interval,
+	)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(
+			fiber.Map{
+				"error": err.Error(),
+			},
+		)
+	}
+
+	return c.JSON(candleData)
 }
