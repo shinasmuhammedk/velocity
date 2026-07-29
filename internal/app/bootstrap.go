@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
-
+	"velocity/internal/analytics/candles"
+	"velocity/internal/analytics/stats"
+	"velocity/internal/engine/events"
 	"velocity/internal/engine/orderbook"
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
@@ -13,7 +15,7 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
-	"velocity/internal/service/marketdataservice"
+	"velocity/internal/service/marketservice"
 	"velocity/internal/service/orderservice"
 	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
@@ -131,6 +133,43 @@ func Bootstrap() (*Container, error) {
 		container.WALManager,
 	)
 
+	container.MarketStatsManager = stats.NewManager()
+	container.MarketStatsService = stats.NewService(
+		container.MarketStatsManager,
+	)
+
+	statsSubscriber := stats.NewSubscriber(
+		container.MarketStatsManager,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.TradeExecutedEventType,
+		statsSubscriber,
+	)
+
+	container.Logger.Info("Stats subscriber registered")
+
+	container.CandleManager = candles.NewManager()
+
+	container.CandleService = candles.NewService(
+		container.CandleManager,
+	)
+
+	candleSubscriber := candles.NewSubscriber(
+		container.CandleManager,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.TradeExecutedEventType,
+		candleSubscriber,
+	)
+	container.Registry.Publisher().Subscribe(
+		events.TradeExecutedEventType,
+		candleSubscriber,
+	)
+	container.Logger.Info("Candle subscriber registered")
+
+
 	provider := func(symbol string) *orderbook.OrderBook {
 		engine := container.Registry.Get(symbol)
 
@@ -199,16 +238,22 @@ func Bootstrap() (*Container, error) {
 	container.RiskService = riskservice.New(
 		riskservice.NewQuantityValidator(),
 		riskservice.NewPriceValidator(),
-		riskservice.NewBalanceValidator(container.WalletService),
+		riskservice.NewBalanceValidator(
+			container.WalletService,
+			container.SymbolRepository,
+		),
 	)
 
 	container.SettlementService = settlementservice.New(
 		container.TxManager,
 	)
-	container.MarketDataService = marketdataservice.New(
+
+	container.MarketService = marketservice.New(
 		container.Registry,
 		container.SymbolRepository,
 		container.TradeRepository,
+		container.MarketStatsService,
+		container.CandleService,
 	)
 
 	container.PositionService = positionservice.New(
@@ -252,7 +297,7 @@ func Bootstrap() (*Container, error) {
 
 	// MarketDataHandler
 	container.MarketDataHandler = handler.NewMarketDataHandler(
-		container.MarketDataService,
+		container.MarketService,
 	)
 	container.Logger.Info("market data handler initialized")
 
@@ -269,7 +314,7 @@ func Bootstrap() (*Container, error) {
 		container.OrderHandler,
 		container.MarketDataHandler,
 		container.WalletHandler,
-        container.PositionHandler,
+		container.PositionHandler,
 	)
 
 	container.HTTP.Get(

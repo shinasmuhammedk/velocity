@@ -1,8 +1,9 @@
-package marketdataservice
+package marketservice
 
 import (
 	"context"
-	"fmt"
+	"velocity/internal/analytics/candles"
+	"velocity/internal/analytics/stats"
 	"velocity/internal/domain/depth"
 	"velocity/internal/engine/registry"
 	"velocity/internal/persistence/postgres/generated"
@@ -16,6 +17,9 @@ type Service struct {
 	registry  *registry.Registry
     symbolRepo repository.SymbolRepository
 	tradeRepo repository.TradeRepository
+    
+    statsService *stats.Service
+    candleService *candles.Service
 }
 
 type Ticker struct {
@@ -32,11 +36,15 @@ func New(
 	reg *registry.Registry,
     symbolRepo repository.SymbolRepository,
 	tradeRepo repository.TradeRepository,
+    statsService *stats.Service,
+    candleService *candles.Service,
 ) *Service {
 	return &Service{
 		registry:  reg,
         symbolRepo: symbolRepo,
 		tradeRepo: tradeRepo,
+        statsService: statsService,
+        candleService: candleService,
 	}
 }
 
@@ -46,24 +54,14 @@ type OrderBook struct {
 	Asks   []depth.Level
 }
 
-func (s *Service) GetOrderBook(
-	symbol string,
-	limit int,
-) (*OrderBook, error) {
+func (s *Service) GetOrderBook(symbol string, limit int) (*OrderBook, error) {
 
-	engine := s.registry.Get(symbol)
-	if engine == nil {
+	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
 
+	engine := s.registry.Get(symbol)
 	book := engine.OrderBook()
-
-	// DEBUG
-	fmt.Println("========== ORDERBOOK QUERY ==========")
-	fmt.Println("Symbol:", symbol)
-	fmt.Println("Ask Levels:", len(book.AskLevels(limit)))
-	fmt.Println("Bid Levels:", len(book.BidLevels(limit)))
-	fmt.Println("=====================================")
 
 	return &OrderBook{
 		Symbol: symbol,
@@ -72,14 +70,16 @@ func (s *Service) GetOrderBook(
 	}, nil
 }
 
+
 func (s *Service) GetTicker(
 	symbol string,
 ) (*Ticker, error) {
 
-	engine := s.registry.Get(symbol)
-	if engine == nil {
+	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
+
+	engine := s.registry.Get(symbol)
 
 	book := engine.OrderBook()
 
@@ -116,8 +116,7 @@ func (s *Service) GetRecentTrades(
 	symbol string,
 ) ([]generated.Trade, error) {
 
-	engine := s.registry.Get(symbol)
-	if engine == nil {
+	if _, err := s.symbolRepo.GetBySymbol(ctx, symbol); err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
 
@@ -147,4 +146,40 @@ func (s *Service) GetUserTrades(
 		ctx,
 		userID,
 	)
+}
+
+func (s *Service) GetMarketStats(symbol string) (*stats.MarketStats, error) {
+
+	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
+		return nil, errors.ErrSymbolNotFound
+	}
+
+	marketStats, ok := s.statsService.Get(symbol)
+	if !ok {
+		return &stats.MarketStats{Symbol: symbol}, nil // valid symbol, just no trades yet
+	}
+
+	return marketStats, nil
+}
+
+
+func (s *Service) GetCandles(
+	symbol string,
+	interval candles.Interval,
+) ([]*candles.Candle, error) {
+
+	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
+		return nil, errors.ErrSymbolNotFound
+	}
+
+	candleList, ok := s.candleService.Get(
+		symbol,
+		interval,
+	)
+
+	if !ok {
+		return []*candles.Candle{}, nil
+	}
+
+	return candleList, nil
 }

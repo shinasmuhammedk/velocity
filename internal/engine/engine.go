@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"sync/atomic"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
@@ -40,6 +39,7 @@ type Engine struct {
 
 func (e *Engine) start() {
 	go func() {
+
 		defer close(e.done)
 		for cmd := range e.commandQueue {
 			switch c := cmd.(type) {
@@ -55,7 +55,6 @@ func (e *Engine) start() {
 
 					continue
 				}
-				fmt.Println("PROCESSING:", c.Order.Symbol, c.Order.ID)
 
 				trades, err := e.matcher.Match(c.Order)
 				if err != nil {
@@ -65,6 +64,8 @@ func (e *Engine) start() {
 				e.incrementSequence()
 
 				for _, t := range trades {
+
+
 					e.lastTradePrice.Store(t.Price)
 					metrics.TradesExecuted.Inc()
 
@@ -154,7 +155,6 @@ func (e *Engine) SubmitOrder(
 	order *order.Order,
 ) error {
 
-	fmt.Println("ENGINE RECEIVED:", order.Symbol, order.ID)
 	// POST_ONLY validation
 	if order.TimeInForce == constants.TimeInForcePostOnly &&
 		order.Type != constants.OrderTypeLimit {
@@ -185,9 +185,11 @@ func (e *Engine) SubmitOrder(
 		}
 	}
 
+
 	e.commandQueue <- command.SubmitOrderCommand{
 		Order: order,
 	}
+
 
 	return nil
 }

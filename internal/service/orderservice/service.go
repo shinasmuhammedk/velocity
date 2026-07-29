@@ -137,6 +137,7 @@ func (s *Service) Submit(
 		zap.String("side", string(o.Side)),
 	)
 
+
 	_, err = s.risk.Validate(
 		ctx,
 		riskservice.ValidateOrderRequest{
@@ -144,10 +145,12 @@ func (s *Service) Submit(
 		},
 	)
 
+
 	if err != nil {
 		s.UserDispatcher.DispatchOrderRejected(o)
 		return nil, err
 	}
+
 
 	if o.Side == constants.OrderSideBuy {
 
@@ -155,10 +158,12 @@ func (s *Service) Submit(
 
 		userID := uuid.MustParse(o.UserID)
 
+		symbol, _ := s.symbolRepo.Get(ctx, req.Symbol)
+
 		err = s.wallet.LockFunds(
 			ctx,
 			userID,
-			"USD", // later this will come from the symbol
+			symbol.QuoteAsset,
 			amount,
 		)
 
@@ -348,7 +353,6 @@ func (s *Service) Modify(
 	return nil
 }
 
-
 func (s *Service) GetOpenOrders(
 	ctx context.Context,
 	userID string,
@@ -372,27 +376,26 @@ func (s *Service) GetOpenOrders(
 	return mapper.ToDomainOrders(rows), nil
 }
 
-
 func (s *Service) ListOrderHistory(
-    ctx context.Context,
-    userID uuid.UUID,
+	ctx context.Context,
+	userID uuid.UUID,
 ) ([]*order.Order, error) {
 
-    _, err := s.userRepo.GetByID(
-        ctx,
-        userID,
-    )
-    if err != nil {
-        return nil, errors.ErrUserNotFound
-    }
+	_, err := s.userRepo.GetByID(
+		ctx,
+		userID,
+	)
+	if err != nil {
+		return nil, errors.ErrUserNotFound
+	}
 
-    rows, err := s.orderRepo.ListOrdersByUser(
-        ctx,
-        userID,
-    )
-    if err != nil {
-        return nil, err
-    }
+	rows, err := s.orderRepo.ListOrdersByUser(
+		ctx,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-    return mapper.ToDomainOrders(rows), nil
+	return mapper.ToDomainOrders(rows), nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/walletservice"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
@@ -12,13 +13,16 @@ import (
 
 type BalanceValidator struct {
 	walletService *walletservice.Service
+	symbolRepo    repository.SymbolRepository
 }
 
 func NewBalanceValidator(
 	walletService *walletservice.Service,
+	symbolRepo repository.SymbolRepository,
 ) *BalanceValidator {
 	return &BalanceValidator{
 		walletService: walletService,
+		symbolRepo:    symbolRepo,
 	}
 }
 
@@ -39,10 +43,15 @@ func (v *BalanceValidator) Validate(
 		return err
 	}
 
+	symbol, err := v.symbolRepo.Get(ctx, o.Symbol)
+	if err != nil {
+		return err
+	}
+
 	wallet, err := v.walletService.Get(
 		ctx,
 		userID,
-		"INR",
+		symbol.QuoteAsset,
 	)
 	if err != nil {
 		return err

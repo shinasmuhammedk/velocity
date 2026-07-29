@@ -5,6 +5,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	"velocity/internal/analytics/candles"
+	"velocity/internal/analytics/stats"
 	"velocity/internal/config"
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
@@ -13,7 +15,7 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/internal/persistence/worker"
-	"velocity/internal/service/marketdataservice"
+	"velocity/internal/service/marketservice"
 	"velocity/internal/service/orderservice"
 	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
@@ -98,16 +100,20 @@ type Container struct {
 	WalletService     *walletservice.Service
 	OrderService      *orderservice.Service
 	SettlementService *settlementservice.Service
-    MarketDataService *marketdataservice.Service
-    PositionService *positionservice.Service
+	MarketService     *marketservice.Service
+	PositionService   *positionservice.Service
 
-    
 	// --------------------------------------------------
 	// HTTP Handlers
 	// --------------------------------------------------
 
-	OrderHandler *handler.OrderHandler
-    MarketDataHandler *handler.MarketDataHandler
-    WalletHandler *handler.WalletHandler
-    PositionHandler *handler.PositionHandler
+	OrderHandler      *handler.OrderHandler
+	MarketDataHandler *handler.MarketDataHandler
+	WalletHandler     *handler.WalletHandler
+	PositionHandler   *handler.PositionHandler
+
+	MarketStatsManager *stats.Manager
+	MarketStatsService *stats.Service
+	CandleManager      *candles.Manager
+	CandleService      *candles.Service
 }
