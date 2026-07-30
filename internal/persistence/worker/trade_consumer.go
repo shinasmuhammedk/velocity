@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	"velocity/internal/domain/trade"
 	"velocity/internal/marketdata"
@@ -45,6 +46,15 @@ func (c *TradeConsumer) Start(
 				return
 
 			case t := <-trades:
+
+				fmt.Println("TRADE RECEIVED BY CONSUMER")
+
+				if t == nil {
+					fmt.Println("TRADE IS NIL")
+					continue
+				}
+
+				fmt.Println("TRADE:", t.Symbol)
 				if t == nil {
 					continue
 				}
@@ -57,6 +67,8 @@ func (c *TradeConsumer) Start(
 					// TODO: log
 					continue
 				}
+
+				fmt.Println("STARTING SETTLEMENT")
 				// Persist trade
 				if err := c.settlement.Settle(
 					ctx,
@@ -69,11 +81,12 @@ func (c *TradeConsumer) Start(
 						Symbol:      t.Symbol,
 						Price:       t.Price,
 						Quantity:    t.Quantity,
-                        
+
 						BaseAsset:  symbol.BaseAsset,
 						QuoteAsset: symbol.QuoteAsset,
 					},
 				); err != nil {
+					fmt.Println("SETTLEMENT ERROR:", err)
 					// TODO:
 					// retry
 					// dead letter queue
@@ -81,8 +94,21 @@ func (c *TradeConsumer) Start(
 					continue
 				}
 
+				fmt.Println("SETTLEMENT SUCCESS")
+
+				fmt.Println("TRADE CONSUMER: Dispatching trade")
+				fmt.Println("Symbol:", t.Symbol)
+
 				// Publish trade event
 				book := c.orderBookFor(t.Symbol)
+
+				if book == nil {
+					fmt.Println("BOOK IS NIL")
+				} else {
+					fmt.Println("BOOK FOUND")
+				}
+
+				fmt.Println("ABOUT TO DISPATCH")
 
 				if book != nil {
 					c.dispatcher.DispatchTrade(

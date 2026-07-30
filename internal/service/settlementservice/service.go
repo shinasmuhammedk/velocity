@@ -2,6 +2,7 @@ package settlementservice
 
 import (
 	"context"
+	"fmt"
 
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/pkg/constants"
@@ -42,87 +43,121 @@ func (s *Service) Settle(
 
 			walletService := walletservice.New(walletRepo)
 
+			fmt.Println("1. TradeExists")
+
 			exists, err := tradeRepo.TradeExists(
 				ctx,
 				req.TradeID,
 			)
+
+			fmt.Println("1 DONE", err)
+
 			if err != nil {
 				return err
 			}
 
 			if exists {
-				// Trade already settled.
-				// Safe to return because settlement has already completed.
+				fmt.Println("Trade already settled")
 				return nil
 			}
 
-			// 1. Consume buyer's locked quote asset
-			if err := walletService.ConsumeLockedFunds(
+			fmt.Println("2. Consume buyer")
+
+			err = walletService.ConsumeLockedFunds(
 				ctx,
 				req.BuyerID,
 				req.QuoteAsset,
 				req.Price*req.Quantity,
-			); err != nil {
+			)
+
+			fmt.Println("2 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 2. Consume seller's locked base asset
-			if err := walletService.ConsumeLockedFunds(
+			fmt.Println("3. Consume seller")
+
+			err = walletService.ConsumeLockedFunds(
 				ctx,
 				req.SellerID,
 				req.BaseAsset,
 				req.Quantity,
-			); err != nil {
+			)
+
+			fmt.Println("3 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 3. Credit buyer with purchased asset
-			if err := walletService.Deposit(
+			fmt.Println("4. Deposit buyer")
+
+			err = walletService.Deposit(
 				ctx,
 				req.BuyerID,
 				req.BaseAsset,
 				req.Quantity,
-			); err != nil {
+			)
+
+			fmt.Println("4 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 4. Credit seller with quote asset
-			if err := walletService.Deposit(
+			fmt.Println("5. Deposit seller")
+
+			err = walletService.Deposit(
 				ctx,
 				req.SellerID,
 				req.QuoteAsset,
 				req.Price*req.Quantity,
-			); err != nil {
+			)
+
+			fmt.Println("5 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 5. Update buyer position
-			if err := positionRepo.Upsert(
+			fmt.Println("6. Update buyer position")
+
+			err = positionRepo.Upsert(
 				ctx,
 				generated.UpsertPositionParams{
 					UserID:   req.BuyerID,
 					Symbol:   req.Symbol,
 					Quantity: req.Quantity,
 				},
-			); err != nil {
+			)
+
+			fmt.Println("6 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 6. Update seller position
+			fmt.Println("7. Update seller position")
 
-			if err := positionRepo.Upsert(
+			err = positionRepo.Upsert(
 				ctx,
 				generated.UpsertPositionParams{
 					UserID:   req.SellerID,
 					Symbol:   req.Symbol,
 					Quantity: -req.Quantity,
 				},
-			); err != nil {
+			)
+
+			fmt.Println("7 DONE", err)
+
+			if err != nil {
 				return err
 			}
 
-			// 7. Persist trade
-			if _, err := tradeRepo.Create(
+			fmt.Println("8. Persist trade")
+
+			_, err = tradeRepo.Create(
 				ctx,
 				generated.CreateTradeParams{
 					ID:          req.TradeID,
@@ -134,27 +169,42 @@ func (s *Service) Settle(
 					Price:       req.Price,
 					Quantity:    req.Quantity,
 				},
-			); err != nil {
+			)
+
+			fmt.Println("8 DONE", err)
+
+			if err != nil {
 				return err
 			}
+
+			fmt.Println("9. Get buy order")
 
 			buyOrder, err := orderRepo.GetByID(
 				ctx,
 				req.BuyOrderID,
 			)
+
+			fmt.Println("9 DONE", err)
+
 			if err != nil {
 				return err
 			}
+
+			fmt.Println("10. Get sell order")
 
 			sellOrder, err := orderRepo.GetByID(
 				ctx,
 				req.SellOrderID,
 			)
+
+			fmt.Println("10 DONE", err)
+
 			if err != nil {
 				return err
 			}
 
-			// 8. Update order status
+			fmt.Println("11. Update buy order")
+
 			buyRemaining := buyOrder.Remaining - req.Quantity
 			buyFilled := buyOrder.Filled + req.Quantity
 
@@ -163,7 +213,7 @@ func (s *Service) Settle(
 				buyStatus = string(constants.OrderStatusFilled)
 			}
 
-			if err := orderRepo.UpdateOrderAfterTrade(
+			err = orderRepo.UpdateOrderAfterTrade(
 				ctx,
 				generated.UpdateOrderAfterTradeParams{
 					ID:        buyOrder.ID,
@@ -171,9 +221,15 @@ func (s *Service) Settle(
 					Filled:    buyFilled,
 					Status:    buyStatus,
 				},
-			); err != nil {
+			)
+
+			fmt.Println("11 DONE", err)
+
+			if err != nil {
 				return err
 			}
+
+			fmt.Println("12. Update sell order")
 
 			sellRemaining := sellOrder.Remaining - req.Quantity
 			sellFilled := sellOrder.Filled + req.Quantity
@@ -183,7 +239,7 @@ func (s *Service) Settle(
 				sellStatus = string(constants.OrderStatusFilled)
 			}
 
-			if err := orderRepo.UpdateOrderAfterTrade(
+			err = orderRepo.UpdateOrderAfterTrade(
 				ctx,
 				generated.UpdateOrderAfterTradeParams{
 					ID:        sellOrder.ID,
@@ -191,9 +247,15 @@ func (s *Service) Settle(
 					Filled:    sellFilled,
 					Status:    sellStatus,
 				},
-			); err != nil {
+			)
+
+			fmt.Println("12 DONE", err)
+
+			if err != nil {
 				return err
 			}
+
+			fmt.Println("SETTLEMENT COMPLETE")
 
 			return nil
 		},

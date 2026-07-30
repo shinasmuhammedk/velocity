@@ -12,4 +12,5 @@ const (
 	MessageTrade  = "trade"
 	MessageTicker = "ticker"
 	MessageDepth  = "depth"
+	MessageKline  = "kline"
 )

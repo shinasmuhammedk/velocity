@@ -1,6 +1,9 @@
 package marketdata
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type Hub struct {
 	clients map[string]map[*Client]bool
@@ -14,19 +17,18 @@ func NewHub() *Hub {
 }
 
 
-func (h *Hub) Subscribe(
-    symbol string,
-    client *Client,
-) {
+func (h *Hub) Subscribe(symbol string, client *Client) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-    h.mu.Lock()
-    defer h.mu.Unlock()
+	if _, exists := h.clients[symbol]; !exists {
+		h.clients[symbol] = make(map[*Client]bool)
+	}
 
-    if _, exists := h.clients[symbol]; !exists {
-        h.clients[symbol] = make(map[*Client]bool)
-    }
+	h.clients[symbol][client] = true
 
-    h.clients[symbol][client] = true
+	fmt.Println("SUBSCRIBED:", symbol)
+	fmt.Println("CLIENT COUNT:", len(h.clients[symbol]))
 }
 
 func (h *Hub) Unsubscribe(
@@ -42,16 +44,19 @@ func (h *Hub) Unsubscribe(
 
 
 func (h *Hub) Broadcast(
-    symbol string,
-    message any,
+	symbol string,
+	message any,
 ) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
-    h.mu.RLock()
-    defer h.mu.RUnlock()
+	clients := h.clients[symbol]
 
-    clients := h.clients[symbol]
+	fmt.Println("BROADCAST:", symbol)
+	fmt.Println("CLIENTS:", len(clients))
 
-    for client := range clients {
-        client.Send(message)
-    }
+	for client := range clients {
+		fmt.Println("Sending to client...")
+		client.Send(message)
+	}
 }
