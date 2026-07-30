@@ -2,6 +2,7 @@ package orderservice
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -89,18 +90,22 @@ func (s *Service) Submit(
 		return nil, err
 	}
 
+	fmt.Println("STEP 1 - user")
 	_, err = s.userRepo.GetByID(
 		ctx,
 		userID,
 	)
+	fmt.Println(err)
 	if err != nil {
 		return nil, errors.ErrUserNotFound
 	}
 
+	fmt.Println("STEP 2 - symbol")
 	symbol, err := s.symbolRepo.Get(
 		ctx,
 		req.Symbol,
 	)
+    fmt.Println(err)
 	if err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
@@ -137,28 +142,27 @@ func (s *Service) Submit(
 		zap.String("side", string(o.Side)),
 	)
 
-
+    fmt.Println("STEP 3 - risk")
 	_, err = s.risk.Validate(
 		ctx,
 		riskservice.ValidateOrderRequest{
 			Order: o,
 		},
 	)
-
+    fmt.Println(err)
 
 	if err != nil {
 		s.UserDispatcher.DispatchOrderRejected(o)
 		return nil, err
 	}
 
+	userID = uuid.MustParse(o.UserID)
 
-	if o.Side == constants.OrderSideBuy {
+	switch o.Side {
+
+	case constants.OrderSideBuy:
 
 		amount := o.Price * o.Quantity
-
-		userID := uuid.MustParse(o.UserID)
-
-		symbol, _ := s.symbolRepo.Get(ctx, req.Symbol)
 
 		err = s.wallet.LockFunds(
 			ctx,
@@ -167,12 +171,25 @@ func (s *Service) Submit(
 			amount,
 		)
 
-		if err != nil {
-			s.UserDispatcher.DispatchOrderRejected(o)
-			return nil, err
-		}
+	case constants.OrderSideSell:
+
+        fmt.Println("STEP 4 - lock")
+		err = s.wallet.LockFunds(
+			ctx,
+			userID,
+			symbol.BaseAsset,
+			o.Quantity,
+		)
+        fmt.Println(err)
+	}
+    
+
+	if err != nil {
+		s.UserDispatcher.DispatchOrderRejected(o)
+		return nil, err
 	}
 
+    fmt.Println("STEP 5 - create")
 	_, err = s.orderRepo.Create(
 		ctx,
 		generated.CreateOrderParams{
@@ -199,19 +216,26 @@ func (s *Service) Submit(
 			UpdatedAt: o.UpdatedAt,
 		},
 	)
+    fmt.Println(err)
 
 	if err != nil {
 		return nil, err
 	}
 
+    fmt.Println("STEP 6 - registry")
 	eng := s.registry.Get(req.Symbol)
+    fmt.Println(eng)
 
+    fmt.Println("STEP 7 - submit")
 	err = eng.SubmitOrder(o)
+    fmt.Println(err)
 	if err != nil {
 		return nil, err
 	}
 	metrics.OrdersSubmitted.Inc()
 	s.UserDispatcher.DispatchOrderAccepted(o)
+    
+    fmt.Println("STEP 8 - done")
 
 	return o, nil
 }

@@ -71,11 +71,6 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("market data publisher initialized")
 
-	container.MarketBroadcaster = marketdata.NewBroadcaster(
-		container.MarketPublisher,
-	)
-	container.Logger.Info("market data broadcaster initialized")
-
 	container.UserHub = userstream.NewHub()
 
 	container.UserPublisher = userstream.NewPublisher(
@@ -155,6 +150,12 @@ func Bootstrap() (*Container, error) {
 		container.CandleManager,
 	)
 
+	container.MarketBroadcaster = marketdata.NewBroadcaster(
+		container.MarketPublisher,
+		container.CandleService,
+	)
+	container.Logger.Info("market data broadcaster initialized")
+
 	candleSubscriber := candles.NewSubscriber(
 		container.CandleManager,
 	)
@@ -168,7 +169,6 @@ func Bootstrap() (*Container, error) {
 		candleSubscriber,
 	)
 	container.Logger.Info("Candle subscriber registered")
-
 
 	provider := func(symbol string) *orderbook.OrderBook {
 		engine := container.Registry.Get(symbol)

@@ -17,3 +17,14 @@ func (s *Service) Get(
 
 	return s.manager.Get(symbol, interval)
 }
+
+func (s *Service) Latest(
+	symbol string,
+	interval Interval,
+) (*Candle, bool) {
+    
+	return s.manager.Latest(
+		symbol,
+		interval,
+	)
+}

@@ -2,6 +2,7 @@ package walletservice
 
 import (
 	"context"
+	"fmt"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/errors"
@@ -110,7 +111,11 @@ func (s *Service) Deposit(
 		return errors.ErrInvalidQuantity
 	}
 
-	wallet, err := s.walletRepo.Get(ctx, userID, asset)
+	wallet, err := s.GetOrCreateWallet(
+		ctx,
+		userID,
+		asset,
+	)
 	if err != nil {
 		return err
 	}
@@ -178,6 +183,16 @@ func (s *Service) ConsumeLockedFunds(
 		return errors.ErrInsufficientLockedBalance
 	}
 
+	fmt.Println("BEFORE")
+	fmt.Println("Available:", wallet.Available)
+	fmt.Println("Locked:", wallet.Locked)
+
+	newLocked := wallet.Locked - amount
+
+	fmt.Println("AFTER")
+	fmt.Println("Available:", wallet.Available)
+	fmt.Println("Locked:", newLocked)
+
 	return s.walletRepo.Update(
 		ctx,
 		generated.UpdateWalletParams{
@@ -187,5 +202,6 @@ func (s *Service) ConsumeLockedFunds(
 			Locked:    wallet.Locked - amount,
 		},
 	)
+    fmt.Println("UPDATE ERR:", err) 
+    return err
 }
-

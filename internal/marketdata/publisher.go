@@ -1,6 +1,8 @@
 package marketdata
 
 import (
+	"fmt"
+	"velocity/internal/analytics/candles"
 	"velocity/internal/domain/trade"
 	"velocity/pkg/constants"
 )
@@ -21,6 +23,8 @@ func (p *Publisher) PublishTrade(
 	t *trade.Trade,
 ) {
 
+    fmt.Println("PUBLISH TRADE:", t.Symbol)
+    
 	p.hub.Broadcast(
 		t.Symbol,
 		Message{
@@ -83,7 +87,7 @@ func (p *Publisher) PublishDepth(
 	p.hub.Broadcast(
 		symbol,
 		Message{
-			Type:  constants.MessageDepth,
+			Type:   constants.MessageDepth,
 			Symbol: symbol,
 			Data: DepthMessage{
 				Bids: bids,
@@ -91,4 +95,20 @@ func (p *Publisher) PublishDepth(
 			},
 		},
 	)
+}
+
+func (p *Publisher) PublishKline(
+	symbol string,
+	candle *candles.Candle,
+) error {
+
+	p.hub.Broadcast(
+		symbol,
+		Message{
+			Type:   constants.MessageKline,
+			Symbol: symbol,
+			Data:   candle,
+		})
+
+	return nil
 }

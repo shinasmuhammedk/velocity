@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 type Registry struct {
 	engines map[string]*engine.Engine
 	mu      sync.RWMutex
-    
-    dispatcher *events.Dispatcher
+
+	dispatcher *events.Dispatcher
 
 	consumer *worker.TradeConsumer
 
@@ -35,8 +36,8 @@ func New(
 
 	return &Registry{
 		engines: make(map[string]*engine.Engine),
-        
-        dispatcher: events.NewDispatcher(),
+
+		dispatcher: events.NewDispatcher(),
 
 		snapshotWriter: snapshotWriter,
 		walManager:     walManager,
@@ -76,7 +77,7 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	e = engine.New(
 		symbol,
 		walWriter,
-        r.dispatcher,
+		r.dispatcher,
 	)
 
 	manager := snapshot.NewManager(
@@ -176,7 +177,15 @@ func (r *Registry) Shutdown() error {
 func (r *Registry) SetConsumer(
 	consumer *worker.TradeConsumer,
 ) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.consumer = consumer
+
+	for symbol, engine := range r.engines {
+		fmt.Println("Starting consumer for:", symbol)
+		consumer.Start(r.ctx, engine.Trades())
+	}
 }
 
 func (r *Registry) Find(symbol string) (*engine.Engine, bool) {
@@ -188,5 +197,5 @@ func (r *Registry) Find(symbol string) (*engine.Engine, bool) {
 }
 
 func (r *Registry) Publisher() *events.Dispatcher {
-    return r.dispatcher
+	return r.dispatcher
 }
