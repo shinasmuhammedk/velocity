@@ -246,6 +246,7 @@ func Bootstrap() (*Container, error) {
 
 	container.SettlementService = settlementservice.New(
 		container.TxManager,
+        container.UserDispatcher,
 	)
 
 	container.MarketService = marketservice.New(

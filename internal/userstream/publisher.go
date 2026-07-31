@@ -90,13 +90,38 @@ func (p *Publisher) PublishPositionUpdate(
 	)
 }
 
-
 func (p *Publisher) PublishOrderModified(
 	userID string,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(userID, Message{
-		Type: string(MessageTypeOrderModified),
+		Type: string(EventOrderModified),
 		Data: report,
 	})
+}
+
+func (p *Publisher) PublishTradeExecuted(
+	userID string,
+	trade TradeExecution,
+) {
+	p.hub.Broadcast(
+		userID,
+		Message{
+			Type: string(EventTradeExecuted),
+			Data: trade,
+		},
+	)
+}
+
+func (p *Publisher) PublishOrderPartiallyFilled(
+	userID string,
+	report ExecutionReport,
+) {
+	p.hub.Broadcast(
+		userID,
+		Message{
+			Type: string(EventOrderPartiallyFilled),
+			Data: report,
+		},
+	)
 }

@@ -1,4 +1,4 @@
-package integration
+package settlement
 
 import (
 	"testing"
@@ -14,14 +14,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSettlement_Success(t *testing.T) {
+func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
-	service := settlementservice.New(tc.TxManager,tc.UserDispatcher)
+	service := settlementservice.New(
+		tc.TxManager,
+		tc.UserDispatcher,
+	)
 
-	// ------------------------------------------------------------------
-	// Create Symbol
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// Symbol
+	//----------------------------------------------------------------------
 
 	symbol := "BTCUSDT-" + uuid.NewString()[:8]
 
@@ -36,13 +39,13 @@ func TestSettlement_Success(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NoError(t, err)
 
-	// ------------------------------------------------------------------
-	// Buyer
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// Users
+	//----------------------------------------------------------------------
 
 	buyerID := uuid.New()
+	sellerID := uuid.New()
 
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
@@ -56,12 +59,6 @@ func TestSettlement_Success(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ------------------------------------------------------------------
-	// Seller
-	// ------------------------------------------------------------------
-
-	sellerID := uuid.New()
-
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
@@ -74,9 +71,11 @@ func TestSettlement_Success(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
 	// Wallets
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+
+	// Buyer has enough funds
 
 	_, err = tc.WalletRepo.Create(
 		tc.Ctx,
@@ -100,13 +99,15 @@ func TestSettlement_Success(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Seller intentionally has insufficient BTC
+
 	_, err = tc.WalletRepo.Create(
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID:    sellerID,
 			Asset:     "BTC",
 			Available: 0,
-			Locked:    1,
+			Locked:    0, // Needs 1 BTC
 		},
 	)
 	require.NoError(t, err)
@@ -122,17 +123,17 @@ func TestSettlement_Success(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
 	// Orders
-	// ------------------------------------------------------------------
-
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
+	//----------------------------------------------------------------------
 
 	price := pgtype.Int8{
 		Int64: 50000,
 		Valid: true,
 	}
+
+	buyOrderID := uuid.New()
+	sellOrderID := uuid.New()
 
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
@@ -145,7 +146,6 @@ func TestSettlement_Success(t *testing.T) {
 			TimeInForce: "GTC",
 			Status:      string(constants.OrderStatusOpen),
 			Price:       price,
-			StopPrice:   0,
 			Quantity:    1,
 			Remaining:   1,
 			Filled:      0,
@@ -166,7 +166,6 @@ func TestSettlement_Success(t *testing.T) {
 			TimeInForce: "GTC",
 			Status:      string(constants.OrderStatusOpen),
 			Price:       price,
-			StopPrice:   0,
 			Quantity:    1,
 			Remaining:   1,
 			Filled:      0,
@@ -176,16 +175,17 @@ func TestSettlement_Success(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// ------------------------------------------------------------------
-	// Settlement
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// Settlement should FAIL
+	//----------------------------------------------------------------------
 
 	tradeID := uuid.New()
 
 	err = service.Settle(
 		tc.Ctx,
 		settlementservice.SettlementRequest{
-			TradeID:     tradeID,
+			TradeID: tradeID,
+
 			BuyOrderID:  buyOrderID,
 			SellOrderID: sellOrderID,
 
@@ -202,73 +202,53 @@ func TestSettlement_Success(t *testing.T) {
 		},
 	)
 
-	require.NoError(t, err)
+	require.Error(t, err)
 
-	// ------------------------------------------------------------------
-	// Buyer Wallet
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// Trade should not exist
+	//----------------------------------------------------------------------
 
-	buyerBTC, _ := tc.WalletRepo.Get(tc.Ctx, buyerID, "BTC")
+	_, err = tc.TradeRepo.GetByID(tc.Ctx, tradeID)
+	require.Error(t, err)
+
+	//----------------------------------------------------------------------
+	// Wallets unchanged
+	//----------------------------------------------------------------------
+
 	buyerUSDT, _ := tc.WalletRepo.Get(tc.Ctx, buyerID, "USDT")
+	buyerBTC, _ := tc.WalletRepo.Get(tc.Ctx, buyerID, "BTC")
 
-	require.EqualValues(t, 1, buyerBTC.Available)
-	require.EqualValues(t, 0, buyerUSDT.Locked)
-
-	// ------------------------------------------------------------------
-	// Seller Wallet
-	// ------------------------------------------------------------------
+	require.EqualValues(t, 50000, buyerUSDT.Locked)
+	require.EqualValues(t, 0, buyerBTC.Available)
 
 	sellerBTC, _ := tc.WalletRepo.Get(tc.Ctx, sellerID, "BTC")
 	sellerUSDT, _ := tc.WalletRepo.Get(tc.Ctx, sellerID, "USDT")
 
 	require.EqualValues(t, 0, sellerBTC.Locked)
-	require.EqualValues(t, 50000, sellerUSDT.Available)
+	require.EqualValues(t, 0, sellerUSDT.Available)
 
-	// ------------------------------------------------------------------
-	// Positions
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// Orders unchanged
+	//----------------------------------------------------------------------
 
-	buyerPosition, err := tc.PositionRepo.Get(
-		tc.Ctx,
-		buyerID,
-		symbol,
-	)
-	require.NoError(t, err)
+	buyOrder, _ := tc.OrderRepo.GetByID(tc.Ctx, buyOrderID)
+	sellOrder, _ := tc.OrderRepo.GetByID(tc.Ctx, sellOrderID)
 
-	sellerPosition, err := tc.PositionRepo.Get(
-		tc.Ctx,
-		sellerID,
-		symbol,
-	)
-	require.NoError(t, err)
+	require.EqualValues(t, 1, buyOrder.Remaining)
+	require.EqualValues(t, 0, buyOrder.Filled)
+	require.Equal(t, string(constants.OrderStatusOpen), buyOrder.Status)
 
-	require.EqualValues(t, 1, buyerPosition.Quantity)
-	require.EqualValues(t, -1, sellerPosition.Quantity)
+	require.EqualValues(t, 1, sellOrder.Remaining)
+	require.EqualValues(t, 0, sellOrder.Filled)
+	require.Equal(t, string(constants.OrderStatusOpen), sellOrder.Status)
 
-	// ------------------------------------------------------------------
-	// Trade persisted
-	// ------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// No positions created
+	//----------------------------------------------------------------------
 
-	trade, err := tc.TradeRepo.GetByID(tc.Ctx, tradeID)
-	require.NoError(t, err)
+	_, err = tc.PositionRepo.Get(tc.Ctx, buyerID, symbol)
+	require.Error(t, err)
 
-	require.Equal(t, tradeID, trade.ID)
-
-	// ------------------------------------------------------------------
-	// Orders updated
-	// ------------------------------------------------------------------
-
-	buyOrder, err := tc.OrderRepo.GetByID(tc.Ctx, buyOrderID)
-	require.NoError(t, err)
-
-	sellOrder, err := tc.OrderRepo.GetByID(tc.Ctx, sellOrderID)
-	require.NoError(t, err)
-
-	require.EqualValues(t, 0, buyOrder.Remaining)
-	require.EqualValues(t, 1, buyOrder.Filled)
-	require.Equal(t, string(constants.OrderStatusFilled), buyOrder.Status)
-
-	require.EqualValues(t, 0, sellOrder.Remaining)
-	require.EqualValues(t, 1, sellOrder.Filled)
-	require.Equal(t, string(constants.OrderStatusFilled), sellOrder.Status)
+	_, err = tc.PositionRepo.Get(tc.Ctx, sellerID, symbol)
+	require.Error(t, err)
 }

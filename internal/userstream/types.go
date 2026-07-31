@@ -3,18 +3,35 @@ package userstream
 type EventType string
 
 const (
-	EventOrderAccepted EventType = "order_accepted"
-	EventOrderRejected EventType = "order_rejected"
-	EventOrderCancelled EventType = "order_cancelled"
-	EventOrderModified EventType = "order_modified"
-	EventOrderPartiallyFilled EventType = "order_partially_filled"
-	EventOrderFilled EventType = "order_filled"
 
-	EventBalanceUpdated EventType = "balance_updated"
-	EventPositionUpdated EventType = "position_updated"
+	// -------------------------
+	// Order Events
+	// -------------------------
+
+	EventOrderAccepted        EventType = "order.accepted"
+	EventOrderRejected        EventType = "order.rejected"
+	EventOrderCancelled       EventType = "order.cancelled"
+	EventOrderModified        EventType = "order.modified"
+	EventOrderPartiallyFilled EventType = "order.partially_filled"
+	EventOrderFilled          EventType = "order.filled"
+
+	// -------------------------
+	// Trade Events
+	// -------------------------
+
+	EventTradeExecuted EventType = "trade.executed"
+
+	// -------------------------
+	// Account Events
+	// -------------------------
+
+	EventBalanceUpdated EventType = "balance.updated"
+	EventPositionUpdated EventType = "position.updated"
+
+	// -------------------------
+	// Connection Events
+	// -------------------------
 
 	EventPing EventType = "ping"
 	EventPong EventType = "pong"
-    
-    MessageTypeOrderModified EventType = "order.modified"
 )
