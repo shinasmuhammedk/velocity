@@ -21,6 +21,22 @@ type ExecutionReport struct {
 	RemainingQuantity int64 `json:"remaining_quantity"`
 }
 
+type TradeExecution struct {
+	TradeID string `json:"trade_id"`
+
+	BuyOrderID  string `json:"buy_order_id"`
+	SellOrderID string `json:"sell_order_id"`
+
+	Symbol string `json:"symbol"`
+
+	Price int64 `json:"price"`
+
+	Quantity int64 `json:"quantity"`
+
+	BuyerID  string `json:"buyer_id"`
+	SellerID string `json:"seller_id"`
+}
+
 type BalanceUpdate struct {
 	Asset string `json:"asset"`
 
@@ -33,8 +49,4 @@ type PositionUpdate struct {
 	Symbol string `json:"symbol"`
 
 	Quantity int64 `json:"quantity"`
-
-	AvgPrice int64 `json:"avg_price"`
-
-	PnL int64 `json:"pnl"`
 }

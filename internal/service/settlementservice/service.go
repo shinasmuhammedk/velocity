@@ -2,9 +2,10 @@ package settlementservice
 
 import (
 	"context"
-	"fmt"
 
+	"velocity/internal/domain/order"
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/internal/userstream"
 	"velocity/pkg/constants"
 
 	"velocity/internal/persistence/postgres/repository"
@@ -16,14 +17,18 @@ import (
 
 type Service struct {
 	txManager tx.Manager
+
+	UserDispatcher *userstream.Dispatcher
 }
 
 func New(
 	txManager tx.Manager,
+	userDispatcher *userstream.Dispatcher,
 ) *Service {
 
 	return &Service{
-		txManager: txManager,
+		txManager:      txManager,
+		UserDispatcher: userDispatcher,
 	}
 }
 
@@ -32,7 +37,25 @@ func (s *Service) Settle(
 	req SettlementRequest,
 ) error {
 
-	return s.txManager.WithTransaction(
+	var (
+		buyerBalance  userstream.BalanceUpdate
+		sellerBalance userstream.BalanceUpdate
+
+		buyerPositionEvent  userstream.PositionUpdate
+		sellerPositionEvent userstream.PositionUpdate
+
+		tradeEvent userstream.TradeExecution
+
+		buyOrderEvent  *order.Order
+		sellOrderEvent *order.Order
+
+		buyFilled  bool
+		sellFilled bool
+
+		tradeAlreadySettled bool
+	)
+
+	err := s.txManager.WithTransaction(
 		ctx,
 		func(tx pgx.Tx) error {
 
@@ -43,26 +66,21 @@ func (s *Service) Settle(
 
 			walletService := walletservice.New(walletRepo)
 
-			fmt.Println("1. TradeExists")
-
 			exists, err := tradeRepo.TradeExists(
 				ctx,
 				req.TradeID,
 			)
-
-			fmt.Println("1 DONE", err)
 
 			if err != nil {
 				return err
 			}
 
 			if exists {
-				fmt.Println("Trade already settled")
+				tradeAlreadySettled = true
+
 				return nil
 			}
 
-			fmt.Println("2. Consume buyer")
-
 			err = walletService.ConsumeLockedFunds(
 				ctx,
 				req.BuyerID,
@@ -70,13 +88,9 @@ func (s *Service) Settle(
 				req.Price*req.Quantity,
 			)
 
-			fmt.Println("2 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("3. Consume seller")
 
 			err = walletService.ConsumeLockedFunds(
 				ctx,
@@ -85,13 +99,9 @@ func (s *Service) Settle(
 				req.Quantity,
 			)
 
-			fmt.Println("3 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("4. Deposit buyer")
 
 			err = walletService.Deposit(
 				ctx,
@@ -100,13 +110,9 @@ func (s *Service) Settle(
 				req.Quantity,
 			)
 
-			fmt.Println("4 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("5. Deposit seller")
 
 			err = walletService.Deposit(
 				ctx,
@@ -115,13 +121,9 @@ func (s *Service) Settle(
 				req.Price*req.Quantity,
 			)
 
-			fmt.Println("5 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("6. Update buyer position")
 
 			err = positionRepo.Upsert(
 				ctx,
@@ -132,13 +134,9 @@ func (s *Service) Settle(
 				},
 			)
 
-			fmt.Println("6 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("7. Update seller position")
 
 			err = positionRepo.Upsert(
 				ctx,
@@ -149,13 +147,9 @@ func (s *Service) Settle(
 				},
 			)
 
-			fmt.Println("7 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("8. Persist trade")
 
 			_, err = tradeRepo.Create(
 				ctx,
@@ -170,43 +164,50 @@ func (s *Service) Settle(
 					Quantity:    req.Quantity,
 				},
 			)
-
-			fmt.Println("8 DONE", err)
-
-			if err != nil {
+            
+            if err != nil {
 				return err
 			}
 
-			fmt.Println("9. Get buy order")
+			tradeEvent = userstream.TradeExecution{
+				TradeID: req.TradeID.String(),
+
+				BuyOrderID:  req.BuyOrderID.String(),
+				SellOrderID: req.SellOrderID.String(),
+
+				BuyerID:  req.BuyerID.String(),
+				SellerID: req.SellerID.String(),
+
+				Symbol: req.Symbol,
+
+				Price:    req.Price,
+				Quantity: req.Quantity,
+			}
+
+			
 
 			buyOrder, err := orderRepo.GetByID(
 				ctx,
 				req.BuyOrderID,
 			)
 
-			fmt.Println("9 DONE", err)
-
 			if err != nil {
 				return err
 			}
-
-			fmt.Println("10. Get sell order")
 
 			sellOrder, err := orderRepo.GetByID(
 				ctx,
 				req.SellOrderID,
 			)
 
-			fmt.Println("10 DONE", err)
-
 			if err != nil {
 				return err
 			}
 
-			fmt.Println("11. Update buy order")
-
 			buyRemaining := buyOrder.Remaining - req.Quantity
-			buyFilled := buyOrder.Filled + req.Quantity
+			buyFilledQty := buyOrder.Filled + req.Quantity
+
+			buyFilled = buyRemaining == 0
 
 			buyStatus := string(constants.OrderStatusPartiallyFilled)
 			if buyRemaining == 0 {
@@ -218,21 +219,31 @@ func (s *Service) Settle(
 				generated.UpdateOrderAfterTradeParams{
 					ID:        buyOrder.ID,
 					Remaining: buyRemaining,
-					Filled:    buyFilled,
+					Filled:    buyFilledQty,
 					Status:    buyStatus,
 				},
 			)
-
-			fmt.Println("11 DONE", err)
-
-			if err != nil {
+            if err != nil {
 				return err
 			}
 
-			fmt.Println("12. Update sell order")
 
+			buyOrderEvent = &order.Order{
+				ID:        buyOrder.ID.String(),
+				UserID:    buyOrder.UserID.String(),
+				Symbol:    buyOrder.Symbol,
+				Status:    constants.OrderStatus(buyStatus),
+				Price:     buyOrder.Price.Int64,
+				Quantity:  buyOrder.Quantity,
+				Filled:    buyFilledQty,
+				Remaining: buyRemaining,
+			}
+
+			
 			sellRemaining := sellOrder.Remaining - req.Quantity
-			sellFilled := sellOrder.Filled + req.Quantity
+			sellFilledQty := sellOrder.Filled + req.Quantity
+
+			sellFilled = sellRemaining == 0
 
 			sellStatus := string(constants.OrderStatusPartiallyFilled)
 			if sellRemaining == 0 {
@@ -244,20 +255,130 @@ func (s *Service) Settle(
 				generated.UpdateOrderAfterTradeParams{
 					ID:        sellOrder.ID,
 					Remaining: sellRemaining,
-					Filled:    sellFilled,
+					Filled:    sellFilledQty,
 					Status:    sellStatus,
 				},
 			)
 
-			fmt.Println("12 DONE", err)
+			sellOrderEvent = &order.Order{
+				ID:        sellOrder.ID.String(),
+				UserID:    sellOrder.UserID.String(),
+				Symbol:    sellOrder.Symbol,
+				Status:    constants.OrderStatus(sellStatus),
+				Price:     sellOrder.Price.Int64,
+				Quantity:  sellOrder.Quantity,
+				Filled:    sellFilledQty,
+				Remaining: sellRemaining,
+			}
 
 			if err != nil {
 				return err
 			}
 
-			fmt.Println("SETTLEMENT COMPLETE")
+			buyerBaseWallet, err := walletRepo.Get(
+				ctx,
+				req.BuyerID,
+				req.BaseAsset,
+			)
+			if err != nil {
+				return err
+			}
+
+			sellerQuoteWallet, err := walletRepo.Get(
+				ctx,
+				req.SellerID,
+				req.QuoteAsset,
+			)
+			if err != nil {
+				return err
+			}
+
+			buyerPosition, err := positionRepo.Get(
+				ctx,
+				req.BuyerID,
+				req.Symbol,
+			)
+			if err != nil {
+				return err
+			}
+
+			sellerPosition, err := positionRepo.Get(
+				ctx,
+				req.SellerID,
+				req.Symbol,
+			)
+			if err != nil {
+				return err
+			}
+
+			buyerBalance = userstream.BalanceUpdate{
+				Asset:     req.BaseAsset,
+				Available: buyerBaseWallet.Available,
+				Locked:    buyerBaseWallet.Locked,
+			}
+
+			sellerBalance = userstream.BalanceUpdate{
+				Asset:     req.QuoteAsset,
+				Available: sellerQuoteWallet.Available,
+				Locked:    sellerQuoteWallet.Locked,
+			}
+
+			buyerPositionEvent = userstream.PositionUpdate{
+				Symbol:   req.Symbol,
+				Quantity: buyerPosition.Quantity,
+			}
+
+			sellerPositionEvent = userstream.PositionUpdate{
+				Symbol:   req.Symbol,
+				Quantity: sellerPosition.Quantity,
+			}
 
 			return nil
 		},
 	)
+
+	if err != nil {
+		return err
+	}
+	if tradeAlreadySettled {
+		return nil
+	}
+
+	s.UserDispatcher.DispatchBalanceUpdated(
+		req.BuyerID.String(),
+		buyerBalance,
+	)
+
+	s.UserDispatcher.DispatchBalanceUpdated(
+		req.SellerID.String(),
+		sellerBalance,
+	)
+
+	s.UserDispatcher.DispatchPositionUpdated(
+		req.BuyerID.String(),
+		buyerPositionEvent,
+	)
+
+	s.UserDispatcher.DispatchPositionUpdated(
+		req.SellerID.String(),
+		sellerPositionEvent,
+	)
+
+	s.UserDispatcher.DispatchTradeExecuted(
+		tradeEvent,
+	)
+
+	if buyFilled {
+		s.UserDispatcher.DispatchOrderFilled(buyOrderEvent)
+	} else {
+		s.UserDispatcher.DispatchOrderPartiallyFilled(buyOrderEvent)
+	}
+
+	if sellFilled {
+		s.UserDispatcher.DispatchOrderFilled(sellOrderEvent)
+	} else {
+		s.UserDispatcher.DispatchOrderPartiallyFilled(sellOrderEvent)
+	}
+
+	return nil
 }

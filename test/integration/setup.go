@@ -8,6 +8,7 @@ import (
 	"velocity/internal/persistence/postgres"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
+	"velocity/internal/userstream"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,7 @@ type TestContext struct {
 	WalletRepo   repository.WalletRepository
 	PositionRepo repository.PositionRepository
 	SymbolRepo   repository.SymbolRepository
+    UserDispatcher *userstream.Dispatcher
 }
 
 func NewTestContext(t *testing.T) *TestContext {
