@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/service/orderservice"
 	"velocity/pkg/constants"
 	"velocity/pkg/response"
@@ -94,8 +95,6 @@ func (h *OrderHandler) Cancel(c *fiber.Ctx) error {
 	)
 }
 
-
-
 func (h *OrderHandler) Modify(
 	c *fiber.Ctx,
 ) error {
@@ -136,7 +135,6 @@ func (h *OrderHandler) Modify(
 	)
 }
 
-
 func (h *OrderHandler) GetOpenOrders(c *fiber.Ctx) error {
 
 	userID := c.Params("userID")
@@ -155,32 +153,61 @@ func (h *OrderHandler) GetOpenOrders(c *fiber.Ctx) error {
 	return c.JSON(orders)
 }
 
-
 func (h *OrderHandler) OrderHistory(
-    c *fiber.Ctx,
+	c *fiber.Ctx,
 ) error {
 
-    userID, err := uuid.Parse(
-        c.Params("userID"),
-    )
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).
-            JSON(fiber.Map{
-                "error": "invalid user id",
-            })
-    }
+	userID, err := uuid.Parse(
+		c.Params("userID"),
+	)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).
+			JSON(fiber.Map{
+				"error": "invalid user id",
+			})
+	}
 
-    orders, err := h.orderService.ListOrderHistory(
-        c.Context(),
-        userID,
-    )
+	orders, err := h.orderService.ListOrderHistory(
+		c.Context(),
+		userID,
+	)
 
-    if err != nil {
-        return c.Status(fiber.StatusInternalServerError).
-            JSON(fiber.Map{
-                "error": err.Error(),
-            })
-    }
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{
+				"error": err.Error(),
+			})
+	}
 
-    return c.JSON(orders)
+	return c.JSON(orders)
+}
+
+func (h *OrderHandler) GetByID(
+	c *fiber.Ctx,
+) error {
+
+	orderID := c.Params("id")
+
+	order, err := h.orderService.GetOrderByID(
+		c.Context(),
+		orderID,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusNotFound,
+			"order not found",
+			err.Error(),
+		)
+	}
+
+	resp := mapper.ToOrderResponse(order)
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"order retrieved successfully",
+		resp,
+	)
 }

@@ -202,6 +202,19 @@ func (s *Service) ConsumeLockedFunds(
 			Locked:    wallet.Locked - amount,
 		},
 	)
-    fmt.Println("UPDATE ERR:", err) 
     return err
+}
+
+
+func (s *Service) GetWalletByAsset(
+	ctx context.Context,
+	userID uuid.UUID,
+	asset string,
+) (generated.Wallet, error) {
+
+	return s.walletRepo.Get(
+		ctx,
+		userID,
+		asset,
+	)
 }

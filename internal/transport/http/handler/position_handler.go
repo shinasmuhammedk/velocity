@@ -1,10 +1,12 @@
 package handler
 
 import (
-    "github.com/gofiber/fiber/v2"
-    "github.com/google/uuid"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
-    "velocity/internal/service/positionservice"
+	"velocity/internal/persistence/postgres/mapper"
+	"velocity/internal/service/positionservice"
+	"velocity/pkg/response"
 )
 
 type PositionHandler struct {
@@ -50,4 +52,44 @@ func (h *PositionHandler) List(
     }
 
     return c.JSON(positions)
+}
+
+
+func (h *PositionHandler) GetBySymbol(
+	c *fiber.Ctx,
+) error {
+
+	userID, err := uuid.Parse(c.Params("userID"))
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid user id",
+			err.Error(),
+		)
+	}
+
+	symbol := c.Params("symbol")
+
+	position, err := h.service.GetPosition(
+		c.Context(),
+		userID,
+		symbol,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusNotFound,
+			"position not found",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"position retrieved successfully",
+		mapper.ToPositionResponse(position),
+	)
 }

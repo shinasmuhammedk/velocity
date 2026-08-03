@@ -32,3 +32,16 @@ func (s *Service) List(
         userID,
     )
 }
+
+func (s *Service) GetPosition(
+	ctx context.Context,
+	userID uuid.UUID,
+	symbol string,
+) (generated.Position, error) {
+
+	return s.repo.Get(
+		ctx,
+		userID,
+		symbol,
+	)
+}

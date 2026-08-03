@@ -13,4 +13,8 @@ func RegisterWalletRoutes(
 	wallet := api.Group("/wallets")
     
     wallet.Get("/:userID", walletHandler.List)
+    wallet.Get("/:userID/:asset", walletHandler.GetByAsset)
+    
+    wallet.Post("/deposit", walletHandler.Deposit)
+    wallet.Post("/withdraw", walletHandler.Withdraw)
 }

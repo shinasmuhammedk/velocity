@@ -11,6 +11,7 @@ func RegisterOrderRoutes(
 	orderHandler *handler.OrderHandler,
 ) {
 	api.Post("/orders", orderHandler.Submit)
+	api.Get("/orders/:id", orderHandler.GetByID)
 	api.Delete("/orders/:id", orderHandler.Cancel)
 	api.Patch("/orders/:id", orderHandler.Modify)
 	api.Get("/orders/open/:userID", orderHandler.GetOpenOrders)

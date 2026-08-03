@@ -423,3 +423,22 @@ func (s *Service) ListOrderHistory(
 
 	return mapper.ToDomainOrders(rows), nil
 }
+
+
+func (s *Service) GetOrderByID(
+	ctx context.Context,
+	orderID string,
+) (*order.Order, error) {
+
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		return nil, errors.ErrInvalidOrderID
+	}
+
+	dbOrder, err := s.orderRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, errors.ErrOrderNotFound
+	}
+
+	return mapper.ToDomainOrder(dbOrder), nil
+}
