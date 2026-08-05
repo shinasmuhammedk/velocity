@@ -74,7 +74,7 @@ func (e *Engine) start() {
 					e.publish(events.TradeExecutedEvent{
 						BaseEvent: events.NewBaseEvent(),
 
-						TradeID: t.ID.String(),
+						TradeID: t.ID,
 
 						BuyOrderID:  t.BuyOrderID,
 						SellOrderID: t.SellOrderID,
@@ -203,7 +203,7 @@ func (e *Engine) OrderBook() *orderbook.OrderBook {
 	return e.book
 }
 
-func (e *Engine) CancelOrder(orderID string) error {
+func (e *Engine) CancelOrder(orderID int64) error {
 	resultCh := make(chan error, 1)
 	e.commandQueue <- command.CancelOrderCommand{
 		OrderID: orderID,
@@ -213,7 +213,7 @@ func (e *Engine) CancelOrder(orderID string) error {
 }
 
 func (e *Engine) ModifyOrder(
-	orderID string,
+	orderID int64,
 	newPrice int64,
 	newQuantity int64,
 ) error {

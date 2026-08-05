@@ -19,7 +19,7 @@ func TestMatchSellOrderFullFill(t *testing.T) {
 	m := matcher.New(book)
 
 	buy := &order.Order{
-		ID:          "buy-1",
+		ID:          "1",
 		UserID:      "buyer-1",
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,

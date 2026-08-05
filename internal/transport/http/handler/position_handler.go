@@ -1,8 +1,9 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 
 	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/service/positionservice"
@@ -10,56 +11,62 @@ import (
 )
 
 type PositionHandler struct {
-    service *positionservice.Service
+	service *positionservice.Service
 }
 
 func NewPositionHandler(
-    service *positionservice.Service,
+	service *positionservice.Service,
 ) *PositionHandler {
 
-    return &PositionHandler{
-        service: service,
-    }
+	return &PositionHandler{
+		service: service,
+	}
 }
 
 func (h *PositionHandler) List(
-    c *fiber.Ctx,
+	c *fiber.Ctx,
 ) error {
 
-    userID, err := uuid.Parse(
-        c.Params("userID"),
-    )
+	userID, err := strconv.ParseInt(
+		c.Params("userID"),
+		10,
+		64,
+	)
 
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(
-            fiber.Map{
-                "error": "invalid user id",
-            },
-        )
-    }
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "invalid user id",
+			},
+		)
+	}
 
-    positions, err := h.service.List(
-        c.Context(),
-        userID,
-    )
+	positions, err := h.service.List(
+		c.Context(),
+		userID,
+	)
 
-    if err != nil {
-        return c.Status(fiber.StatusInternalServerError).JSON(
-            fiber.Map{
-                "error": err.Error(),
-            },
-        )
-    }
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			fiber.Map{
+				"error": err.Error(),
+			},
+		)
+	}
 
-    return c.JSON(positions)
+	return c.JSON(positions)
 }
-
 
 func (h *PositionHandler) GetBySymbol(
 	c *fiber.Ctx,
 ) error {
 
-	userID, err := uuid.Parse(c.Params("userID"))
+	userID, err := strconv.ParseInt(
+		c.Params("userID"),
+		10,
+		64,
+	)
+
 	if err != nil {
 		return response.Error(
 			c,

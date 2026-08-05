@@ -3,7 +3,6 @@ package riskservice
 import (
 	"context"
 
-	"github.com/google/uuid"
 
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/walletservice"
@@ -38,10 +37,7 @@ func (v *BalanceValidator) Validate(
 		return nil
 	}
 
-	userID, err := uuid.Parse(o.UserID)
-	if err != nil {
-		return err
-	}
+	userID := o.UserID
 
 	symbol, err := v.symbolRepo.Get(ctx, o.Symbol)
 	if err != nil {

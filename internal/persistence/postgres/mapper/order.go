@@ -9,8 +9,7 @@ import (
 
 func ToDomainOrder(g generated.Order) *order.Order {
 	return &order.Order{
-		ID:     g.ID.String(),
-		UserID: g.UserID.String(),
+		ID:     g.ID,
 		Symbol: g.Symbol,
 
 		Side: constants.OrderSide(g.Side),

@@ -10,10 +10,17 @@ func RegisterOrderRoutes(
 	api fiber.Router,
 	orderHandler *handler.OrderHandler,
 ) {
-	api.Post("/orders", orderHandler.Submit)
-	api.Get("/orders/:id", orderHandler.GetByID)
-	api.Delete("/orders/:id", orderHandler.Cancel)
-	api.Patch("/orders/:id", orderHandler.Modify)
-	api.Get("/orders/open/:userID", orderHandler.GetOpenOrders)
-	api.Get("/orders/history/:userID", orderHandler.OrderHistory)
+	orders := api.Group("/orders")
+
+	orders.Post("/", orderHandler.Submit)
+
+	orders.Get("/:id", orderHandler.GetByID)
+
+	orders.Delete("/:id", orderHandler.Cancel)
+
+	orders.Patch("/:id", orderHandler.Modify)
+
+	orders.Get("/open", orderHandler.GetOpenOrders)
+
+	orders.Get("/history", orderHandler.OrderHistory)
 }

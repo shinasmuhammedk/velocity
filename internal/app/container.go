@@ -21,7 +21,10 @@ import (
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/settlementservice"
 	"velocity/internal/service/walletservice"
+	identityclient "velocity/internal/transport/grpc/client/identity"
 	"velocity/internal/transport/http/handler"
+	httpmiddleware "velocity/internal/transport/http/middleware"
+	userwsHandler "velocity/internal/transport/userws/handler"
 	wsHandler "velocity/internal/transport/ws/handler"
 	"velocity/internal/userstream"
 )
@@ -41,6 +44,15 @@ type Container struct {
 
 	DB   *pgxpool.Pool
 	HTTP *fiber.App
+
+	// --------------------------------------------------
+	// gRPC Clients
+	// --------------------------------------------------
+
+	IdentityClient *identityclient.Client
+
+	// HTTP Middleware
+	AuthMiddleware *httpmiddleware.AuthMiddleware
 
 	// --------------------------------------------------
 	// Repositories
@@ -73,7 +85,8 @@ type Container struct {
 	MarketPublisher   *marketdata.Publisher
 	MarketBroadcaster *marketdata.Broadcaster
 
-	WSHandler *wsHandler.Handler
+	WSHandler     *wsHandler.Handler
+	UserWSHandler *userwsHandler.Handler
 
 	// --------------------------------------------------
 	// User Stream

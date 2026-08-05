@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -36,7 +35,7 @@ func (r *orderRepository) Create(
 
 func (r *orderRepository) GetByID(
 	ctx context.Context,
-	id uuid.UUID,
+	id int64,
 ) (generated.Order, error) {
 	return r.queries.GetOrderByID(ctx, id)
 }
@@ -50,7 +49,7 @@ func (r *orderRepository) UpdateStatus(
 
 func (r *orderRepository) ListByUser(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Order, error) {
 	return r.queries.ListOrdersByUser(ctx, userID)
 }
@@ -96,7 +95,7 @@ func (r *orderRepository) UpdateOrderAfterTrade(
 
 func (r *orderRepository) ListOpenOrdersByUser(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Order, error) {
 
 	return r.queries.ListOpenOrdersByUser(
@@ -108,7 +107,7 @@ func (r *orderRepository) ListOpenOrdersByUser(
 
 func (r *orderRepository) ListOrdersByUser(
     ctx context.Context,
-    userID uuid.UUID,
+    userID int64,
 ) ([]generated.Order, error) {
 
     return r.queries.ListOrdersByUser(

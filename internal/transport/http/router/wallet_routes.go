@@ -11,10 +11,12 @@ func RegisterWalletRoutes(
 	walletHandler *handler.WalletHandler,
 ) {
 	wallet := api.Group("/wallets")
-    
-    wallet.Get("/:userID", walletHandler.List)
-    wallet.Get("/:userID/:asset", walletHandler.GetByAsset)
-    
-    wallet.Post("/deposit", walletHandler.Deposit)
-    wallet.Post("/withdraw", walletHandler.Withdraw)
+
+	wallet.Get("/", walletHandler.List)
+
+	wallet.Get("/:asset", walletHandler.GetByAsset)
+
+	wallet.Post("/deposit", walletHandler.Deposit)
+
+	wallet.Post("/withdraw", walletHandler.Withdraw)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
@@ -19,6 +18,7 @@ import (
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
+	"velocity/pkg/idgen"
 	"velocity/pkg/timeutil"
 )
 
@@ -62,7 +62,7 @@ func New(
 }
 
 type SubmitOrderRequest struct {
-	UserID string
+	UserID int64
 
 	Symbol string
 
@@ -85,17 +85,21 @@ func (s *Service) Submit(
 	req SubmitOrderRequest,
 ) (*order.Order, error) {
 
-	userID, err := uuid.Parse(req.UserID)
+	userID := req.UserID
+	var err error
 	if err != nil {
 		return nil, err
 	}
 
 	fmt.Println("STEP 1 - user")
-	_, err = s.userRepo.GetByID(
+	fmt.Println("UserID:", userID)
+	user, errr := s.userRepo.GetByID(
 		ctx,
 		userID,
 	)
-	fmt.Println(err)
+	fmt.Println(user)
+    fmt.Println(errr)
+	// fmt.Println(err)
 	if err != nil {
 		return nil, errors.ErrUserNotFound
 	}
@@ -105,7 +109,7 @@ func (s *Service) Submit(
 		ctx,
 		req.Symbol,
 	)
-    fmt.Println(err)
+	fmt.Println(err)
 	if err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
@@ -115,7 +119,7 @@ func (s *Service) Submit(
 	}
 
 	o := &order.Order{
-		ID:     uuid.NewString(),
+		ID:     idgen.Next(),
 		UserID: req.UserID,
 		Symbol: req.Symbol,
 
@@ -142,21 +146,21 @@ func (s *Service) Submit(
 		zap.String("side", string(o.Side)),
 	)
 
-    fmt.Println("STEP 3 - risk")
+	fmt.Println("STEP 3 - risk")
 	_, err = s.risk.Validate(
 		ctx,
 		riskservice.ValidateOrderRequest{
 			Order: o,
 		},
 	)
-    fmt.Println(err)
+	fmt.Println(err)
 
 	if err != nil {
 		s.UserDispatcher.DispatchOrderRejected(o)
 		return nil, err
 	}
 
-	userID = uuid.MustParse(o.UserID)
+	userID = o.UserID
 
 	switch o.Side {
 
@@ -173,28 +177,27 @@ func (s *Service) Submit(
 
 	case constants.OrderSideSell:
 
-        fmt.Println("STEP 4 - lock")
+		fmt.Println("STEP 4 - lock")
 		err = s.wallet.LockFunds(
 			ctx,
 			userID,
 			symbol.BaseAsset,
 			o.Quantity,
 		)
-        fmt.Println(err)
+		fmt.Println(err)
 	}
-    
 
 	if err != nil {
 		s.UserDispatcher.DispatchOrderRejected(o)
 		return nil, err
 	}
 
-    fmt.Println("STEP 5 - create")
+	fmt.Println("STEP 5 - create")
 	_, err = s.orderRepo.Create(
 		ctx,
 		generated.CreateOrderParams{
-			ID:          uuid.MustParse(o.ID),
-			UserID:      uuid.MustParse(o.UserID),
+			ID:          o.ID,
+			UserID:      o.UserID,
 			Symbol:      o.Symbol,
 			Side:        string(o.Side),
 			OrderType:   string(o.Type),
@@ -216,39 +219,38 @@ func (s *Service) Submit(
 			UpdatedAt: o.UpdatedAt,
 		},
 	)
-    fmt.Println(err)
+	fmt.Println(err)
 
 	if err != nil {
 		return nil, err
 	}
 
-    fmt.Println("STEP 6 - registry")
+	fmt.Println("STEP 6 - registry")
 	eng := s.registry.Get(req.Symbol)
-    fmt.Println(eng)
+	fmt.Println(eng)
 
-    fmt.Println("STEP 7 - submit")
+	fmt.Println("STEP 7 - submit")
 	err = eng.SubmitOrder(o)
-    fmt.Println(err)
+	fmt.Println(err)
 	if err != nil {
 		return nil, err
 	}
 	metrics.OrdersSubmitted.Inc()
 	s.UserDispatcher.DispatchOrderAccepted(o)
-    
-    fmt.Println("STEP 8 - done")
+
+	fmt.Println("STEP 8 - done")
 
 	return o, nil
 }
 
 func (s *Service) Cancel(
 	ctx context.Context,
-	// userID string,
-	orderID string,
+	orderID int64,
 ) error {
 
 	dbOrder, err := s.orderRepo.GetByID(
 		ctx,
-		uuid.MustParse(orderID),
+		orderID,
 	)
 
 	if err != nil {
@@ -291,8 +293,8 @@ func (s *Service) Cancel(
 	}
 
 	o := &order.Order{
-		ID:        dbOrder.ID.String(),
-		UserID:    dbOrder.UserID.String(),
+		ID:        dbOrder.ID,
+		UserID:    dbOrder.UserID,
 		Symbol:    dbOrder.Symbol,
 		Status:    constants.OrderStatusCancelled,
 		Price:     dbOrder.Price.Int64,
@@ -308,13 +310,13 @@ func (s *Service) Cancel(
 
 func (s *Service) Modify(
 	ctx context.Context,
-	orderID string,
+	orderID int64,
 	req ModifyOrderRequest,
 ) error {
 
 	dbOrder, err := s.orderRepo.GetByID(
 		ctx,
-		uuid.MustParse(orderID),
+		orderID,
 	)
 	if err != nil {
 		return errors.ErrOrderNotFound
@@ -362,8 +364,8 @@ func (s *Service) Modify(
 	}
 
 	o := &order.Order{
-		ID:        dbOrder.ID.String(),
-		UserID:    dbOrder.UserID.String(),
+		ID:        dbOrder.ID,
+		UserID:    dbOrder.UserID,
 		Symbol:    dbOrder.Symbol,
 		Status:    constants.OrderStatusOpen,
 		Price:     req.Price,
@@ -379,20 +381,21 @@ func (s *Service) Modify(
 
 func (s *Service) GetOpenOrders(
 	ctx context.Context,
-	userID string,
+	userID int64,
 ) ([]*order.Order, error) {
 
-	id, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.userRepo.GetByID(ctx, id)
+	_, err := s.userRepo.GetByID(
+		ctx,
+		userID,
+	)
 	if err != nil {
 		return nil, errors.ErrUserNotFound
 	}
 
-	rows, err := s.orderRepo.ListOpenOrdersByUser(ctx, id)
+	rows, err := s.orderRepo.ListOpenOrdersByUser(
+		ctx,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +405,7 @@ func (s *Service) GetOpenOrders(
 
 func (s *Service) ListOrderHistory(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]*order.Order, error) {
 
 	_, err := s.userRepo.GetByID(
@@ -424,18 +427,12 @@ func (s *Service) ListOrderHistory(
 	return mapper.ToDomainOrders(rows), nil
 }
 
-
 func (s *Service) GetOrderByID(
 	ctx context.Context,
-	orderID string,
+	orderID int64,
 ) (*order.Order, error) {
 
-	id, err := uuid.Parse(orderID)
-	if err != nil {
-		return nil, errors.ErrInvalidOrderID
-	}
-
-	dbOrder, err := s.orderRepo.GetByID(ctx, id)
+	dbOrder, err := s.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
 		return nil, errors.ErrOrderNotFound
 	}

@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,7 +20,7 @@ func SeedWallets(
 		_, err := q.CreateWallet(
 			ctx,
 			generated.CreateWalletParams{
-				UserID: uuid.MustParse(w.UserID),
+				UserID: w.UserID,
 
 				Asset: w.Asset,
 

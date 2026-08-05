@@ -3,7 +3,6 @@ package positionservice
 import (
     "context"
 
-    "github.com/google/uuid"
 
     "velocity/internal/persistence/postgres/generated"
     "velocity/internal/persistence/postgres/repository"
@@ -24,7 +23,7 @@ func New(
 
 func (s *Service) List(
     ctx context.Context,
-    userID uuid.UUID,
+    userID int64,
 ) ([]generated.Position, error) {
 
     return s.repo.ListByUser(
@@ -35,7 +34,7 @@ func (s *Service) List(
 
 func (s *Service) GetPosition(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	symbol string,
 ) (generated.Position, error) {
 

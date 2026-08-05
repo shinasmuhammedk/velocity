@@ -3,13 +3,13 @@ package events
 type TradeExecutedEvent struct {
 	BaseEvent
 
-	TradeID string
+	TradeID int64
 
-	BuyOrderID string
-	SellOrderID string
+	BuyOrderID int64
+	SellOrderID int64
 
-	BuyerID string
-	SellerID string
+	BuyerID int64
+	SellerID int64
 
 	Symbol string
 

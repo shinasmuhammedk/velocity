@@ -1,8 +1,9 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 
 	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/service/walletservice"
@@ -25,9 +26,12 @@ func NewWalletHandler(
 
 func (h *WalletHandler) List(c *fiber.Ctx) error {
 
-	userID, err := uuid.Parse(
+	userID, err := strconv.ParseInt(
 		c.Params("userID"),
+		10,
+		64,
 	)
+
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).
 			JSON(fiber.Map{
@@ -35,16 +39,19 @@ func (h *WalletHandler) List(c *fiber.Ctx) error {
 			})
 	}
 
+
 	wallets, err := h.service.List(
 		c.Context(),
 		userID,
 	)
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).
 			JSON(fiber.Map{
 				"error": err.Error(),
 			})
 	}
+
 
 	return c.JSON(wallets)
 }
@@ -53,7 +60,12 @@ func (h *WalletHandler) GetByAsset(
 	c *fiber.Ctx,
 ) error {
 
-	userID, err := uuid.Parse(c.Params("userID"))
+	userID, err := strconv.ParseInt(
+		c.Params("userID"),
+		10,
+		64,
+	)
+
 	if err != nil {
 		return response.Error(
 			c,
@@ -89,7 +101,6 @@ func (h *WalletHandler) GetByAsset(
 }
 
 
-
 func (h *WalletHandler) Deposit(
 	c *fiber.Ctx,
 ) error {
@@ -105,7 +116,13 @@ func (h *WalletHandler) Deposit(
 		)
 	}
 
-	userID, err := uuid.Parse(req.UserID)
+
+	userID, err := strconv.ParseInt(
+		req.UserID,
+		10,
+		64,
+	)
+
 	if err != nil {
 		return response.Error(
 			c,
@@ -114,6 +131,7 @@ func (h *WalletHandler) Deposit(
 			err.Error(),
 		)
 	}
+
 
 	err = h.service.Deposit(
 		c.Context(),
@@ -131,7 +149,7 @@ func (h *WalletHandler) Deposit(
 		)
 	}
 
-	// Fetch updated wallet
+
 	wallet, err := h.service.GetWalletByAsset(
 		c.Context(),
 		userID,
@@ -146,6 +164,7 @@ func (h *WalletHandler) Deposit(
 			err.Error(),
 		)
 	}
+
 
 	return response.Success(
 		c,
@@ -171,7 +190,13 @@ func (h *WalletHandler) Withdraw(
 		)
 	}
 
-	userID, err := uuid.Parse(req.UserID)
+
+	userID, err := strconv.ParseInt(
+		req.UserID,
+		10,
+		64,
+	)
+
 	if err != nil {
 		return response.Error(
 			c,
@@ -180,6 +205,7 @@ func (h *WalletHandler) Withdraw(
 			err.Error(),
 		)
 	}
+
 
 	err = h.service.Withdraw(
 		c.Context(),
@@ -197,6 +223,7 @@ func (h *WalletHandler) Withdraw(
 		)
 	}
 
+
 	wallet, err := h.service.GetWalletByAsset(
 		c.Context(),
 		userID,
@@ -211,6 +238,7 @@ func (h *WalletHandler) Withdraw(
 			err.Error(),
 		)
 	}
+
 
 	return response.Success(
 		c,

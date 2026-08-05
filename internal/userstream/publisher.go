@@ -13,7 +13,7 @@ func NewPublisher(
 }
 
 func (p *Publisher) PublishOrderAccepted(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(
@@ -26,7 +26,7 @@ func (p *Publisher) PublishOrderAccepted(
 }
 
 func (p *Publisher) PublishOrderRejected(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(
@@ -39,7 +39,7 @@ func (p *Publisher) PublishOrderRejected(
 }
 
 func (p *Publisher) PublishOrderCancelled(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(
@@ -52,7 +52,7 @@ func (p *Publisher) PublishOrderCancelled(
 }
 
 func (p *Publisher) PublishOrderFilled(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(
@@ -65,7 +65,7 @@ func (p *Publisher) PublishOrderFilled(
 }
 
 func (p *Publisher) PublishBalanceUpdate(
-	userID string,
+	userID int64,
 	update BalanceUpdate,
 ) {
 	p.hub.Broadcast(
@@ -78,7 +78,7 @@ func (p *Publisher) PublishBalanceUpdate(
 }
 
 func (p *Publisher) PublishPositionUpdate(
-	userID string,
+	userID int64,
 	update PositionUpdate,
 ) {
 	p.hub.Broadcast(
@@ -91,7 +91,7 @@ func (p *Publisher) PublishPositionUpdate(
 }
 
 func (p *Publisher) PublishOrderModified(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(userID, Message{
@@ -101,7 +101,7 @@ func (p *Publisher) PublishOrderModified(
 }
 
 func (p *Publisher) PublishTradeExecuted(
-	userID string,
+	userID int64,
 	trade TradeExecution,
 ) {
 	p.hub.Broadcast(
@@ -114,7 +114,7 @@ func (p *Publisher) PublishTradeExecuted(
 }
 
 func (p *Publisher) PublishOrderPartiallyFilled(
-	userID string,
+	userID int64,
 	report ExecutionReport,
 ) {
 	p.hub.Broadcast(

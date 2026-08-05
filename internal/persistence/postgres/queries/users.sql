@@ -2,7 +2,6 @@
 INSERT INTO users (
     id,
     email,
-    password_hash,
     created_at,
     updated_at
 )
@@ -10,8 +9,7 @@ VALUES (
     $1,
     $2,
     $3,
-    $4,
-    $5
+    $4
 )
 RETURNING *;
 
@@ -34,14 +32,6 @@ SELECT EXISTS(
     FROM users
     WHERE id = $1
 );
-
-
--- name: UpdateUserPassword :exec
-UPDATE users
-SET
-    password_hash = $2,
-    updated_at = NOW()
-WHERE id = $1;
 
 
 -- name: DeleteUser :exec

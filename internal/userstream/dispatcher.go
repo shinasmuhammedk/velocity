@@ -1,7 +1,6 @@
 package userstream
 
 import (
-	"fmt"
 
 	"velocity/internal/domain/order"
 )
@@ -22,7 +21,7 @@ func (d *Dispatcher) DispatchOrderAccepted(
 	o *order.Order,
 ) {
 	d.publisher.PublishOrderAccepted(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }
@@ -32,7 +31,7 @@ func (d *Dispatcher) DispatchOrderFilled(
 ) {
 
 	d.publisher.PublishOrderFilled(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }
@@ -42,7 +41,7 @@ func (d *Dispatcher) DispatchOrderCancelled(
 ) {
 
 	d.publisher.PublishOrderCancelled(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }
@@ -52,7 +51,7 @@ func (d *Dispatcher) DispatchOrderRejected(
 ) {
 
 	d.publisher.PublishOrderRejected(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }
@@ -62,7 +61,7 @@ func (d *Dispatcher) DispatchOrderModified(
 ) {
 
 	d.publisher.PublishOrderModified(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }
@@ -82,7 +81,7 @@ func (d *Dispatcher) DispatchTradeExecuted(
 }
 
 func (d *Dispatcher) DispatchBalanceUpdated(
-	userID string,
+	userID int64,
 	update BalanceUpdate,
 ) {
 	d.publisher.PublishBalanceUpdate(
@@ -92,7 +91,7 @@ func (d *Dispatcher) DispatchBalanceUpdated(
 }
 
 func (d *Dispatcher) DispatchPositionUpdated(
-	userID string,
+	userID int64,
 	update PositionUpdate,
 ) {
 	d.publisher.PublishPositionUpdate(
@@ -106,7 +105,7 @@ func (d *Dispatcher) DispatchOrderPartiallyFilled(
 ) {
 
 	d.publisher.PublishOrderPartiallyFilled(
-		fmt.Sprint(o.UserID),
+		o.UserID,
 		newExecutionReport(o),
 	)
 }

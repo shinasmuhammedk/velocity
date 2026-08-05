@@ -1,11 +1,14 @@
 CREATE TABLE trades (
-    id UUID PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
 
-    buy_order_id UUID NOT NULL,
-    sell_order_id UUID NOT NULL,
+    buy_order_id BIGINT NOT NULL,
+    sell_order_id BIGINT NOT NULL,
 
-    buyer_id UUID NOT NULL,
-    seller_id UUID NOT NULL,
+    buyer_id BIGINT NOT NULL
+        REFERENCES users(id),
+
+    seller_id BIGINT NOT NULL
+        REFERENCES users(id),
 
     symbol TEXT NOT NULL
         REFERENCES symbols(symbol),

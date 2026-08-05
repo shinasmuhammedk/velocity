@@ -6,13 +6,12 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 func (s *Service) GetOrCreateWallet(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 ) (generated.Wallet, error) {
 

@@ -10,7 +10,6 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/errors"
 
-	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -139,7 +138,7 @@ func (s *Service) GetSymbols(
 
 func (s *Service) GetUserTrades(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Trade, error) {
 
 	return s.tradeRepo.ListByUser(

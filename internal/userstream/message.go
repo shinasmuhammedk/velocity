@@ -6,7 +6,7 @@ type Message struct {
 }
 
 type ExecutionReport struct {
-	OrderID string `json:"order_id"`
+	OrderID int64 `json:"order_id"`
 
 	Symbol string `json:"symbol"`
 
@@ -22,10 +22,10 @@ type ExecutionReport struct {
 }
 
 type TradeExecution struct {
-	TradeID string `json:"trade_id"`
+	TradeID int64 `json:"trade_id"`
 
-	BuyOrderID  string `json:"buy_order_id"`
-	SellOrderID string `json:"sell_order_id"`
+	BuyOrderID  int64 `json:"buy_order_id"`
+	SellOrderID int64 `json:"sell_order_id"`
 
 	Symbol string `json:"symbol"`
 
@@ -33,8 +33,8 @@ type TradeExecution struct {
 
 	Quantity int64 `json:"quantity"`
 
-	BuyerID  string `json:"buyer_id"`
-	SellerID string `json:"seller_id"`
+	BuyerID  int64 `json:"buyer_id"`
+	SellerID int64 `json:"seller_id"`
 }
 
 type BalanceUpdate struct {

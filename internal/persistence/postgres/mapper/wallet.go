@@ -11,7 +11,6 @@ func ToWalletResponse(
 
 	return response.WalletResponse{
 		ID:        w.ID.String(),
-		UserID:    w.UserID.String(),
 		Asset:     w.Asset,
 		Available: w.Available,
 		Locked:    w.Locked,

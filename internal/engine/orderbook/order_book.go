@@ -56,7 +56,7 @@ type OrderBook struct {
 	Bids map[int64]*pricelevel.PriceLevel
 	Asks map[int64]*pricelevel.PriceLevel
 
-	Orders map[string]*OrderLocation
+	Orders map[int64]*OrderLocation
 
 	bidPrices bidHeap
 	askPrices askHeap
@@ -69,7 +69,7 @@ func New(symbol string) *OrderBook {
 		Symbol:    symbol,
 		Bids:      make(map[int64]*pricelevel.PriceLevel),
 		Asks:      make(map[int64]*pricelevel.PriceLevel),
-		Orders:    make(map[string]*OrderLocation),
+		Orders:    make(map[int64]*OrderLocation),
 		bidPrices: bidHeap{},
 		askPrices: askHeap{},
 	}
@@ -193,7 +193,7 @@ func (b *OrderBook) RemoveAskLevel(price int64) {
 	delete(b.Asks, price)
 }
 
-func (b *OrderBook) CancelOrder(orderID string) error {
+func (b *OrderBook) CancelOrder(orderID int64) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -235,14 +235,14 @@ func (b *OrderBook) CancelOrder(orderID string) error {
 	return nil
 }
 
-func (b *OrderBook) RemoveOrderIndex(orderID string) {
+func (b *OrderBook) RemoveOrderIndex(orderID int64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	delete(b.Orders, orderID)
 }
 
-func (b *OrderBook) ModifyOrder(orderID string, newPrice int64, newQuantity int64) error {
+func (b *OrderBook) ModifyOrder(orderID int64, newPrice int64, newQuantity int64) error {
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -337,7 +337,7 @@ func (b *OrderBook) addOrderWithoutLock(o *order.Order) {
 	}
 }
 
-func (b *OrderBook) GetOrder(orderID string) *order.Order {
+func (b *OrderBook) GetOrder(orderID int64) *order.Order {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

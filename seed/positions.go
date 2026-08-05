@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,7 +20,7 @@ func SeedPositions(
 		err := q.UpsertPosition(
 			ctx,
 			generated.UpsertPositionParams{
-				UserID: uuid.MustParse(p.UserID),
+				UserID: p.UserID,
 				Symbol: p.Symbol,
 
 				Quantity: p.Quantity,

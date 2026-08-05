@@ -13,7 +13,8 @@ func RegisterPositionRoutes(
 
 	positions := api.Group("/positions")
 
-	positions.Get("/:userID", positionHandler.List)
-	positions.Get("/:userID/:symbol", positionHandler.GetBySymbol)
+	positions.Get("/", positionHandler.List)
+
+	positions.Get("/:symbol", positionHandler.GetBySymbol)
 
 }

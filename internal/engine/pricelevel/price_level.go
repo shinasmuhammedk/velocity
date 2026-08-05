@@ -81,7 +81,7 @@ func (p *PriceLevel) Remove(target *order.Order) {
 // to FindFirst with a same-user exclusion predicate, but avoids the
 // closure allocation FindFirst requires — used on the hot matching path
 // where Match() is called on every incoming order.
-func (p *PriceLevel) FindFirstExcludingUser(userID string) *order.Order {
+func (p *PriceLevel) FindFirstExcludingUser(userID int64) *order.Order {
 	for e := p.Orders.Front(); e != nil; e = e.Next() {
 		o := e.Value.(*order.Order)
 		if o.UserID != userID {

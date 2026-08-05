@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -28,7 +27,7 @@ func (r *positionRepository) Upsert(
 
 func (r *positionRepository) Get(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	symbol string,
 ) (generated.Position, error) {
 	return r.queries.GetPosition(
@@ -42,7 +41,7 @@ func (r *positionRepository) Get(
 
 func (r *positionRepository) ListByUser(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Position, error) {
 	return r.queries.ListPositionsByUser(ctx, userID)
 }
