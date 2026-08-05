@@ -4,38 +4,37 @@ import (
 	"context"
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, params generated.CreateUserParams) (generated.User, error)
-	GetByID(ctx context.Context, id uuid.UUID) (generated.User, error)
+	GetByID(ctx context.Context, id int64) (generated.User, error)
 	GetByEmail(ctx context.Context, email string) (generated.User, error)
 }
 
 type OrderRepository interface {
 	Create(ctx context.Context, params generated.CreateOrderParams) (generated.Order, error)
-	GetByID(ctx context.Context, id uuid.UUID) (generated.Order, error)
+	GetByID(ctx context.Context, id int64) (generated.Order, error)
 	UpdateStatus(ctx context.Context, params generated.UpdateOrderStatusParams) error
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Order, error)
+	ListByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	ListOpenOrders(ctx context.Context, symbol string) ([]generated.Order, error)
 	RecoveryOrders(ctx context.Context) ([]generated.Order, error)
 	GetPendingStopOrders(ctx context.Context) ([]generated.Order, error)
 	UpdateOrderForModify(ctx context.Context, params generated.UpdateOrderForModifyParams) error
 	WithTx(tx pgx.Tx) OrderRepository
 	UpdateOrderAfterTrade(ctx context.Context, params generated.UpdateOrderAfterTradeParams) error
-	ListOpenOrdersByUser(ctx context.Context, userID uuid.UUID) ([]generated.Order, error)
-	ListOrdersByUser(ctx context.Context, userID uuid.UUID) ([]generated.Order, error)
+	ListOpenOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
+	ListOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 }
 
 type TradeRepository interface {
 	Create(ctx context.Context, params generated.CreateTradeParams) (generated.Trade, error)
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Trade, error)
+	ListByUser(ctx context.Context, userID int64) ([]generated.Trade, error)
 	ListBySymbol(ctx context.Context, symbol string) ([]generated.Trade, error)
-	GetByID(ctx context.Context, id uuid.UUID) (generated.Trade, error)
+	GetByID(ctx context.Context, id int64) (generated.Trade, error)
 	WithTx(tx pgx.Tx) TradeRepository
-	TradeExists(ctx context.Context, id uuid.UUID) (bool, error)
+	TradeExists(ctx context.Context, id int64) (bool, error)
 }
 
 type SymbolRepository interface {
@@ -48,15 +47,15 @@ type SymbolRepository interface {
 
 type PositionRepository interface {
 	Upsert(ctx context.Context, params generated.UpsertPositionParams) error
-	Get(ctx context.Context, userID uuid.UUID, symbol string) (generated.Position, error)
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]generated.Position, error)
+	Get(ctx context.Context, userID int64, symbol string) (generated.Position, error)
+	ListByUser(ctx context.Context, userID int64) ([]generated.Position, error)
 	WithTx(tx pgx.Tx) PositionRepository
 }
 
 type WalletRepository interface {
 	Create(ctx context.Context, params generated.CreateWalletParams) (generated.Wallet, error)
-	Get(ctx context.Context, userID uuid.UUID, asset string) (generated.Wallet, error)
+	Get(ctx context.Context, userID int64, asset string) (generated.Wallet, error)
 	Update(ctx context.Context, params generated.UpdateWalletParams) error
-	List(ctx context.Context, userID uuid.UUID) ([]generated.Wallet, error)
+	List(ctx context.Context, userID int64) ([]generated.Wallet, error)
 	WithTx(tx pgx.Tx) WalletRepository
 }

@@ -80,7 +80,7 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 		)
 
 		t := &trade.Trade{
-			ID: idgen.UUID(),
+			ID: idgen.Next(),
 
 			BuyOrderID:  incoming.ID,
 			SellOrderID: resting.ID,
@@ -176,7 +176,7 @@ func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
 		)
 
 		t := &trade.Trade{
-			ID: idgen.UUID(),
+			ID: idgen.Next(),
 
 			BuyOrderID:  resting.ID,
 			SellOrderID: incoming.ID,

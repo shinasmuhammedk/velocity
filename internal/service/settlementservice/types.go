@@ -1,15 +1,14 @@
 package settlementservice
 
-import "github.com/google/uuid"
 
 type SettlementRequest struct {
-	TradeID uuid.UUID
+	TradeID int64
 
-	BuyOrderID  uuid.UUID
-	SellOrderID uuid.UUID
+	BuyOrderID  int64
+	SellOrderID int64
 
-	BuyerID  uuid.UUID
-	SellerID uuid.UUID
+	BuyerID  int64
+	SellerID int64
 
 	Symbol string
 

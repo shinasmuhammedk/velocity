@@ -1,8 +1,9 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 
 	"velocity/internal/analytics/candles"
 	"velocity/internal/service/marketservice"
@@ -96,24 +97,26 @@ func (h *MarketDataHandler) GetRecentTrades(c *fiber.Ctx) error {
 
 func (h *MarketDataHandler) Symbols(c *fiber.Ctx) error {
 
-    symbols, err := h.marketService.GetSymbols(
-        c.Context(),
-    )
+	symbols, err := h.marketService.GetSymbols(
+		c.Context(),
+	)
 
-    if err != nil {
-        return c.Status(fiber.StatusInternalServerError).
-            JSON(fiber.Map{
-                "error": err.Error(),
-            })
-    }
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).
+			JSON(fiber.Map{
+				"error": err.Error(),
+			})
+	}
 
-    return c.JSON(symbols)
+	return c.JSON(symbols)
 }
 
 func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 
-	userID, err := uuid.Parse(
+	userID, err := strconv.ParseInt(
 		c.Params("userID"),
+		10,
+		64,
 	)
 
 	if err != nil {
@@ -138,7 +141,6 @@ func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 	return c.JSON(trades)
 }
 
-
 func (h *MarketDataHandler) GetMarketStats(c *fiber.Ctx) error {
 
 	symbol := c.Params("symbol")
@@ -152,7 +154,6 @@ func (h *MarketDataHandler) GetMarketStats(c *fiber.Ctx) error {
 
 	return c.JSON(stats)
 }
-
 
 func (h *MarketDataHandler) GetCandles(
 	c *fiber.Ctx,

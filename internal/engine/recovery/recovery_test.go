@@ -187,7 +187,7 @@ func (m *mockOrderRepository) Create(
 
 func (m *mockOrderRepository) GetByID(
 	context.Context,
-	uuid.UUID,
+	int64,
 ) (generated.Order, error) {
 	panic("not implemented")
 }
@@ -201,7 +201,7 @@ func (m *mockOrderRepository) UpdateStatus(
 
 func (m *mockOrderRepository) ListByUser(
 	context.Context,
-	uuid.UUID,
+	int64,
 ) ([]generated.Order, error) {
 	panic("not implemented")
 }

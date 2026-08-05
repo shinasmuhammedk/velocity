@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"velocity/internal/persistence/postgres/generated"
@@ -30,7 +29,7 @@ func (r *walletRepository) Create(
 
 func (r *walletRepository) Get(
     ctx context.Context,
-    userID uuid.UUID,
+    userID int64,
     asset string,
 ) (generated.Wallet, error) {
 
@@ -63,7 +62,7 @@ func (r *walletRepository) Update(
 
 func (r *walletRepository) List(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Wallet, error) {
 
 	return r.q.ListWallets(ctx, userID)

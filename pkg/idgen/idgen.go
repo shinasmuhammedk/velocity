@@ -1,6 +1,8 @@
 package idgen
 
 import (
+	"sync/atomic"
+
 	"github.com/google/uuid"
 )
 
@@ -23,4 +25,12 @@ func UUID() uuid.UUID {
 	}
 
 	return id
+}
+
+var sequence int64 = 0
+
+
+// Next returns a unique increasing int64 ID.
+func Next() int64 {
+	return atomic.AddInt64(&sequence, 1)
 }

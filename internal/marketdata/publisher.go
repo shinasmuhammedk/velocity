@@ -31,7 +31,7 @@ func (p *Publisher) PublishTrade(
 			Type:   constants.MessageTrade,
 			Symbol: t.Symbol,
 			Data: TradeMessage{
-				TradeID:  t.ID.String(),
+				TradeID:  t.ID,
 				Price:    t.Price,
 				Quantity: t.Quantity,
 				BuyerID:  t.BuyerID,

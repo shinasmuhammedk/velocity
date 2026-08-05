@@ -1,7 +1,7 @@
 package request
 
 type SubmitOrderRequest struct {
-	UserID string `json:"user_id"`
+	// UserID string `json:"user_id"`
 
 	Symbol string `json:"symbol"`
 

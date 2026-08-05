@@ -11,7 +11,7 @@ type StopBook struct {
 	buyStops  map[int64][]*order.Order
 	sellStops map[int64][]*order.Order
 
-	orderIndex map[string]*order.Order
+	orderIndex map[int64]*order.Order
 	mu         sync.Mutex
 }
 
@@ -19,7 +19,7 @@ func New() *StopBook {
 	return &StopBook{
 		buyStops:   make(map[int64][]*order.Order),
 		sellStops:  make(map[int64][]*order.Order),
-		orderIndex: make(map[string]*order.Order),
+		orderIndex: make(map[int64]*order.Order),
 	}
 }
 
@@ -71,7 +71,7 @@ func (s *StopBook) Trigger(price int64) []*order.Order {
 	return triggered
 }
 
-func (s *StopBook) CancelOrder(orderID string) error {
+func (s *StopBook) CancelOrder(orderID int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

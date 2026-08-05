@@ -3,11 +3,12 @@ package order
 import (
 	"time"
 	"velocity/pkg/constants"
+
 )
 
 type Order struct {
-	ID     string
-	UserID string
+	ID     int64
+	UserID int64
 	Symbol string
 
 	Side        constants.OrderSide

@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,11 +20,11 @@ func SeedUsers(
 		_, err := q.CreateUser(
 			ctx,
 			generated.CreateUserParams{
-				ID: uuid.MustParse(u.ID),
+				ID: u.ID,
 
 				Email: u.Email,
 
-				PasswordHash: u.Password,
+				// PasswordHash: u.Password,
 			},
 		)
 

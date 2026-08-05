@@ -23,12 +23,16 @@ import (
 	"velocity/internal/service/walletservice"
 	"velocity/internal/transport/http/handler"
 	"velocity/internal/transport/http/router"
+	userwsHandler "velocity/internal/transport/userws/handler"
+	userwsRouter "velocity/internal/transport/userws/router"
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	identityclient "velocity/internal/transport/grpc/client/identity"
+    httpmiddleware "velocity/internal/transport/http/middleware"
 )
 
 // Bootstrap creates and initializes the application.
@@ -41,6 +45,17 @@ func Bootstrap() (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	identityClient, err := identityclient.New("localhost:50051")
+	if err != nil {
+		return nil, err
+	}
+
+	container.IdentityClient = identityClient
+    
+    container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
+
+	container.Logger.Info("identity grpc client initialized")
 
 	// Register repositories
 	container.UserRepository = repository.NewUserRepository(container.DB)
@@ -246,7 +261,7 @@ func Bootstrap() (*Container, error) {
 
 	container.SettlementService = settlementservice.New(
 		container.TxManager,
-        container.UserDispatcher,
+		container.UserDispatcher,
 	)
 
 	container.MarketService = marketservice.New(
@@ -284,11 +299,15 @@ func Bootstrap() (*Container, error) {
 		container.Registry,
 		container.Logger,
 		container.UserDispatcher,
+		// container.IdentityClient,
 	)
 	container.Logger.Info("order service initialized")
 
 	container.WSHandler = wsHandler.NewHandler(container.MarketHub)
 	container.Logger.Info("websocket handler initialized")
+
+	container.UserWSHandler = userwsHandler.NewHandler(container.UserHub)
+	container.Logger.Info("private websocket handler initialized")
 
 	//OrderHandler
 	container.OrderHandler = handler.NewOrderHandler(
@@ -312,10 +331,12 @@ func Bootstrap() (*Container, error) {
 	//router
 	router.Register(
 		container.HTTP,
+        // container.IdentityClient,
 		container.OrderHandler,
 		container.MarketDataHandler,
 		container.WalletHandler,
 		container.PositionHandler,
+        container.AuthMiddleware.Authenticate,
 	)
 
 	container.HTTP.Get(
@@ -327,6 +348,11 @@ func Bootstrap() (*Container, error) {
 	wsRouter.Register(
 		container.HTTP,
 		container.WSHandler,
+	)
+
+	userwsRouter.Register(
+		container.HTTP,
+		container.UserWSHandler,
 	)
 
 	container.Logger.Info("application bootstrap completed")

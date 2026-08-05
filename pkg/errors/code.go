@@ -57,4 +57,6 @@ const (
 	CodeInvalidAsset        Code = "INVALID_ASSET"
 	CodeNegativeBalance     Code = "NEGATIVE_BALANCE"
     CodeInsufficientLockedBalance Code = "INSUFFICIENT_LOCKED_BALANCE"
+    
+    CodeInvalidOrderID Code = "INVALID_ORDER_ID"
 )

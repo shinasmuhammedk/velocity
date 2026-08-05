@@ -7,7 +7,6 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/errors"
 
-	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -20,11 +19,11 @@ func New(walletRepo repository.WalletRepository) *Service {
 	}
 }
 
-func (s *Service) Get(ctx context.Context, userID uuid.UUID, asset string) (generated.Wallet, error) {
+func (s *Service) Get(ctx context.Context, userID int64, asset string) (generated.Wallet, error) {
 	return s.walletRepo.Get(ctx, userID, asset)
 }
 
-func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]generated.Wallet, error) {
+func (s *Service) List(ctx context.Context, userID int64) ([]generated.Wallet, error) {
 	return s.walletRepo.List(ctx, userID)
 }
 
@@ -38,7 +37,7 @@ func (s *Service) Update(ctx context.Context, params generated.UpdateWalletParam
 
 func (s *Service) LockFunds(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 	amount int64,
 ) error {
@@ -68,7 +67,7 @@ func (s *Service) LockFunds(
 
 func (s *Service) UnlockFunds(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 	amount int64,
 ) error {
@@ -103,7 +102,7 @@ func (s *Service) UnlockFunds(
 
 func (s *Service) Deposit(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 	amount int64,
 ) error {
@@ -132,7 +131,7 @@ func (s *Service) Deposit(
 
 func (s *Service) Withdraw(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 	amount int64,
 ) error {
@@ -161,7 +160,7 @@ func (s *Service) Withdraw(
 
 func (s *Service) ConsumeLockedFunds(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 	asset string,
 	amount int64,
 ) error {
@@ -202,6 +201,19 @@ func (s *Service) ConsumeLockedFunds(
 			Locked:    wallet.Locked - amount,
 		},
 	)
-    fmt.Println("UPDATE ERR:", err) 
     return err
+}
+
+
+func (s *Service) GetWalletByAsset(
+	ctx context.Context,
+	userID int64,
+	asset string,
+) (generated.Wallet, error) {
+
+	return s.walletRepo.Get(
+		ctx,
+		userID,
+		asset,
+	)
 }

@@ -1,7 +1,7 @@
 CREATE TABLE orders (
-    id UUID PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
 
-    user_id UUID NOT NULL
+    user_id BIGINT NOT NULL
         REFERENCES users(id),
 
     symbol TEXT NOT NULL

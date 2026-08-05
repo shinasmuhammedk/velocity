@@ -1,7 +1,7 @@
 package seed
 
 type UserSeed struct {
-	ID       string
+	ID       int64
 	Email    string
 	Password string
 }
@@ -17,31 +17,31 @@ type SymbolSeed struct {
 }
 
 type WalletSeed struct {
-	UserID    string
+	UserID    int64
 	Asset     string
 	Available int64
 	Locked    int64
 }
 
 type PositionSeed struct {
-	UserID   string
+	UserID   int64
 	Symbol   string
 	Quantity int64
 }
 
 var Users = []UserSeed{
 	{
-		ID:       "a0d34cbb-524f-45bd-bfc7-921b7f9ffda0",
+		ID:       1,
 		Email:    "test1@velocity.dev",
 		Password: "dummy-password-hash",
 	},
 	{
-		ID:       "5b31d252-99ad-4ebe-a842-e593050414c4",
+		ID:       2,
 		Email:    "test2@velocity.dev",
 		Password: "dummy-password-hash",
 	},
 	{
-		ID:       "367bc8a3-e320-4cc6-adfd-55248b9947ab",
+		ID:       3,
 		Email:    "marketmaker@velocity.dev",
 		Password: "dummy-password-hash",
 	},
@@ -60,62 +60,69 @@ var Symbols = []SymbolSeed{
 }
 
 var Wallets = []WalletSeed{
+
 	// ---------- test1 ----------
 	{
-		UserID:    "a0d34cbb-524f-45bd-bfc7-921b7f9ffda0",
+		UserID:    1,
 		Asset:     "BTC",
 		Available: 5,
 		Locked:    0,
 	},
 	{
-		UserID:    "a0d34cbb-524f-45bd-bfc7-921b7f9ffda0",
+		UserID:    1,
 		Asset:     "USDT",
 		Available: 100000000,
 		Locked:    0,
 	},
+
 
 	// ---------- test2 ----------
 	{
-		UserID:    "5b31d252-99ad-4ebe-a842-e593050414c4",
+		UserID:    2,
 		Asset:     "BTC",
 		Available: 5,
 		Locked:    0,
 	},
 	{
-		UserID:    "5b31d252-99ad-4ebe-a842-e593050414c4",
+		UserID:    2,
 		Asset:     "USDT",
 		Available: 100000000,
 		Locked:    0,
 	},
 
+
 	// ---------- market maker ----------
 	{
-		UserID:    "367bc8a3-e320-4cc6-adfd-55248b9947ab",
+		UserID:    3,
 		Asset:     "BTC",
 		Available: 100,
 		Locked:    0,
 	},
 	{
-		UserID:    "367bc8a3-e320-4cc6-adfd-55248b9947ab",
+		UserID:    3,
 		Asset:     "USDT",
 		Available: 1000000000,
 		Locked:    0,
 	},
 }
 
+
 var Positions = []PositionSeed{
+
 	{
-		UserID:   "a0d34cbb-524f-45bd-bfc7-921b7f9ffda0",
+		UserID:   1,
 		Symbol:   "BTCUSDT",
 		Quantity: 0,
 	},
+
 	{
-		UserID:   "5b31d252-99ad-4ebe-a842-e593050414c4",
+		UserID:   2,
 		Symbol:   "BTCUSDT",
 		Quantity: 0,
 	},
+
 	{
-		UserID:   "367bc8a3-e320-4cc6-adfd-55248b9947ab",
+		UserID:   3,
 		Symbol:   "BTCUSDT",
 		Quantity: 0,
 	},

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package identity.v1;
+
+option go_package = "github.com/velocity-dashboard/identity-service/proto/identity/v1;identityv1";
+
+service AuthService {
+  rpc ValidateToken(ValidateTokenRequest)
+      returns (ValidateTokenResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  uint32 user_id = 2;
+  string email = 3;
+  string role = 4;
+  string error = 5;
+}

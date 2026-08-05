@@ -1,7 +1,6 @@
 package marketdata
 
 import (
-	"fmt"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -10,13 +9,17 @@ type Client struct {
     Conn *websocket.Conn
 }
 
-func (c *Client) Send(v any) {
-    fmt.Println("WRITING TO WS")
+// func (c *Client) Send(v any) {
+//     fmt.Println("WRITING TO WS")
 
-    if err := c.Conn.WriteJSON(v); err != nil {
-        fmt.Println("WRITE ERROR:", err)
-        return
-    }
+//     if err := c.Conn.WriteJSON(v); err != nil {
+//         fmt.Println("WRITE ERROR:", err)
+//         return
+//     }
 
-    fmt.Println("WRITE SUCCESS")
+//     fmt.Println("WRITE SUCCESS")
+// }
+
+func (c *Client) Send(v any) error {
+    return c.Conn.WriteJSON(v)
 }

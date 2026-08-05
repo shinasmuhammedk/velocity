@@ -2,7 +2,7 @@ package command
 
 // in the command package
 type ModifyOrderCommand struct {
-	OrderID     string
+	OrderID     int64
 	NewPrice    int64
 	NewQuantity int64
 	Result      chan error

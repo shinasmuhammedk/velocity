@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 )
 
 type userRepository struct {
@@ -22,7 +21,7 @@ func (r *userRepository) Create(ctx context.Context, params generated.CreateUser
 	return r.queries.CreateUser(ctx, params)
 }
 
-func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (generated.User, error) {
+func (r *userRepository) GetByID(ctx context.Context, id int64) (generated.User, error) {
 	return r.queries.GetUserByID(ctx, id)
 }
 

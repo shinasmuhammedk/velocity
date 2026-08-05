@@ -9,7 +9,6 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/settlementservice"
 
-	"github.com/google/uuid"
 )
 
 type TradeConsumer struct {
@@ -74,10 +73,10 @@ func (c *TradeConsumer) Start(
 					ctx,
 					settlementservice.SettlementRequest{
 						TradeID:     t.ID,
-						BuyOrderID:  uuid.MustParse(t.BuyOrderID),
-						SellOrderID: uuid.MustParse(t.SellOrderID),
-						BuyerID:     uuid.MustParse(t.BuyerID),
-						SellerID:    uuid.MustParse(t.SellerID),
+						BuyOrderID:  t.BuyOrderID,
+						SellOrderID: t.SellOrderID,
+						BuyerID:     t.BuyerID,
+						SellerID:    t.SellerID,
 						Symbol:      t.Symbol,
 						Price:       t.Price,
 						Quantity:    t.Quantity,

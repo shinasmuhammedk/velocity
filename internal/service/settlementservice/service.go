@@ -170,13 +170,13 @@ func (s *Service) Settle(
 			}
 
 			tradeEvent = userstream.TradeExecution{
-				TradeID: req.TradeID.String(),
+				TradeID: req.TradeID,
 
-				BuyOrderID:  req.BuyOrderID.String(),
-				SellOrderID: req.SellOrderID.String(),
+				BuyOrderID:  req.BuyOrderID,
+				SellOrderID: req.SellOrderID,
 
-				BuyerID:  req.BuyerID.String(),
-				SellerID: req.SellerID.String(),
+				BuyerID:  req.BuyerID,
+				SellerID: req.SellerID,
 
 				Symbol: req.Symbol,
 
@@ -229,8 +229,8 @@ func (s *Service) Settle(
 
 
 			buyOrderEvent = &order.Order{
-				ID:        buyOrder.ID.String(),
-				UserID:    buyOrder.UserID.String(),
+				ID:        buyOrder.ID,
+				UserID:    buyOrder.UserID,
 				Symbol:    buyOrder.Symbol,
 				Status:    constants.OrderStatus(buyStatus),
 				Price:     buyOrder.Price.Int64,
@@ -261,8 +261,8 @@ func (s *Service) Settle(
 			)
 
 			sellOrderEvent = &order.Order{
-				ID:        sellOrder.ID.String(),
-				UserID:    sellOrder.UserID.String(),
+				ID:        sellOrder.ID,
+				UserID:    sellOrder.UserID,
 				Symbol:    sellOrder.Symbol,
 				Status:    constants.OrderStatus(sellStatus),
 				Price:     sellOrder.Price.Int64,
@@ -345,22 +345,22 @@ func (s *Service) Settle(
 	}
 
 	s.UserDispatcher.DispatchBalanceUpdated(
-		req.BuyerID.String(),
+		req.BuyerID,
 		buyerBalance,
 	)
 
 	s.UserDispatcher.DispatchBalanceUpdated(
-		req.SellerID.String(),
+		req.SellerID,
 		sellerBalance,
 	)
 
 	s.UserDispatcher.DispatchPositionUpdated(
-		req.BuyerID.String(),
+		req.BuyerID,
 		buyerPositionEvent,
 	)
 
 	s.UserDispatcher.DispatchPositionUpdated(
-		req.SellerID.String(),
+		req.SellerID,
 		sellerPositionEvent,
 	)
 

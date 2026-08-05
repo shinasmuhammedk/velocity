@@ -174,8 +174,12 @@ var (
 		CodeNegativeBalance,
 		"negative balance",
 	)
-    ErrInsufficientLockedBalance = New(
-	CodeInsufficientLockedBalance,
-	"insufficient locked balance",
-)
+	ErrInsufficientLockedBalance = New(
+		CodeInsufficientLockedBalance,
+		"insufficient locked balance",
+	)
+    ErrInvalidOrderID = New(
+        CodeInvalidOrderID, 
+        "invalid order id",
+    )
 )

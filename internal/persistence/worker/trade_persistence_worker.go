@@ -9,7 +9,6 @@ import (
 	"velocity/internal/persistence/postgres/tx"
 	"velocity/pkg/constants"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -52,10 +51,10 @@ func (w *tradePersistenceWorker) ProcessTrade(
 				ctx,
 				generated.CreateTradeParams{
 					ID:          t.ID,
-					BuyOrderID:  uuid.MustParse(t.BuyOrderID),
-					SellOrderID: uuid.MustParse(t.SellOrderID),
-					BuyerID:     uuid.MustParse(t.BuyerID),
-					SellerID:    uuid.MustParse(t.SellerID),
+					BuyOrderID:  t.BuyOrderID,
+					SellOrderID: t.SellOrderID,
+					BuyerID:     t.BuyerID,
+					SellerID:    t.SellerID,
 					Symbol:      t.Symbol,
 					Price:       t.Price,
 					Quantity:    t.Quantity,
@@ -68,7 +67,7 @@ func (w *tradePersistenceWorker) ProcessTrade(
 
 			buyOrder, err := queries.GetOrderByID(
 				ctx,
-				uuid.MustParse(t.BuyOrderID),
+				t.BuyOrderID,
 			)
 			if err != nil {
 				return err
@@ -76,7 +75,7 @@ func (w *tradePersistenceWorker) ProcessTrade(
 
 			sellOrder, err := queries.GetOrderByID(
 				ctx,
-				uuid.MustParse(t.SellOrderID),
+				t.SellOrderID,
 			)
 			if err != nil {
 				return err
@@ -127,7 +126,6 @@ func (w *tradePersistenceWorker) ProcessTrade(
 			err = queries.UpsertPosition(
 				ctx,
 				generated.UpsertPositionParams{
-					UserID:   uuid.MustParse(t.BuyerID),
 					Symbol:   t.Symbol,
 					Quantity: t.Quantity,
 				},
@@ -139,7 +137,6 @@ func (w *tradePersistenceWorker) ProcessTrade(
 			err = queries.UpsertPosition(
 				ctx,
 				generated.UpsertPositionParams{
-					UserID:   uuid.MustParse(t.SellerID),
 					Symbol:   t.Symbol,
 					Quantity: -t.Quantity,
 				},

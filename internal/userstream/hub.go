@@ -3,18 +3,18 @@ package userstream
 import "sync"
 
 type Hub struct {
-	clients map[string]map[*Client]struct{}
+	clients map[int64]map[*Client]struct{}
 	mu      sync.RWMutex
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients: make(map[string]map[*Client]struct{}),
+		clients: make(map[int64]map[*Client]struct{}),
 	}
 }
 
 func (h *Hub) Subscribe(
-	userID string,
+	userID int64,
 	client *Client,
 ) {
 	h.mu.Lock()
@@ -28,7 +28,7 @@ func (h *Hub) Subscribe(
 }
 
 func (h *Hub) Unsubscribe(
-	userID string,
+	userID int64,
 	client *Client,
 ) {
 	h.mu.Lock()
@@ -47,7 +47,7 @@ func (h *Hub) Unsubscribe(
 }
 
 func (h *Hub) Broadcast(
-	userID string,
+	userID int64,
 	message any,
 ) {
 	h.mu.Lock()

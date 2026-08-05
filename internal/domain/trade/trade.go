@@ -3,17 +3,16 @@ package trade
 import (
 	"time"
 
-	"github.com/google/uuid"
 )
 
 type Trade struct {
-    ID uuid.UUID
+    ID int64
 
-    BuyOrderID  string
-    SellOrderID string
+    BuyOrderID  int64
+    SellOrderID int64
 
-    BuyerID  string
-    SellerID string
+    BuyerID  int64
+    SellerID int64
 
     Symbol string
     Price int64

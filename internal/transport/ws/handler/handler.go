@@ -26,6 +26,10 @@ func (h *Handler) Handle(
 	client := &marketdata.Client{
 		Conn: c,
 	}
+	defer func() {
+		h.hub.RemoveClient(client)
+		_ = c.Close()
+	}()
 
 	for {
 

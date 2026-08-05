@@ -1,7 +1,7 @@
 package command
 
 type CancelOrderCommand struct {
-    OrderID string
+    OrderID int64
     Result  chan error   // the background goroutine sends the outcome here
 }
 

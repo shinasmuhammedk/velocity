@@ -16,7 +16,6 @@ func NewHub() *Hub {
 	}
 }
 
-
 func (h *Hub) Subscribe(symbol string, client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -32,16 +31,15 @@ func (h *Hub) Subscribe(symbol string, client *Client) {
 }
 
 func (h *Hub) Unsubscribe(
-    symbol string,
-    client *Client,
+	symbol string,
+	client *Client,
 ) {
 
-    h.mu.Lock()
-    defer h.mu.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-    delete(h.clients[symbol], client)
+	delete(h.clients[symbol], client)
 }
-
 
 func (h *Hub) Broadcast(
 	symbol string,
@@ -57,6 +55,22 @@ func (h *Hub) Broadcast(
 
 	for client := range clients {
 		fmt.Println("Sending to client...")
-		client.Send(message)
+		// client.Send(message)
+		if err := client.Send(message); err != nil {
+			delete(clients, client)
+		}
+	}
+}
+
+func (h *Hub) RemoveClient(client *Client) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for symbol, clients := range h.clients {
+		delete(clients, client)
+
+		if len(clients) == 0 {
+			delete(h.clients, symbol)
+		}
 	}
 }

@@ -5,7 +5,6 @@ import (
 
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -28,14 +27,14 @@ func (r *tradeRepository) Create(
 
 func (r *tradeRepository) GetByID(
 	ctx context.Context,
-	id uuid.UUID,
+	id int64,
 ) (generated.Trade, error) {
 	return r.queries.GetTradeByID(ctx, id)
 }
 
 func (r *tradeRepository) ListByUser(
 	ctx context.Context,
-	userID uuid.UUID,
+	userID int64,
 ) ([]generated.Trade, error) {
 	return r.queries.ListTradesByUser(ctx, userID)
 }
@@ -55,7 +54,7 @@ func (r *tradeRepository) WithTx(tx pgx.Tx) TradeRepository {
 
 func (r *tradeRepository) TradeExists(
     ctx context.Context,
-    id uuid.UUID,
+    id int64,
 ) (bool, error) {
     return r.queries.TradeExists(ctx, id)
 }

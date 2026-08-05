@@ -90,8 +90,8 @@ func toDomainOrder(
 	}
 
 	return &order.Order{
-		ID:          dbOrder.ID.String(),
-		UserID:      dbOrder.UserID.String(),
+		ID:          dbOrder.ID,
+		UserID:      dbOrder.UserID,
 		Symbol:      dbOrder.Symbol,
 		Side:        constants.OrderSide(dbOrder.Side),
 		Type:        constants.OrderType(dbOrder.OrderType),
