@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(ctx context.Context, params generated.CreateUserParams) (generated.User, error)
 	GetByID(ctx context.Context, id int64) (generated.User, error)
 	GetByEmail(ctx context.Context, email string) (generated.User, error)
+	Exists(ctx context.Context, id int64) (bool, error)
 }
 
 type OrderRepository interface {

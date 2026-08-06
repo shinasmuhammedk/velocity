@@ -10,15 +10,34 @@ import (
 func main() {
 	container, err := app.Bootstrap()
 	if err != nil {
-		log.Fatal(err) // fine here — nothing to shut down yet, Bootstrap failed
+		log.Fatal(err)
 	}
 
 	defer app.Shutdown(container)
 
+	// -----------------------------
+	// Start gRPC Server
+	// -----------------------------
+	go func() {
+		if err := container.GRPCServer.Start(); err != nil {
+			container.Logger.Error(
+				"grpc server failed",
+				logger.ErrorField(err),
+			)
+		}
+	}()
+
+	defer container.GRPCServer.Stop()
+
 	container.Logger.Info("velocity started successfully")
 
+	// -----------------------------
+	// Start HTTP Server
+	// -----------------------------
 	if err := container.HTTP.Listen(":8080"); err != nil {
-		container.Logger.Error("http server failed", logger.ErrorField(err))
-		return // let the deferred Shutdown run, then exit normally
+		container.Logger.Error(
+			"http server failed",
+			logger.ErrorField(err),
+		)
 	}
 }

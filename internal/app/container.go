@@ -20,8 +20,10 @@ import (
 	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/settlementservice"
+	"velocity/internal/service/userservice"
 	"velocity/internal/service/walletservice"
 	identityclient "velocity/internal/transport/grpc/client/identity"
+	grpcserver "velocity/internal/transport/grpc/server"
 	"velocity/internal/transport/http/handler"
 	httpmiddleware "velocity/internal/transport/http/middleware"
 	userwsHandler "velocity/internal/transport/userws/handler"
@@ -115,6 +117,10 @@ type Container struct {
 	SettlementService *settlementservice.Service
 	MarketService     *marketservice.Service
 	PositionService   *positionservice.Service
+	UserService       *userservice.Service
+
+	VelocityGRPCServer *grpcserver.UserServer
+	GRPCServer         *grpcserver.Server
 
 	// --------------------------------------------------
 	// HTTP Handlers

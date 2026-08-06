@@ -217,3 +217,4 @@ func (s *Service) GetWalletByAsset(
 		asset,
 	)
 }
+

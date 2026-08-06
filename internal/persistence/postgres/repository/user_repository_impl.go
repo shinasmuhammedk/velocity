@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"velocity/internal/persistence/postgres/generated"
-
 )
 
 type userRepository struct {
@@ -27,4 +26,12 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (generated.User,
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (generated.User, error) {
 	return r.queries.GetUserByEmail(ctx, email)
+}
+
+func (r *userRepository) Exists(
+	ctx context.Context,
+	id int64,
+) (bool, error) {
+
+	return r.queries.ExistsUser(ctx, id)
 }

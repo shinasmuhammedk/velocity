@@ -20,6 +20,7 @@ import (
 	"velocity/internal/service/positionservice"
 	"velocity/internal/service/riskservice"
 	"velocity/internal/service/settlementservice" // <-- Add this
+	"velocity/internal/service/userservice"
 	"velocity/internal/service/walletservice"
 	"velocity/internal/transport/http/handler"
 	"velocity/internal/transport/http/router"
@@ -29,10 +30,12 @@ import (
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
 
+	identityclient "velocity/internal/transport/grpc/client/identity"
+	httpmiddleware "velocity/internal/transport/http/middleware"
+
 	"github.com/gofiber/adaptor/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	identityclient "velocity/internal/transport/grpc/client/identity"
-    httpmiddleware "velocity/internal/transport/http/middleware"
+	grpcserver "velocity/internal/transport/grpc/server"
 )
 
 // Bootstrap creates and initializes the application.
@@ -52,8 +55,8 @@ func Bootstrap() (*Container, error) {
 	}
 
 	container.IdentityClient = identityClient
-    
-    container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
+
+	container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
 
 	container.Logger.Info("identity grpc client initialized")
 
@@ -249,6 +252,26 @@ func Bootstrap() (*Container, error) {
 		container.WalletRepository,
 	)
 
+	container.UserService = userservice.New(
+		container.UserRepository,
+        container.WalletService,
+	)
+
+	container.Logger.Info("user service initialized")
+
+	grpcServer, err := grpcserver.New(container.UserService)
+	if err != nil {
+		return nil, err
+	}
+
+	container.GRPCServer = grpcServer
+
+	container.VelocityGRPCServer = grpcserver.NewUserServer(
+		container.UserService,
+	)
+
+	container.Logger.Info("velocity grpc server initialized")
+
 	//risk service
 	container.RiskService = riskservice.New(
 		riskservice.NewQuantityValidator(),
@@ -331,12 +354,12 @@ func Bootstrap() (*Container, error) {
 	//router
 	router.Register(
 		container.HTTP,
-        // container.IdentityClient,
+		// container.IdentityClient,
 		container.OrderHandler,
 		container.MarketDataHandler,
 		container.WalletHandler,
 		container.PositionHandler,
-        container.AuthMiddleware.Authenticate,
+		container.AuthMiddleware.Authenticate,
 	)
 
 	container.HTTP.Get(

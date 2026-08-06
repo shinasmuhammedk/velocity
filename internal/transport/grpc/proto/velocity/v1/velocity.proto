@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package velocity.v1;
+
+option go_package = "velocity/internal/transport/grpc/proto/velocity/v1;velocityv1";
+
+service VelocityService {
+  rpc CreateUser(CreateUserRequest)
+      returns (CreateUserResponse);
+}
+
+message CreateUserRequest {
+  int64 id = 1;
+  string email = 2;
+}
+
+message CreateUserResponse {
+  bool success = 1;
+  string error = 2;
+
+  int64 user_id = 3;
+  string email = 4;
+}
