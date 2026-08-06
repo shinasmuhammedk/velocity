@@ -1,0 +1,517 @@
+Folder PATH listing for volume Local Disk E
+Volume serial number is 00000084 3AF6:8F41
+D:.
+¦   .gitignore
+¦   bench.test.exe
+¦   cpu.prof
+¦   go.mod
+¦   go.sum
+¦   Makefile
+¦   mem.out
+¦   mem.prof
+¦   README.md
+¦   sqlc.yaml
+¦   structure.txt
+¦   
++---api
+¦   +---openapi
+¦   ¦       velocity.yaml
+¦   ¦       
+¦   +---proto
++---cmd
+¦   +---api
+¦   ¦       main.go
+¦   ¦       
+¦   +---matchnode
+¦   ¦       main.go
+¦   ¦       
+¦   +---migrate
+¦   ¦       main.go
+¦   ¦       
+¦   +---seed
+¦   ¦       main.go
+¦   ¦       
+¦   +---worker
+¦           main.go
+¦           
++---configs
+¦       config.development.yaml
+¦       config.prod.yaml
+¦       config.staging.yaml
+¦       
++---deployments
+¦   +---ci
+¦   ¦   +---github-actions
+¦   +---compose
+¦   ¦       docker-compose.yml
+¦   ¦       
+¦   +---docker
+¦   ¦       api.Dockerfile
+¦   ¦       matchnode.Dockerfile
+¦   ¦       worker.Dockerfile
+¦   ¦       
+¦   +---kubernetes
+¦       +---base
+¦       +---overlays
++---docs
+¦   +---adr
+¦   ¦       ADR-001-price-time-priority.md
+¦   ¦       ADR-002-single-threaded-matching.md
+¦   ¦       ADR-003-event-driven-engine.md
+¦   ¦       ADR-004-engine-per-symbol.md
+¦   ¦       ADR-005-fifo-price-levels.md
+¦   ¦       
+¦   +---api
+¦   +---architecture
+¦   ¦       01-application-bootstrap.md
+¦   ¦       02-configuration.md
+¦   ¦       03-logging.md
+¦   ¦       04-git-workflow.md
+¦   ¦       concurrency-model.md
+¦   ¦       data-structures.md
+¦   ¦       matching-engine-architecture.md
+¦   ¦       orderbook.md
+¦   ¦       
+¦   +---database
+¦   ¦       01-database-architecture.md
+¦   ¦       
+¦   +---performance
+¦   ¦       benchmark-results.md
+¦   ¦       performance-targets.md
+¦   ¦       
+¦   +---sequence-diagrams
+¦           full-fill.md
+¦           order-placement.md
+¦           partial-fill.md
+¦           
++---internal
+¦   +---analytics
+¦   ¦   +---candles
+¦   ¦   ¦       candle.go
+¦   ¦   ¦       interval.go
+¦   ¦   ¦       manager.go
+¦   ¦   ¦       service.go
+¦   ¦   ¦       subscriber.go
+¦   ¦   ¦       update.go
+¦   ¦   ¦       
+¦   ¦   +---kline
+¦   ¦   +---stats
+¦   ¦           manager.go
+¦   ¦           service.go
+¦   ¦           subscriber.go
+¦   ¦           types.go
+¦   ¦           updator.go
+¦   ¦           window.go
+¦   ¦           
+¦   +---app
+¦   ¦       bootstrap.go
+¦   ¦       container.go
+¦   ¦       shutdown.go
+¦   ¦       startup.go
+¦   ¦       
+¦   +---config
+¦   ¦       config.go
+¦   ¦       environment.go
+¦   ¦       loader.go
+¦   ¦       validator.go
+¦   ¦       
+¦   +---domain
+¦   ¦   +---depth
+¦   ¦   ¦       level.go
+¦   ¦   ¦       
+¦   ¦   +---marketdata
+¦   ¦   ¦       message.go
+¦   ¦   ¦       
+¦   ¦   +---order
+¦   ¦   ¦       error.go
+¦   ¦   ¦       order.go
+¦   ¦   ¦       status.go
+¦   ¦   ¦       
+¦   ¦   +---position
+¦   ¦   +---risk
+¦   ¦   +---trade
+¦   ¦           trade.go
+¦   ¦           
+¦   +---engine
+¦   ¦   ¦   engine.go
+¦   ¦   ¦   engine_test.go
+¦   ¦   ¦   
+¦   ¦   +---command
+¦   ¦   ¦       cancel_order.go
+¦   ¦   ¦       command.go
+¦   ¦   ¦       modify_order.go
+¦   ¦   ¦       submit_order.go
+¦   ¦   ¦       
+¦   ¦   +---events
+¦   ¦   ¦       base_event.go
+¦   ¦   ¦       depth_event.go
+¦   ¦   ¦       dispatcher.go
+¦   ¦   ¦       events.go
+¦   ¦   ¦       order_event.go
+¦   ¦   ¦       publisher.go
+¦   ¦   ¦       ticker_event.go
+¦   ¦   ¦       trade_event.go
+¦   ¦   ¦       types.go
+¦   ¦   ¦       
+¦   ¦   +---matcher
+¦   ¦   ¦       matcher.go
+¦   ¦   ¦       matcher_test.go
+¦   ¦   ¦       
+¦   ¦   +---orderbook
+¦   ¦   ¦       cancel.go
+¦   ¦   ¦       orderbook_test.go
+¦   ¦   ¦       order_book.go
+¦   ¦   ¦       
+¦   ¦   +---pricelevel
+¦   ¦   ¦       pricelevel_test.go
+¦   ¦   ¦       price_level.go
+¦   ¦   ¦       
+¦   ¦   +---queue
+¦   ¦   +---recovery
+¦   ¦   ¦       recovery.go
+¦   ¦   ¦       recovery_test.go
+¦   ¦   ¦       snapshot_recovery.go
+¦   ¦   ¦       
+¦   ¦   +---registry
+¦   ¦   ¦       registry.go
+¦   ¦   ¦       registry_test.go
+¦   ¦   ¦       
+¦   ¦   +---replay
+¦   ¦   +---snapshot
+¦   ¦   ¦       json_serializer.go
+¦   ¦   ¦       loader.go
+¦   ¦   ¦       manager.go
+¦   ¦   ¦       mock_writer.go
+¦   ¦   ¦       serializer.go
+¦   ¦   ¦       types.go
+¦   ¦   ¦       writer.go
+¦   ¦   ¦       
+¦   ¦   +---stopbook
+¦   ¦   ¦       stopbook_test.go
+¦   ¦   ¦       stop_book.go
+¦   ¦   ¦       
+¦   ¦   +---wal
+¦   ¦           event.go
+¦   ¦           json.go
+¦   ¦           manager.go
+¦   ¦           reader.go
+¦   ¦           replay.go
+¦   ¦           serializer.go
+¦   ¦           types.go
+¦   ¦           writer.go
+¦   ¦           
+¦   +---eventbus
+¦   ¦       publisher.go
+¦   ¦       subscriber.go
+¦   ¦       
+¦   +---infrastructure
+¦   ¦   +---kafka
+¦   ¦   +---logging
+¦   ¦   +---metrics
+¦   ¦   ¦       metrics.go
+¦   ¦   ¦       
+¦   ¦   +---monitoring
+¦   ¦   +---prometheus
+¦   ¦   +---redis
+¦   ¦   +---security
+¦   ¦   ¦   +---jwt
+¦   ¦   ¦   +---password
+¦   ¦   +---tracing
+¦   +---marketdata
+¦   ¦   ¦   broadcaster.go
+¦   ¦   ¦   client.go
+¦   ¦   ¦   hub.go
+¦   ¦   ¦   message.go
+¦   ¦   ¦   protocol.go
+¦   ¦   ¦   provider.go
+¦   ¦   ¦   publisher.go
+¦   ¦   ¦   ticker.go
+¦   ¦   ¦   types.go
+¦   ¦   ¦   
+¦   ¦   +---messages
+¦   ¦           kline.go
+¦   ¦           
+¦   +---persistence
+¦   ¦   +---dlq
+¦   ¦   +---postgres
+¦   ¦   ¦   ¦   connection.go
+¦   ¦   ¦   ¦   
+¦   ¦   ¦   +---generated
+¦   ¦   ¦   ¦       db.go
+¦   ¦   ¦   ¦       models.go
+¦   ¦   ¦   ¦       orders.sql.go
+¦   ¦   ¦   ¦       positions.sql.go
+¦   ¦   ¦   ¦       querier.go
+¦   ¦   ¦   ¦       symbols.sql.go
+¦   ¦   ¦   ¦       trades.sql.go
+¦   ¦   ¦   ¦       users.sql.go
+¦   ¦   ¦   ¦       wallets.sql.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---mapper
+¦   ¦   ¦   ¦       order.go
+¦   ¦   ¦   ¦       position.go
+¦   ¦   ¦   ¦       trade.go
+¦   ¦   ¦   ¦       wallet.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---queries
+¦   ¦   ¦   ¦       orders.sql
+¦   ¦   ¦   ¦       positions.sql
+¦   ¦   ¦   ¦       symbols.sql
+¦   ¦   ¦   ¦       trades.sql
+¦   ¦   ¦   ¦       users.sql
+¦   ¦   ¦   ¦       wallets.sql
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---repository
+¦   ¦   ¦   ¦       order_repository_impl.go
+¦   ¦   ¦   ¦       position_repository_impl.go
+¦   ¦   ¦   ¦       repository.go
+¦   ¦   ¦   ¦       symbol_repository_impl.go
+¦   ¦   ¦   ¦       trade_repository_impl.go
+¦   ¦   ¦   ¦       user_repository_impl.go
+¦   ¦   ¦   ¦       wallet_repository.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---schema
+¦   ¦   ¦   +---tx
+¦   ¦   ¦           manager.go
+¦   ¦   ¦           
+¦   ¦   +---queue
+¦   ¦   +---retry
+¦   ¦   +---worker
+¦   ¦           orderbook_provider.go
+¦   ¦           trade_consumer.go
+¦   ¦           trade_persistence_worker.go
+¦   ¦           trade_worker.go
+¦   ¦           
+¦   +---service
+¦   ¦   +---marketservice
+¦   ¦   ¦       service.go
+¦   ¦   ¦       
+¦   ¦   +---orderservice
+¦   ¦   ¦       service.go
+¦   ¦   ¦       
+¦   ¦   +---positionservice
+¦   ¦   ¦       service.go
+¦   ¦   ¦       
+¦   ¦   +---riskservice
+¦   ¦   ¦       balance_validator.go
+¦   ¦   ¦       price_validator.go
+¦   ¦   ¦       quantity_validator.go
+¦   ¦   ¦       request.go
+¦   ¦   ¦       result.go
+¦   ¦   ¦       rules.go
+¦   ¦   ¦       service.go
+¦   ¦   ¦       validate.go
+¦   ¦   ¦       wallet_repository.go
+¦   ¦   ¦       
+¦   ¦   +---settlementservice
+¦   ¦   ¦       response.go
+¦   ¦   ¦       service.go
+¦   ¦   ¦       types.go
+¦   ¦   ¦       
+¦   ¦   +---tradeservice
+¦   ¦   +---walletservice
+¦   ¦           helper.go
+¦   ¦           service.go
+¦   ¦           
+¦   +---transport
+¦   ¦   +---grpc
+¦   ¦   ¦   +---client
+¦   ¦   ¦   ¦   +---identity
+¦   ¦   ¦   ¦           client.go
+¦   ¦   ¦   ¦           
+¦   ¦   ¦   +---handler
+¦   ¦   ¦   ¦       handler.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---proto
+¦   ¦   ¦       ¦   proto.go
+¦   ¦   ¦       ¦   
+¦   ¦   ¦       +---identity
+¦   ¦   ¦           +---v1
+¦   ¦   ¦                   identity.pb.go
+¦   ¦   ¦                   identity.proto
+¦   ¦   ¦                   identity_grpc.pb.go
+¦   ¦   ¦                   
+¦   ¦   +---http
+¦   ¦   ¦   +---dto
+¦   ¦   ¦   ¦   +---request
+¦   ¦   ¦   ¦   ¦       cancel_order_request.go
+¦   ¦   ¦   ¦   ¦       deposit_wallet_request.go
+¦   ¦   ¦   ¦   ¦       modify_order_request.go
+¦   ¦   ¦   ¦   ¦       submit_order_request.go
+¦   ¦   ¦   ¦   ¦       withdraw_wallet_request.go
+¦   ¦   ¦   ¦   ¦       
+¦   ¦   ¦   ¦   +---response
+¦   ¦   ¦   ¦           error_response.go
+¦   ¦   ¦   ¦           orderbook_response.go
+¦   ¦   ¦   ¦           order_response.go
+¦   ¦   ¦   ¦           position_response.go
+¦   ¦   ¦   ¦           submit_order_response.go
+¦   ¦   ¦   ¦           wallet_response.go
+¦   ¦   ¦   ¦           
+¦   ¦   ¦   +---handler
+¦   ¦   ¦   ¦       market_data_handler.go
+¦   ¦   ¦   ¦       order_handler.go
+¦   ¦   ¦   ¦       position_handler.go
+¦   ¦   ¦   ¦       wallet_handler.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---middleware
+¦   ¦   ¦   ¦       auth.go
+¦   ¦   ¦   ¦       context.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---router
+¦   ¦   ¦   ¦       market_routes.go
+¦   ¦   ¦   ¦       order_routes.go
+¦   ¦   ¦   ¦       position_routes.go
+¦   ¦   ¦   ¦       router.go
+¦   ¦   ¦   ¦       wallet_routes.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---server
+¦   ¦   ¦   +---validation
+¦   ¦   +---userws
+¦   ¦   ¦   +---handler
+¦   ¦   ¦   ¦       handler.go
+¦   ¦   ¦   ¦       
+¦   ¦   ¦   +---router
+¦   ¦   ¦           router.go
+¦   ¦   ¦           
+¦   ¦   +---ws
+¦   ¦       +---dto
+¦   ¦       +---handler
+¦   ¦       ¦       handler.go
+¦   ¦       ¦       
+¦   ¦       +---hub
+¦   ¦       +---router
+¦   ¦               router.go
+¦   ¦               
+¦   +---userstream
+¦           client.go
+¦           dispatcher.go
+¦           hub.go
+¦           message.go
+¦           protocol.go
+¦           publisher.go
+¦           types.go
+¦           
++---migrations
+¦       0001_create_users.down.sql
+¦       0001_create_users.up.sql
+¦       0002_create_symbols.down.sql
+¦       0002_create_symbols.up.sql
+¦       0003_create_orders.down.sql
+¦       0003_create_orders.up.sql
+¦       0004_create_trades.down.sql
+¦       0004_create_trades.up.sql
+¦       0005_create_positions.down.sql
+¦       0005_create_positions.up.sql
+¦       0006_create_wallets.down.sql
+¦       0006_create_wallets.up.sql
+¦       0007_create_position_history.down.sql
+¦       0007_create_position_history.up.sql
+¦       
++---pkg
+¦   +---constants
+¦   ¦       app.go
+¦   ¦       database.go
+¦   ¦       engine.go
+¦   ¦       events.go
+¦   ¦       http.go
+¦   ¦       marketdata.go
+¦   ¦       metrics.go
+¦   ¦       order.go
+¦   ¦       snapshot.go
+¦   ¦       wal.go
+¦   ¦       websocket.go
+¦   ¦       
+¦   +---errors
+¦   ¦       code.go
+¦   ¦       error.go
+¦   ¦       errors.go
+¦   ¦       
+¦   +---helpers
+¦   ¦       helper.go
+¦   ¦       
+¦   +---idgen
+¦   ¦       idgen.go
+¦   ¦       
+¦   +---logger
+¦   ¦       logger.go
+¦   ¦       
+¦   +---response
+¦   ¦       response.go
+¦   ¦       
+¦   +---timeutil
+¦   ¦       timeutil.go
+¦   ¦       
+¦   +---validator
+¦           validator.go
+¦           
++---scripts
+¦       loadtest.sh
+¦       migrate.sh
+¦       seed.sh
+¦       
++---seed
+¦       data.go
+¦       positions.go
+¦       seed.go
+¦       symbols.go
+¦       users.go
+¦       wallets.go
+¦       
++---test
+¦   +---bench
+¦   ¦       engine_bench_test.go
+¦   ¦       
+¦   +---chaos
+¦   +---fixtures
+¦   +---helpers
+¦   ¦       order_helper.go
+¦   ¦       
+¦   +---integration
+¦   ¦   ¦   context_test.go
+¦   ¦   ¦   setup.go
+¦   ¦   ¦   setup_test.go
+¦   ¦   ¦   
+¦   ¦   +---repository
+¦   ¦   ¦       order_test.go
+¦   ¦   ¦       position_test.go
+¦   ¦   ¦       trade_test.go
+¦   ¦   ¦       user_test.go
+¦   ¦   ¦       wallet_test.go
+¦   ¦   ¦       
+¦   ¦   +---service
+¦   ¦   ¦       order_lifecycle_test.go
+¦   ¦   ¦       order_service_test.go
+¦   ¦   ¦       settlement_service_test.go
+¦   ¦   ¦       wallet_service_test.go
+¦   ¦   ¦       
+¦   ¦   +---settlement
+¦   ¦           settlement_duplicate_trade_test.go
+¦   ¦           settlement_insufficient_buyer_balance_test.go
+¦   ¦           settlement_insufficient_seller_balance_test.go
+¦   ¦           settlement_order_already_filled_test.go
+¦   ¦           settlement_partial_fill_test.go
+¦   ¦           settlement_position_update_test.go
+¦   ¦           settlement_transaction_rollback_test.go
+¦   ¦           settlement_wallet_accumulation_test.go
+¦   ¦           
+¦   +---load
+¦   +---mocks
+¦   +---stress
+¦   +---unit
+¦       +---orderservice
+¦       +---riskservice
+¦               balance_validator_test.go
+¦               price_validator_test.go
+¦               quantity_validator_test.go
+¦               
++---wal
+        BTCUSD.wal
+        BTCUSDT.wal
+        BTCUSDT_34003814.wal
+        BTCUSDT_58189fe4.wal
+        BTCUSDT_61775f21.wal
+        BTCUSDT_6eb35cb4.wal
+        BTCUSDT_8021055d.wal
+        BTCUSDT_d08432b6.wal
+        
