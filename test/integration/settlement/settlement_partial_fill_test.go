@@ -40,21 +40,27 @@ func TestSettlement_PartialFill(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
+
 	//----------------------------------------------------------------------
 	// Users
 	//----------------------------------------------------------------------
 
-	buyerID := uuid.New()
-	sellerID := uuid.New()
-
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID: buyerID,
-			Email: uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           buyerID,
+			Email:        uuid.NewString() + "@buyer.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -62,11 +68,11 @@ func TestSettlement_PartialFill(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID: sellerID,
-			Email: uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           sellerID,
+			Email:        uuid.NewString() + "@seller.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -79,7 +85,7 @@ func TestSettlement_PartialFill(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: buyerID,
-			Asset: "USDT",
+			Asset:  "USDT",
 			Locked: 100000,
 		},
 	)
@@ -89,7 +95,7 @@ func TestSettlement_PartialFill(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: buyerID,
-			Asset: "BTC",
+			Asset:  "BTC",
 		},
 	)
 	require.NoError(t, err)
@@ -98,7 +104,7 @@ func TestSettlement_PartialFill(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: sellerID,
-			Asset: "BTC",
+			Asset:  "BTC",
 			Locked: 1,
 		},
 	)
@@ -108,7 +114,7 @@ func TestSettlement_PartialFill(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: sellerID,
-			Asset: "USDT",
+			Asset:  "USDT",
 		},
 	)
 	require.NoError(t, err)
@@ -122,27 +128,24 @@ func TestSettlement_PartialFill(t *testing.T) {
 		Valid: true,
 	}
 
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
-
 	// Buyer wants 2 BTC
 
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
 		generated.CreateOrderParams{
-			ID: buyOrderID,
-			UserID: buyerID,
-			Symbol: symbol,
-			Side: "BUY",
-			OrderType: "LIMIT",
+			ID:          buyOrderID,
+			UserID:      buyerID,
+			Symbol:      symbol,
+			Side:        "BUY",
+			OrderType:   "LIMIT",
 			TimeInForce: "GTC",
-			Status: string(constants.OrderStatusOpen),
-			Price: price,
-			Quantity: 2,
-			Remaining: 2,
-			Filled: 0,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			Status:      string(constants.OrderStatusOpen),
+			Price:       price,
+			Quantity:    2,
+			Remaining:   2,
+			Filled:      0,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -152,19 +155,19 @@ func TestSettlement_PartialFill(t *testing.T) {
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
 		generated.CreateOrderParams{
-			ID: sellOrderID,
-			UserID: sellerID,
-			Symbol: symbol,
-			Side: "SELL",
-			OrderType: "LIMIT",
+			ID:          sellOrderID,
+			UserID:      sellerID,
+			Symbol:      symbol,
+			Side:        "SELL",
+			OrderType:   "LIMIT",
 			TimeInForce: "GTC",
-			Status: string(constants.OrderStatusOpen),
-			Price: price,
-			Quantity: 1,
-			Remaining: 1,
-			Filled: 0,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			Status:      string(constants.OrderStatusOpen),
+			Price:       price,
+			Quantity:    1,
+			Remaining:   1,
+			Filled:      0,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -176,20 +179,20 @@ func TestSettlement_PartialFill(t *testing.T) {
 	err = service.Settle(
 		tc.Ctx,
 		settlementservice.SettlementRequest{
-			TradeID: uuid.New(),
+			TradeID: tradeID,
 
-			BuyOrderID: buyOrderID,
+			BuyOrderID:  buyOrderID,
 			SellOrderID: sellOrderID,
 
-			BuyerID: buyerID,
+			BuyerID:  buyerID,
 			SellerID: sellerID,
 
 			Symbol: symbol,
 
-			BaseAsset: "BTC",
+			BaseAsset:  "BTC",
 			QuoteAsset: "USDT",
 
-			Price: 50000,
+			Price:    50000,
 			Quantity: 1,
 		},
 	)

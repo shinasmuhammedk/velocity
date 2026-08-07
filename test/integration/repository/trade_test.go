@@ -15,8 +15,17 @@ import (
 func TestCreateAndGetTrade(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
-    symbol := "BTCUSDT_" + uuid.New().String()[:8]
-    
+	symbol := "BTCUSDT_" + uuid.New().String()[:8]
+
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
+
 	//-----------------------------------
 	// Create Symbol
 	//-----------------------------------
@@ -37,14 +46,12 @@ func TestCreateAndGetTrade(t *testing.T) {
 	// Create Buyer
 	//-----------------------------------
 
-	buyerID := uuid.New()
-
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           buyerID,
-			Email:        buyerID.String() + "@test.com",
-			PasswordHash: "hash",
+			Email:        uuid.New().String() + "@test.com",
+			// PasswordHash: "hash",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -55,14 +62,12 @@ func TestCreateAndGetTrade(t *testing.T) {
 	// Create Seller
 	//-----------------------------------
 
-	sellerID := uuid.New()
-
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           sellerID,
-			Email:        sellerID.String() + "@test.com",
-			PasswordHash: "hash",
+			Email:        uuid.New().String() + "@test.com",
+			// PasswordHash: "hash",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -72,8 +77,6 @@ func TestCreateAndGetTrade(t *testing.T) {
 	//-----------------------------------
 	// Create Buy Order
 	//-----------------------------------
-
-	buyOrderID := uuid.New()
 
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
@@ -103,8 +106,6 @@ func TestCreateAndGetTrade(t *testing.T) {
 	// Create Sell Order
 	//-----------------------------------
 
-	sellOrderID := uuid.New()
-
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
 		generated.CreateOrderParams{
@@ -132,8 +133,6 @@ func TestCreateAndGetTrade(t *testing.T) {
 	//-----------------------------------
 	// Create Trade
 	//-----------------------------------
-
-	tradeID := uuid.New()
 
 	trade, err := tc.TradeRepo.Create(
 		tc.Ctx,

@@ -16,15 +16,19 @@ func TestOrderRepository(t *testing.T) {
 
 	tc := integration.NewTestContext(t)
 
-	// ---------- Create User ----------
-	userID := uuid.New()
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	userID := base
+	orderID := base + 1
 
+	// ---------- Create User ----------
 	_, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           userID,
 			Email:        uuid.New().String() + "@test.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -47,8 +51,6 @@ func TestOrderRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// ---------- Create Order ----------
-	orderID := uuid.New()
-
 	order, err := tc.OrderRepo.Create(
 		tc.Ctx,
 		generated.CreateOrderParams{

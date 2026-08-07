@@ -11,7 +11,6 @@ import (
 	"velocity/internal/engine/wal"
 	"velocity/internal/persistence/postgres/generated"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -52,8 +51,8 @@ func TestRecoverySkipsSnapshotRestoredSymbols(
 	repo := &mockOrderRepository{
 		orders: []generated.Order{
 			{
-				ID:          uuid.New(),
-				UserID:      uuid.New(),
+				ID:          1,
+				UserID:      101,
 				Symbol:      "BTCUSDT",
 				Side:        "BUY",
 				OrderType:   "LIMIT",
@@ -129,8 +128,8 @@ func TestRecoveryLoadsOrdersForSymbolsWithoutSnapshots(
 	repo := &mockOrderRepository{
 		orders: []generated.Order{
 			{
-				ID:          uuid.New(),
-				UserID:      uuid.New(),
+				ID:          2,
+				UserID:      102,
 				Symbol:      "ETHUSDT",
 				Side:        "BUY",
 				OrderType:   "LIMIT",

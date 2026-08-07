@@ -2,7 +2,6 @@
 package bench
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,10 +10,10 @@ import (
 	"velocity/pkg/constants"
 )
 
-func createSellOrder(id string, price int64, qty int64) *order.Order {
+func createSellOrder(id int64, price int64, qty int64) *order.Order {
 	return &order.Order{
 		ID:          id,
-		UserID:      "seller",
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -27,10 +26,10 @@ func createSellOrder(id string, price int64, qty int64) *order.Order {
 	}
 }
 
-func createBuyOrder(id string, price int64, qty int64) *order.Order {
+func createBuyOrder(id int64, price int64, qty int64) *order.Order {
 	return &order.Order{
 		ID:          id,
-		UserID:      "buyer",
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -43,18 +42,23 @@ func createBuyOrder(id string, price int64, qty int64) *order.Order {
 	}
 }
 
+// buyIDOffset keeps benchmark buy-order IDs from ever colliding with
+// seed sell-order IDs, regardless of how many seed levels are used or
+// how large b.N grows.
+const buyIDOffset = 1_000_000_000
+
 func BenchmarkEngineMatching(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	b.Cleanup(func() {
 		e.Stop()
 	})
 
 	seed := createSellOrder(
-		"seed-giant-sell",
+		1,
 		1000,
 		1_000_000_000_000,
 	)
@@ -71,7 +75,7 @@ func BenchmarkEngineMatching(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		buy := createBuyOrder(
-			fmt.Sprintf("buy-%d", i),
+			buyIDOffset+int64(i),
 			1000,
 			10,
 		)
@@ -88,7 +92,7 @@ func BenchmarkEngineMatchingDeepBook(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	b.Cleanup(func() {
 		e.Stop()
@@ -98,7 +102,7 @@ func BenchmarkEngineMatchingDeepBook(b *testing.B) {
 		price := int64(1000 + i)
 
 		sell := createSellOrder(
-			fmt.Sprintf("seed-sell-%d", i),
+			int64(i+1),
 			price,
 			1_000_000_000,
 		)
@@ -116,7 +120,7 @@ func BenchmarkEngineMatchingDeepBook(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		buy := createBuyOrder(
-			fmt.Sprintf("buy-%d", i),
+			buyIDOffset+int64(i),
 			5999,
 			10,
 		)

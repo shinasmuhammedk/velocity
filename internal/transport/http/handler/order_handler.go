@@ -9,6 +9,7 @@ import (
 
 	httprequest "velocity/internal/transport/http/dto/request"
 	httpresponse "velocity/internal/transport/http/dto/response"
+    dtoresponse "velocity/internal/transport/http/dto/response"
 	"velocity/internal/transport/http/middleware"
 
 	"github.com/gofiber/fiber/v2"
@@ -27,30 +28,28 @@ func NewOrderHandler(
 }
 
 func (h *OrderHandler) Submit(c *fiber.Ctx) error {
+
 	var req httprequest.SubmitOrderRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(
-			fiber.Map{
-				"error": "invalid request bosy",
-			},
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid request body",
+			err.Error(),
 		)
 	}
 
-	// serviceReq := orderservice.SubmitOrderRequest{
-	// 	UserID: req.UserID,
-	// 	Symbol: req.Symbol,
-
-	// 	Side:        constants.OrderSide(req.Side),
-	// 	Type:        constants.OrderType(req.Type),
-	// 	TimeInForce: constants.TimeInForce(req.TimeInForce),
-
-	// 	Price:     req.Price,
-	// 	StopPrice: req.StopPrice,
-	// 	Quantity:  req.Quantity,
-	// }
-
 	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
 
 	serviceReq := orderservice.SubmitOrderRequest{
 		UserID: userID,
@@ -73,14 +72,18 @@ func (h *OrderHandler) Submit(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(
-			fiber.Map{
-				"error": err.Error(),
-			},
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"failed to submit order",
+			err.Error(),
 		)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(
+	return response.Success(
+		c,
+		fiber.StatusCreated,
+		"order submitted successfully",
 		httpresponse.SubmitOrderResponse{
 			OrderID: order.ID,
 			Status:  string(order.Status),
@@ -91,14 +94,38 @@ func (h *OrderHandler) Submit(c *fiber.Ctx) error {
 
 func (h *OrderHandler) Cancel(c *fiber.Ctx) error {
 
-	// userID := middleware.GetUserID(c)
+	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
 
 	orderID, err := strconv.ParseInt(
 		c.Params("id"),
 		10,
 		64,
 	)
-	err = h.orderService.Cancel(c.Context(), orderID)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid order id",
+			err.Error(),
+		)
+	}
+
+	err = h.orderService.Cancel(
+		c.Context(),
+		orderID,
+		userID,
+	)
+
 	if err != nil {
 		return response.Error(
 			c,
@@ -120,11 +147,31 @@ func (h *OrderHandler) Modify(
 	c *fiber.Ctx,
 ) error {
 
+	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
+
 	orderID, err := strconv.ParseInt(
 		c.Params("id"),
 		10,
 		64,
 	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid order id",
+			err.Error(),
+		)
+	}
 
 	var req orderservice.ModifyOrderRequest
 
@@ -140,6 +187,7 @@ func (h *OrderHandler) Modify(
 	err = h.orderService.Modify(
 		c.Context(),
 		orderID,
+		userID,
 		req,
 	)
 
@@ -162,45 +210,59 @@ func (h *OrderHandler) Modify(
 
 func (h *OrderHandler) GetOpenOrders(c *fiber.Ctx) error {
 
-	// userID := c.Params("userID")
-
 	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
 
 	orders, err := h.orderService.GetOpenOrders(
 		c.Context(),
 		userID,
 	)
 
-	// orders, err := h.orderService.GetOpenOrders(
-	// 	c.Context(),
-	// 	userID,
-	// )
-
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"failed to retrieve open orders",
+			err.Error(),
+		)
 	}
 
-	return c.JSON(orders)
+	orderResponses := make([]dtoresponse.OrderResponse, len(orders))
+
+	for i, o := range orders {
+		orderResponses[i] = mapper.ToOrderResponse(o)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"open orders retrieved successfully",
+		orderResponses,
+	)
 }
 
 func (h *OrderHandler) OrderHistory(
 	c *fiber.Ctx,
 ) error {
 
-	// userID, err := uuid.Parse(
-	// 	c.Params("userID"),
-	// )
-
 	userID := middleware.GetUserID(c)
 
-	// if err != nil {
-	// 	return c.Status(fiber.StatusBadRequest).
-	// 		JSON(fiber.Map{
-	// 			"error": "invalid user id",
-	// 		})
-	// }
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
 
 	orders, err := h.orderService.ListOrderHistory(
 		c.Context(),
@@ -208,18 +270,41 @@ func (h *OrderHandler) OrderHistory(
 	)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		return response.Error(
+			c,
+			fiber.StatusInternalServerError,
+			"failed to retrieve order history",
+			err.Error(),
+		)
 	}
 
-	return c.JSON(orders)
+	orderResponses := make([]dtoresponse.OrderResponse, len(orders))
+
+	for i, o := range orders {
+		orderResponses[i] = mapper.ToOrderResponse(o)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"order history retrieved successfully",
+		orderResponses,
+	)
 }
 
 func (h *OrderHandler) GetByID(
 	c *fiber.Ctx,
 ) error {
+
+	user, err := middleware.GetAuthenticatedUser(c)
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
 
 	orderID, err := strconv.ParseInt(
 		c.Params("id"),
@@ -227,8 +312,18 @@ func (h *OrderHandler) GetByID(
 		64,
 	)
 
-	order, err := h.orderService.GetOrderByID(
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid order id",
+			err.Error(),
+		)
+	}
+
+	order, err := h.orderService.GetUserOrderByID(
 		c.Context(),
+		user.UserID,
 		orderID,
 	)
 

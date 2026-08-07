@@ -17,7 +17,7 @@ import (
 func TestSettlement_Success(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
-	service := settlementservice.New(tc.TxManager,tc.UserDispatcher)
+	service := settlementservice.New(tc.TxManager, tc.UserDispatcher)
 
 	// ------------------------------------------------------------------
 	// Create Symbol
@@ -38,18 +38,25 @@ func TestSettlement_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, err)
 
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
+
 	// ------------------------------------------------------------------
 	// Buyer
 	// ------------------------------------------------------------------
-
-	buyerID := uuid.New()
 
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           buyerID,
 			Email:        uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -60,14 +67,12 @@ func TestSettlement_Success(t *testing.T) {
 	// Seller
 	// ------------------------------------------------------------------
 
-	sellerID := uuid.New()
-
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           sellerID,
 			Email:        uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -126,9 +131,6 @@ func TestSettlement_Success(t *testing.T) {
 	// Orders
 	// ------------------------------------------------------------------
 
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
-
 	price := pgtype.Int8{
 		Int64: 50000,
 		Valid: true,
@@ -179,8 +181,6 @@ func TestSettlement_Success(t *testing.T) {
 	// ------------------------------------------------------------------
 	// Settlement
 	// ------------------------------------------------------------------
-
-	tradeID := uuid.New()
 
 	err = service.Settle(
 		tc.Ctx,

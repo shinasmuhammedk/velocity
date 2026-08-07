@@ -14,13 +14,13 @@ import (
 )
 
 func newOrder(
-	id string,
+	id int64,
 	side constants.OrderSide,
 	price int64,
 ) *order.Order {
 	return &order.Order{
 		ID:          id,
-		UserID:      "user-" + id,
+		UserID:      id + 1000,
 		Symbol:      "BTCUSDT",
 		Side:        side,
 		Type:        constants.OrderTypeLimit,
@@ -36,9 +36,9 @@ func newOrder(
 func TestBestBid(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	book.AddOrder(newOrder("1", constants.OrderSideBuy, 1000))
-	book.AddOrder(newOrder("2", constants.OrderSideBuy, 1010))
-	book.AddOrder(newOrder("3", constants.OrderSideBuy, 1005))
+	book.AddOrder(newOrder(1, constants.OrderSideBuy, 1000))
+	book.AddOrder(newOrder(2, constants.OrderSideBuy, 1010))
+	book.AddOrder(newOrder(3, constants.OrderSideBuy, 1005))
 
 	best := book.BestBid()
 
@@ -49,9 +49,9 @@ func TestBestBid(t *testing.T) {
 func TestBestAsk(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	book.AddOrder(newOrder("1", constants.OrderSideSell, 1020))
-	book.AddOrder(newOrder("2", constants.OrderSideSell, 1010))
-	book.AddOrder(newOrder("3", constants.OrderSideSell, 1030))
+	book.AddOrder(newOrder(1, constants.OrderSideSell, 1020))
+	book.AddOrder(newOrder(2, constants.OrderSideSell, 1010))
+	book.AddOrder(newOrder(3, constants.OrderSideSell, 1030))
 
 	best := book.BestAsk()
 
@@ -62,7 +62,7 @@ func TestBestAsk(t *testing.T) {
 func TestRemoveBidLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	book.AddOrder(newOrder("1", constants.OrderSideBuy, 1000))
+	book.AddOrder(newOrder(1, constants.OrderSideBuy, 1000))
 
 	require.NotNil(t, book.BestBid())
 
@@ -74,7 +74,7 @@ func TestRemoveBidLevel(t *testing.T) {
 func TestRemoveAskLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	book.AddOrder(newOrder("1", constants.OrderSideSell, 1000))
+	book.AddOrder(newOrder(1, constants.OrderSideSell, 1000))
 
 	require.NotNil(t, book.BestAsk())
 
@@ -86,9 +86,9 @@ func TestRemoveAskLevel(t *testing.T) {
 func TestMultipleOrdersSamePriceLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	book.AddOrder(newOrder("1", constants.OrderSideBuy, 1000))
-	book.AddOrder(newOrder("2", constants.OrderSideBuy, 1000))
-	book.AddOrder(newOrder("3", constants.OrderSideBuy, 1000))
+	book.AddOrder(newOrder(1, constants.OrderSideBuy, 1000))
+	book.AddOrder(newOrder(2, constants.OrderSideBuy, 1000))
+	book.AddOrder(newOrder(3, constants.OrderSideBuy, 1000))
 
 	level := book.Bids[1000]
 
@@ -97,11 +97,10 @@ func TestMultipleOrdersSamePriceLevel(t *testing.T) {
 	assert.Equal(t, 3, level.Size())
 }
 
-
 func TestCancelOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -113,11 +112,10 @@ func TestCancelOrder(t *testing.T) {
 	assert.Nil(t, book.BestBid())
 }
 
-
 func TestCancelUnknownOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	err := book.CancelOrder("does-not-exist")
+	err := book.CancelOrder(9999)
 
 	require.Error(t, err)
 	assert.Equal(t, errors.ErrOrderNotFound, err)
@@ -126,7 +124,7 @@ func TestCancelUnknownOrder(t *testing.T) {
 func TestCancelAlreadyCancelledOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -142,7 +140,7 @@ func TestCancelAlreadyCancelledOrder(t *testing.T) {
 func TestCancelRemovesPriceLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideSell, 1010)
+	o := newOrder(1, constants.OrderSideSell, 1010)
 
 	book.AddOrder(o)
 
@@ -155,11 +153,10 @@ func TestCancelRemovesPriceLevel(t *testing.T) {
 	assert.Nil(t, book.BestAsk())
 }
 
-
 func TestOrderIndexedOnAdd(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -171,7 +168,7 @@ func TestOrderIndexedOnAdd(t *testing.T) {
 func TestOrderRemovedFromIndexOnCancel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -187,7 +184,7 @@ func TestOrderRemovedFromIndexOnCancel(t *testing.T) {
 func TestModifyOrderQuantityReductionKeepsPriority(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -214,8 +211,8 @@ func TestModifyOrderQuantityReductionKeepsPriority(t *testing.T) {
 func TestModifyOrderPriceChangeLosesPriority(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o1 := newOrder("1", constants.OrderSideBuy, 1000)
-	o2 := newOrder("2", constants.OrderSideBuy, 1010)
+	o1 := newOrder(1, constants.OrderSideBuy, 1000)
+	o2 := newOrder(2, constants.OrderSideBuy, 1010)
 
 	book.AddOrder(o1)
 	book.AddOrder(o2)
@@ -240,8 +237,8 @@ func TestModifyOrderPriceChangeLosesPriority(t *testing.T) {
 func TestModifyOrderQuantityIncreaseLosesPriority(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o1 := newOrder("1", constants.OrderSideBuy, 1000)
-	o2 := newOrder("2", constants.OrderSideBuy, 1000)
+	o1 := newOrder(1, constants.OrderSideBuy, 1000)
+	o2 := newOrder(2, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o1)
 	book.AddOrder(o2)
@@ -266,7 +263,7 @@ func TestModifyOrderQuantityIncreaseLosesPriority(t *testing.T) {
 func TestModifyFilledOrderFails(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 	o.Status = constants.OrderStatusFilled
 
 	book.AddOrder(o)
@@ -284,7 +281,7 @@ func TestModifyFilledOrderFails(t *testing.T) {
 func TestModifyCancelledOrderFails(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 	o.Status = constants.OrderStatusCancelled
 
 	book.AddOrder(o)
@@ -303,7 +300,7 @@ func TestModifyUnknownOrderFails(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
 	err := book.ModifyOrder(
-		"unknown",
+		9999,
 		1000,
 		100,
 	)
@@ -315,7 +312,7 @@ func TestModifyUnknownOrderFails(t *testing.T) {
 func TestModifyQuantityBelowFilledFails(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	o.Filled = 80
 	o.Remaining = 20
@@ -335,7 +332,7 @@ func TestModifyQuantityBelowFilledFails(t *testing.T) {
 func TestModifyCreatesNewPriceLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -354,7 +351,7 @@ func TestModifyCreatesNewPriceLevel(t *testing.T) {
 func TestModifyRemovesOldPriceLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	o := newOrder("1", constants.OrderSideBuy, 1000)
+	o := newOrder(1, constants.OrderSideBuy, 1000)
 
 	book.AddOrder(o)
 
@@ -370,5 +367,3 @@ func TestModifyRemovesOldPriceLevel(t *testing.T) {
 
 	assert.False(t, exists)
 }
-
-

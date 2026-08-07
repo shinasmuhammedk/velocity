@@ -16,9 +16,6 @@ func RegisterMarketRoutes(
 	market.Get("/orderbook/:symbol", marketHandler.GetOrderBook)
 	market.Get("/ticker/:symbol", marketHandler.GetTicker)
 	market.Get("/trades/:symbol", marketHandler.GetRecentTrades)
-	market.Get("/trades/user/:userID", marketHandler.GetUserTrades)
-
 	market.Get("/stats/:symbol", marketHandler.GetMarketStats)
-
 	market.Get("/:symbol/candles", marketHandler.GetCandles)
 }

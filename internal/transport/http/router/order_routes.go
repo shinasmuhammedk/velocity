@@ -14,13 +14,10 @@ func RegisterOrderRoutes(
 
 	orders.Post("/", orderHandler.Submit)
 
-	orders.Get("/:id", orderHandler.GetByID)
-
-	orders.Delete("/:id", orderHandler.Cancel)
-
-	orders.Patch("/:id", orderHandler.Modify)
-
 	orders.Get("/open", orderHandler.GetOpenOrders)
-
 	orders.Get("/history", orderHandler.OrderHistory)
+
+	orders.Get("/:id", orderHandler.GetByID)
+	orders.Delete("/:id", orderHandler.Cancel)
+	orders.Patch("/:id", orderHandler.Modify)
 }

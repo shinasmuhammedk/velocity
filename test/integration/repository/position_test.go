@@ -17,14 +17,14 @@ func TestPositionRepository(t *testing.T) {
 	// -----------------------------
 	// Create User
 	// -----------------------------
-	userID := uuid.New()
+	userID := time.Now().UnixNano()
 
 	_, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           userID,
 			Email:        uuid.New().String() + "@test.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},

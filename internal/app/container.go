@@ -29,6 +29,7 @@ import (
 	userwsHandler "velocity/internal/transport/userws/handler"
 	wsHandler "velocity/internal/transport/ws/handler"
 	"velocity/internal/userstream"
+	"velocity/pkg/snowflake"
 )
 
 type Container struct {
@@ -46,6 +47,12 @@ type Container struct {
 
 	DB   *pgxpool.Pool
 	HTTP *fiber.App
+
+	// --------------------------------------------------
+	// Utilities
+	// --------------------------------------------------
+
+	IDGenerator *snowflake.Generator
 
 	// --------------------------------------------------
 	// gRPC Clients

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"velocity/internal/domain/order"
 	"velocity/pkg/constants"
-    apperr "velocity/pkg/errors"
+	apperr "velocity/pkg/errors"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,8 +13,8 @@ func TestAddBuyStopOrder(t *testing.T) {
 	sb := New()
 
 	o := &order.Order{
-		ID:        "stop-buy-1",
-		UserID:    "user1",
+		ID:        1,
+		UserID:    101,
 		Symbol:    "BTCUSDT",
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
@@ -35,8 +35,8 @@ func TestAddSellStopOrder(t *testing.T) {
 	sb := New()
 
 	o := &order.Order{
-		ID:        "stop-sell-1",
-		UserID:    "user1",
+		ID:        1,
+		UserID:    101,
 		Symbol:    "BTCUSDT",
 		Side:      constants.OrderSideSell,
 		Type:      constants.StopMarketOrder,
@@ -57,14 +57,14 @@ func TestTriggerBuyStops(t *testing.T) {
 	sb := New()
 
 	o1 := &order.Order{
-		ID:        "buy-stop-1",
+		ID:        1,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1050,
 	}
 
 	o2 := &order.Order{
-		ID:        "buy-stop-2",
+		ID:        2,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1060,
@@ -90,14 +90,14 @@ func TestTriggerSellStops(t *testing.T) {
 	sb := New()
 
 	o1 := &order.Order{
-		ID:        "sell-stop-1",
+		ID:        1,
 		Side:      constants.OrderSideSell,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 950,
 	}
 
 	o2 := &order.Order{
-		ID:        "sell-stop-2",
+		ID:        2,
 		Side:      constants.OrderSideSell,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 940,
@@ -123,7 +123,7 @@ func TestTriggerDoesNotActivateOrdersPrematurely(t *testing.T) {
 	sb := New()
 
 	o := &order.Order{
-		ID:        "buy-stop-1",
+		ID:        1,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1050,
@@ -143,7 +143,7 @@ func TestCancelStopOrder(t *testing.T) {
 	sb := New()
 
 	o := &order.Order{
-		ID:        "stop-1",
+		ID:        1,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1050,
@@ -171,7 +171,7 @@ func TestCancelStopOrder(t *testing.T) {
 func TestCancelUnknownStopOrder(t *testing.T) {
 	sb := New()
 
-	err := sb.CancelOrder("unknown")
+	err := sb.CancelOrder(9999)
 
 	require.ErrorIs(
 		t,
@@ -184,14 +184,14 @@ func TestCancelRemovesOnlyRequestedOrder(t *testing.T) {
 	sb := New()
 
 	o1 := &order.Order{
-		ID:        "stop-1",
+		ID:        1,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1050,
 	}
 
 	o2 := &order.Order{
-		ID:        "stop-2",
+		ID:        2,
 		Side:      constants.OrderSideBuy,
 		Type:      constants.StopMarketOrder,
 		StopPrice: 1050,

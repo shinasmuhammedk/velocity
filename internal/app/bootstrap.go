@@ -29,13 +29,15 @@ import (
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
+	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
 	httpmiddleware "velocity/internal/transport/http/middleware"
 
+	grpcserver "velocity/internal/transport/grpc/server"
+
 	"github.com/gofiber/adaptor/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	grpcserver "velocity/internal/transport/grpc/server"
 )
 
 // Bootstrap creates and initializes the application.
@@ -48,6 +50,9 @@ func Bootstrap() (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	container.IDGenerator = snowflake.New(1)
+	container.Logger.Info("snowflake id generator initialized")
 
 	identityClient, err := identityclient.New("localhost:50051")
 	if err != nil {
@@ -254,7 +259,7 @@ func Bootstrap() (*Container, error) {
 
 	container.UserService = userservice.New(
 		container.UserRepository,
-        container.WalletService,
+		container.WalletService,
 	)
 
 	container.Logger.Info("user service initialized")
@@ -323,6 +328,7 @@ func Bootstrap() (*Container, error) {
 		container.Logger,
 		container.UserDispatcher,
 		// container.IdentityClient,
+        container.IDGenerator,
 	)
 	container.Logger.Info("order service initialized")
 
@@ -376,6 +382,7 @@ func Bootstrap() (*Container, error) {
 	userwsRouter.Register(
 		container.HTTP,
 		container.UserWSHandler,
+        container.AuthMiddleware,
 	)
 
 	container.Logger.Info("application bootstrap completed")

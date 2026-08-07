@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 
 	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/service/positionservice"
+	dtoresponse "velocity/internal/transport/http/dto/response"
+	"velocity/internal/transport/http/middleware"
 	"velocity/pkg/response"
 )
 
@@ -27,17 +27,14 @@ func (h *PositionHandler) List(
 	c *fiber.Ctx,
 ) error {
 
-	userID, err := strconv.ParseInt(
-		c.Params("userID"),
-		10,
-		64,
-	)
+	userID := middleware.GetUserID(c)
 
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(
-			fiber.Map{
-				"error": "invalid user id",
-			},
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
 		)
 	}
 
@@ -47,32 +44,40 @@ func (h *PositionHandler) List(
 	)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(
-			fiber.Map{
-				"error": err.Error(),
-			},
+		return response.Error(
+			c,
+			fiber.StatusInternalServerError,
+			"failed to retrieve positions",
+			err.Error(),
 		)
 	}
 
-	return c.JSON(positions)
+	positionResponses := make([]dtoresponse.PositionResponse, len(positions))
+
+	for i, p := range positions {
+		positionResponses[i] = mapper.ToPositionResponse(p)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"positions retrieved successfully",
+		positionResponses,
+	)
 }
 
 func (h *PositionHandler) GetBySymbol(
 	c *fiber.Ctx,
 ) error {
 
-	userID, err := strconv.ParseInt(
-		c.Params("userID"),
-		10,
-		64,
-	)
+	userID := middleware.GetUserID(c)
 
-	if err != nil {
+	if userID == 0 {
 		return response.Error(
 			c,
-			fiber.StatusBadRequest,
-			"invalid user id",
-			err.Error(),
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
 		)
 	}
 

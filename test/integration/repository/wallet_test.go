@@ -18,9 +18,9 @@ func TestCreateAndGetWallet(t *testing.T) {
 	user, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           uuid.New(),
+			ID:           time.Now().UnixNano(),
 			Email:        uuid.New().String() + "@velocity.dev",
-			PasswordHash: "password123",
+			// PasswordHash: "password123",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},

@@ -9,22 +9,24 @@ import (
 )
 
 func Register(
-    app *fiber.App,
-    orderHandler *handler.OrderHandler,
-    marketHandler *handler.MarketDataHandler,
-    walletHandler *handler.WalletHandler,
-    positionHandler *handler.PositionHandler,
-    auth fiber.Handler,
+	app *fiber.App,
+	orderHandler *handler.OrderHandler,
+	marketHandler *handler.MarketDataHandler,
+	walletHandler *handler.WalletHandler,
+	positionHandler *handler.PositionHandler,
+	auth fiber.Handler,
 ) {
-    api := app.Group("/api")
+	api := app.Group("/api")
 
-    // Public
-    RegisterMarketRoutes(api, marketHandler)
+	// Protected
+	private := api.Group("/", auth)
 
-    // Protected
-    private := api.Group("/", auth)
+	private.Get("/market/trades/user", marketHandler.GetUserTrades)
 
-    RegisterOrderRoutes(private, orderHandler)
-    RegisterWalletRoutes(private, walletHandler)
-    RegisterPositionRoutes(private, positionHandler)
+	RegisterOrderRoutes(private, orderHandler)
+	RegisterWalletRoutes(private, walletHandler)
+	RegisterPositionRoutes(private, positionHandler)
+
+	// Public
+	RegisterMarketRoutes(api, marketHandler)
 }
