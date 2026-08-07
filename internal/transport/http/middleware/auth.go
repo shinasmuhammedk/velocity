@@ -88,9 +88,48 @@ func (m *AuthMiddleware) Authenticate(c *fiber.Ctx) error {
 	// Store User Context
 	// -------------------------
 
-	c.Locals("userID", resp.UserId)
-	c.Locals("email", resp.Email)
-	c.Locals("role", resp.Role)
+	c.Locals("authUser", &AuthenticatedUser{
+		UserID: int64(resp.UserId),
+		Email:  resp.Email,
+		Role:   resp.Role,
+	})
+
+	return c.Next()
+}
+
+
+func (m *AuthMiddleware) AuthenticateWS(c *fiber.Ctx) error {
+
+	token := c.Query("token")
+
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "missing token",
+		})
+	}
+
+	resp, err := m.identityClient.ValidateToken(
+		c.Context(),
+		token,
+	)
+
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "authentication service unavailable",
+		})
+	}
+
+	if !resp.Valid {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": resp.Error,
+		})
+	}
+
+	c.Locals("authUser", &AuthenticatedUser{
+		UserID: int64(resp.UserId),
+		Email:  resp.Email,
+		Role:   resp.Role,
+	})
 
 	return c.Next()
 }

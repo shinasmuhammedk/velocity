@@ -12,15 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createWalletForServiceTest(t *testing.T, tc *integration.TestContext) (uuid.UUID, string) {
-	userID := uuid.New()
+func createWalletForServiceTest(t *testing.T, tc *integration.TestContext) (int64, string) {
+	userID := time.Now().UnixNano()
 
 	_, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           userID,
 			Email:        uuid.New().String() + "@test.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -88,7 +88,6 @@ func TestWalletServiceWithdraw(t *testing.T) {
 	require.EqualValues(t, 0, wallet.Locked)
 }
 
-
 func TestWalletServiceLockFunds(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
@@ -105,7 +104,6 @@ func TestWalletServiceLockFunds(t *testing.T) {
 	require.EqualValues(t, 70000, wallet.Available)
 	require.EqualValues(t, 30000, wallet.Locked)
 }
-
 
 func TestWalletServiceUnlockFunds(t *testing.T) {
 	tc := integration.NewTestContext(t)
@@ -129,7 +127,6 @@ func TestWalletServiceUnlockFunds(t *testing.T) {
 	require.EqualValues(t, 20000, wallet.Locked)
 }
 
-
 func TestWalletServiceConsumeLockedFunds(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
@@ -152,8 +149,6 @@ func TestWalletServiceConsumeLockedFunds(t *testing.T) {
 	require.EqualValues(t, 25000, wallet.Locked)
 }
 
-
-
 func TestWalletServiceWithdrawInsufficientBalance(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
@@ -171,8 +166,6 @@ func TestWalletServiceWithdrawInsufficientBalance(t *testing.T) {
 	require.ErrorIs(t, err, errors.ErrInsufficientBalance)
 }
 
-
-
 func TestWalletServiceLockInsufficientBalance(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
@@ -189,8 +182,6 @@ func TestWalletServiceLockInsufficientBalance(t *testing.T) {
 
 	require.ErrorIs(t, err, errors.ErrInsufficientBalance)
 }
-
-
 
 func TestWalletServiceConsumeInsufficientLockedBalance(t *testing.T) {
 	tc := integration.NewTestContext(t)
@@ -212,7 +203,6 @@ func TestWalletServiceConsumeInsufficientLockedBalance(t *testing.T) {
 
 	require.ErrorIs(t, err, errors.ErrInsufficientLockedBalance)
 }
-
 
 func TestWalletServiceInvalidAmount(t *testing.T) {
 	tc := integration.NewTestContext(t)

@@ -40,27 +40,34 @@ func TestSettlement_OrderAlreadyFilled(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
+	nonExistentTradeID := base + 5
+
 	//----------------------------------------------------------------------
 	// Users
 	//----------------------------------------------------------------------
 
-	buyerID := uuid.New()
-	sellerID := uuid.New()
-
 	users := []generated.CreateUserParams{
 		{
-			ID: buyerID,
-			Email: uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           buyerID,
+			Email:        uuid.NewString() + "@buyer.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 		{
-			ID: sellerID,
-			Email: uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           sellerID,
+			Email:        uuid.NewString() + "@seller.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	}
 
@@ -75,28 +82,28 @@ func TestSettlement_OrderAlreadyFilled(t *testing.T) {
 
 	wallets := []generated.CreateWalletParams{
 		{
-			UserID: buyerID,
-			Asset: "USDT",
+			UserID:    buyerID,
+			Asset:     "USDT",
 			Available: 0,
-			Locked: 50000,
+			Locked:    50000,
 		},
 		{
-			UserID: buyerID,
-			Asset: "BTC",
+			UserID:    buyerID,
+			Asset:     "BTC",
 			Available: 0,
-			Locked: 0,
+			Locked:    0,
 		},
 		{
-			UserID: sellerID,
-			Asset: "BTC",
+			UserID:    sellerID,
+			Asset:     "BTC",
 			Available: 0,
-			Locked: 1,
+			Locked:    1,
 		},
 		{
-			UserID: sellerID,
-			Asset: "USDT",
+			UserID:    sellerID,
+			Asset:     "USDT",
 			Available: 0,
-			Locked: 0,
+			Locked:    0,
 		},
 	}
 
@@ -113,9 +120,6 @@ func TestSettlement_OrderAlreadyFilled(t *testing.T) {
 	//----------------------------------------------------------------------
 	// Orders already FILLED
 	//----------------------------------------------------------------------
-
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
 
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
@@ -164,7 +168,7 @@ func TestSettlement_OrderAlreadyFilled(t *testing.T) {
 	err = service.Settle(
 		tc.Ctx,
 		settlementservice.SettlementRequest{
-			TradeID: uuid.New(),
+			TradeID: tradeID,
 
 			BuyOrderID:  buyOrderID,
 			SellOrderID: sellOrderID,
@@ -210,6 +214,6 @@ func TestSettlement_OrderAlreadyFilled(t *testing.T) {
 	// No trade should be inserted
 	//----------------------------------------------------------------------
 
-	_, err = tc.TradeRepo.GetByID(tc.Ctx, uuid.New())
+	_, err = tc.TradeRepo.GetByID(tc.Ctx, nonExistentTradeID)
 	require.Error(t, err)
 }

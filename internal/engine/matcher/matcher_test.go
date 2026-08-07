@@ -19,8 +19,8 @@ func TestMatchSellOrderFullFill(t *testing.T) {
 	m := matcher.New(book)
 
 	buy := &order.Order{
-		ID:          "1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -35,8 +35,8 @@ func TestMatchSellOrderFullFill(t *testing.T) {
 	book.AddOrder(buy)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          2,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -70,8 +70,8 @@ func TestMatchSellOrderPartialFill(t *testing.T) {
 	m := matcher.New(book)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -86,8 +86,8 @@ func TestMatchSellOrderPartialFill(t *testing.T) {
 	book.AddOrder(buy)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          2,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -120,8 +120,8 @@ func TestMatchSellOrderFIFO(t *testing.T) {
 	m := matcher.New(book)
 
 	buy1 := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -134,8 +134,8 @@ func TestMatchSellOrderFIFO(t *testing.T) {
 	}
 
 	buy2 := &order.Order{
-		ID:          "buy-2",
-		UserID:      "buyer-2",
+		ID:          2,
+		UserID:      102,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -151,8 +151,8 @@ func TestMatchSellOrderFIFO(t *testing.T) {
 	book.AddOrder(buy2)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          3,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -170,7 +170,7 @@ func TestMatchSellOrderFIFO(t *testing.T) {
 	require.Len(t, trades, 1)
 
 	// buy1 was added first — it should fill first, not buy2
-	assert.Equal(t, "buy-1", trades[0].BuyOrderID)
+	assert.Equal(t, int64(1), trades[0].BuyOrderID)
 
 	assert.Equal(t, int64(0), buy1.Remaining)
 	assert.Equal(t, int64(50), buy2.Remaining)
@@ -181,8 +181,8 @@ func TestMatchSellOrderMultiplePriceLevels(t *testing.T) {
 	m := matcher.New(book)
 
 	book.AddOrder(&order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -195,8 +195,8 @@ func TestMatchSellOrderMultiplePriceLevels(t *testing.T) {
 	})
 
 	book.AddOrder(&order.Order{
-		ID:          "buy-2",
-		UserID:      "buyer-2",
+		ID:          2,
+		UserID:      102,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -209,8 +209,8 @@ func TestMatchSellOrderMultiplePriceLevels(t *testing.T) {
 	})
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          3,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -241,11 +241,11 @@ func TestMatchSellOrderSkipsSelfTradeToNextLevel(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
-	// seller-1's own resting buy order sits at the BEST price (1005).
+	// seller's own resting buy order sits at the BEST price (1005).
 	// It must be skipped due to self-trade prevention.
 	ownBuy := &order.Order{
-		ID:          "buy-own",
-		UserID:      "seller-1", // same user as the incoming sell below
+		ID:          1,
+		UserID:      201, // same user as the incoming sell below
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -260,8 +260,8 @@ func TestMatchSellOrderSkipsSelfTradeToNextLevel(t *testing.T) {
 	// A different buyer sits at a WORSE price (1000) — this is the one
 	// that should actually get matched.
 	otherBuy := &order.Order{
-		ID:          "buy-other",
-		UserID:      "buyer-2",
+		ID:          2,
+		UserID:      102,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -277,8 +277,8 @@ func TestMatchSellOrderSkipsSelfTradeToNextLevel(t *testing.T) {
 	book.AddOrder(otherBuy)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          3,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -296,7 +296,7 @@ func TestMatchSellOrderSkipsSelfTradeToNextLevel(t *testing.T) {
 	require.Len(t, trades, 1)
 
 	// Must have matched the OTHER buyer at 1000, not self at 1005
-	assert.Equal(t, "buy-other", trades[0].BuyOrderID)
+	assert.Equal(t, int64(2), trades[0].BuyOrderID)
 	assert.Equal(t, int64(1000), trades[0].Price)
 	assert.Equal(t, int64(50), trades[0].Quantity)
 
@@ -313,8 +313,8 @@ func TestMatchMarketBuyOrderConsumesLiquidity(t *testing.T) {
 	m := matcher.New(book)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          1,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -331,8 +331,8 @@ func TestMatchMarketBuyOrderConsumesLiquidity(t *testing.T) {
 	// Market buy — Price is irrelevant/unused here (commonly 0),
 	// should match regardless of the resting order's price.
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          2,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeMarket,
@@ -363,8 +363,8 @@ func TestMatchMarketSellOrderConsumesLiquidity(t *testing.T) {
 	m := matcher.New(book)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -379,8 +379,8 @@ func TestMatchMarketSellOrderConsumesLiquidity(t *testing.T) {
 	book.AddOrder(buy)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          2,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeMarket,
@@ -411,8 +411,8 @@ func TestMatchMarketBuyOrderPartialFillDoesNotRest(t *testing.T) {
 
 	// Only 30 available, but the market order wants 100
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          1,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -427,8 +427,8 @@ func TestMatchMarketBuyOrderPartialFillDoesNotRest(t *testing.T) {
 	book.AddOrder(sell)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          2,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeMarket,
@@ -461,8 +461,8 @@ func TestMatchMarketOrderOnEmptyBookProducesNoTrades(t *testing.T) {
 	m := matcher.New(book)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeMarket,
@@ -485,22 +485,21 @@ func TestMatchMarketOrderOnEmptyBookProducesNoTrades(t *testing.T) {
 	assert.Nil(t, book.BestBid())
 }
 
-
 func TestFilledOrderRemovedFromIndex(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	buy := testhelpers.NewOrder(
-		"buy-1",
-		"user-1",
+		1,
+		1,
 		constants.OrderSideBuy,
 		1000,
 		100,
 	)
 
 	sell := testhelpers.NewOrder(
-		"sell-1",
-		"user-2",
+		2,
+		2,
 		constants.OrderSideSell,
 		1000,
 		100,
@@ -522,8 +521,8 @@ func TestIOCPartialFillDoesNotRest(t *testing.T) {
 	m := matcher.New(book)
 
 	restingSell := testhelpers.NewOrder(
-		"sell-1",
-		"user-1",
+		1,
+		1,
 		constants.OrderSideSell,
 		1000,
 		50,
@@ -532,8 +531,8 @@ func TestIOCPartialFillDoesNotRest(t *testing.T) {
 	book.AddOrder(restingSell)
 
 	iocBuy := testhelpers.NewOrder(
-		"buy-1",
-		"user-2",
+		2,
+		2,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -554,14 +553,13 @@ func TestIOCPartialFillDoesNotRest(t *testing.T) {
 	assert.Nil(t, book.BestBid())
 }
 
-
 func TestIOCNoMatchCancelsOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	iocBuy := testhelpers.NewOrder(
-		"buy-1",
-		"user-1",
+		1,
+		1,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -581,14 +579,13 @@ func TestIOCNoMatchCancelsOrder(t *testing.T) {
 	assert.Nil(t, book.BestBid())
 }
 
-
 func TestIOCFullFill(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	restingSell := testhelpers.NewOrder(
-		"sell-1",
-		"user-1",
+		1,
+		1,
 		constants.OrderSideSell,
 		1000,
 		100,
@@ -597,8 +594,8 @@ func TestIOCFullFill(t *testing.T) {
 	book.AddOrder(restingSell)
 
 	iocBuy := testhelpers.NewOrder(
-		"buy-1",
-		"user-2",
+		2,
+		2,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -618,18 +615,14 @@ func TestIOCFullFill(t *testing.T) {
 	assert.Nil(t, book.BestBid())
 }
 
-
-
-
-
 func TestFOKFullFill(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	book.AddOrder(
 		testhelpers.NewOrder(
-			"sell-1",
-			"user-1",
+			1,
+			1,
 			constants.OrderSideSell,
 			1000,
 			100,
@@ -637,8 +630,8 @@ func TestFOKFullFill(t *testing.T) {
 	)
 
 	buy := testhelpers.NewOrder(
-		"buy-1",
-		"user-2",
+		2,
+		2,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -654,15 +647,14 @@ func TestFOKFullFill(t *testing.T) {
 	assert.Equal(t, constants.OrderStatusFilled, buy.Status)
 }
 
-
 func TestFOKInsufficientLiquidityCancelsOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	book.AddOrder(
 		testhelpers.NewOrder(
-			"sell-1",
-			"user-1",
+			1,
+			1,
 			constants.OrderSideSell,
 			1000,
 			50,
@@ -670,8 +662,8 @@ func TestFOKInsufficientLiquidityCancelsOrder(t *testing.T) {
 	)
 
 	buy := testhelpers.NewOrder(
-		"buy-1",
-		"user-2",
+		2,
+		2,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -687,14 +679,13 @@ func TestFOKInsufficientLiquidityCancelsOrder(t *testing.T) {
 	assert.Equal(t, constants.OrderStatusCancelled, buy.Status)
 }
 
-
 func TestFOKDoesNotRestOnBook(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	buy := testhelpers.NewOrder(
-		"buy-1",
-		"user-1",
+		1,
+		1,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -716,8 +707,8 @@ func TestFOKIgnoresSelfTradeLiquidity(t *testing.T) {
 
 	book.AddOrder(
 		testhelpers.NewOrder(
-			"sell-1",
-			"user-1",
+			1,
+			1,
 			constants.OrderSideSell,
 			1000,
 			100,
@@ -725,8 +716,8 @@ func TestFOKIgnoresSelfTradeLiquidity(t *testing.T) {
 	)
 
 	buy := testhelpers.NewOrder(
-		"buy-1",
-		"user-1",
+		2,
+		1,
 		constants.OrderSideBuy,
 		1000,
 		100,
@@ -742,14 +733,13 @@ func TestFOKIgnoresSelfTradeLiquidity(t *testing.T) {
 	assert.Equal(t, constants.OrderStatusCancelled, buy.Status)
 }
 
-
 func TestPostOnlyBuyCrossingIsRejected(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	resting := &order.Order{
-		ID:        "sell1",
-		UserID:    "seller",
+		ID:        1,
+		UserID:    1,
 		Symbol:    "BTCUSDT",
 		Side:      constants.OrderSideSell,
 		Type:      constants.OrderTypeLimit,
@@ -762,8 +752,8 @@ func TestPostOnlyBuyCrossingIsRejected(t *testing.T) {
 	book.AddOrder(resting)
 
 	incoming := &order.Order{
-		ID:          "buy1",
-		UserID:      "buyer",
+		ID:          2,
+		UserID:      2,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -784,14 +774,13 @@ func TestPostOnlyBuyCrossingIsRejected(t *testing.T) {
 	)
 }
 
-
 func TestPostOnlySellCrossingIsRejected(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	resting := &order.Order{
-		ID:        "buy1",
-		UserID:    "buyer",
+		ID:        1,
+		UserID:    1,
 		Symbol:    "BTCUSDT",
 		Side:      constants.OrderSideBuy,
 		Type:      constants.OrderTypeLimit,
@@ -804,8 +793,8 @@ func TestPostOnlySellCrossingIsRejected(t *testing.T) {
 	book.AddOrder(resting)
 
 	incoming := &order.Order{
-		ID:          "sell1",
-		UserID:      "seller",
+		ID:          2,
+		UserID:      2,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -826,14 +815,13 @@ func TestPostOnlySellCrossingIsRejected(t *testing.T) {
 	)
 }
 
-
 func TestPostOnlyBuyRestsOnBook(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	book.AddOrder(&order.Order{
-		ID:        "sell1",
-		UserID:    "seller",
+		ID:        1,
+		UserID:    1,
 		Symbol:    "BTCUSDT",
 		Side:      constants.OrderSideSell,
 		Type:      constants.OrderTypeLimit,
@@ -844,8 +832,8 @@ func TestPostOnlyBuyRestsOnBook(t *testing.T) {
 	})
 
 	incoming := &order.Order{
-		ID:          "buy1",
-		UserID:      "buyer",
+		ID:          2,
+		UserID:      2,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -873,15 +861,13 @@ func TestPostOnlyBuyRestsOnBook(t *testing.T) {
 	)
 }
 
-
-
 func TestPostOnlyAcceptedOnEmptyBook(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 	m := matcher.New(book)
 
 	incoming := &order.Order{
-		ID:          "buy1",
-		UserID:      "buyer",
+		ID:          1,
+		UserID:      1,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -902,5 +888,3 @@ func TestPostOnlyAcceptedOnEmptyBook(t *testing.T) {
 		incoming.Status,
 	)
 }
-
-

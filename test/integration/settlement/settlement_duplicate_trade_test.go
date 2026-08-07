@@ -44,17 +44,18 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 	// Users
 	// ----------------------------------------------------------------------
 
-	buyerID := uuid.New()
-	sellerID := uuid.New()
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
 
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           buyerID,
-			Email:        uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:    buyerID,
+			Email: uuid.NewString() + "@buyer.com",
+			// PasswordHash: "password",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -62,11 +63,11 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           sellerID,
-			Email:        uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:    sellerID,
+			Email: uuid.NewString() + "@seller.com",
+			// PasswordHash: "password",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -79,7 +80,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: buyerID,
-			Asset: "USDT",
+			Asset:  "USDT",
 			Locked: 50000,
 		},
 	)
@@ -89,7 +90,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: buyerID,
-			Asset: "BTC",
+			Asset:  "BTC",
 		},
 	)
 	require.NoError(t, err)
@@ -98,7 +99,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: sellerID,
-			Asset: "BTC",
+			Asset:  "BTC",
 			Locked: 1,
 		},
 	)
@@ -108,7 +109,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		tc.Ctx,
 		generated.CreateWalletParams{
 			UserID: sellerID,
-			Asset: "USDT",
+			Asset:  "USDT",
 		},
 	)
 	require.NoError(t, err)
@@ -122,8 +123,8 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		Valid: true,
 	}
 
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
+	buyOrderID := base + 2
+	sellOrderID := base + 3
 
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
@@ -167,7 +168,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 	// Settlement request
 	// ----------------------------------------------------------------------
 
-	tradeID := uuid.New()
+	tradeID := base + 4
 
 	req := settlementservice.SettlementRequest{
 		TradeID: tradeID,
@@ -175,7 +176,7 @@ func TestSettlement_DuplicateTrade(t *testing.T) {
 		BuyOrderID:  buyOrderID,
 		SellOrderID: sellOrderID,
 
-		BuyerID: buyerID,
+		BuyerID:  buyerID,
 		SellerID: sellerID,
 
 		Symbol: symbol,

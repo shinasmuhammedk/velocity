@@ -154,3 +154,10 @@ WHERE user_id = $1
   AND status IN ('OPEN', 'PARTIALLY_FILLED')
 ORDER BY created_at DESC;
 
+
+-- name: GetOrderByUserAndID :one
+SELECT *
+FROM orders
+WHERE id = $1
+  AND user_id = $2
+LIMIT 1;

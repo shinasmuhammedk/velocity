@@ -1,47 +1,34 @@
 package middleware
 
 import (
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
+type AuthenticatedUser struct {
+	UserID int64
+	Email  string
+	Role   string
+}
+
+func GetAuthenticatedUser(c *fiber.Ctx) (*AuthenticatedUser, error) {
+	user, ok := c.Locals("authUser").(*AuthenticatedUser)
+	if !ok || user == nil {
+		return nil, fiber.ErrUnauthorized
+	}
+
+	return user, nil
+}
+
 func GetUserID(c *fiber.Ctx) int64 {
-    value := c.Locals("userID")
 
-    switch v := value.(type) {
+	user, ok := c.Locals("authUser").(*AuthenticatedUser)
 
-    case int64:
-        return v
+	if !ok || user == nil {
+		return 0
+	}
 
-    case int32:
-        return int64(v)
-
-    case int:
-        return int64(v)
-
-    case uint:
-        return int64(v)
-
-    case uint32:
-        return int64(v)
-
-    case uint64:
-        return int64(v)
-
-    case string:
-        id, err := strconv.ParseInt(v, 10, 64)
-        if err != nil {
-            return 0
-        }
-        return id
-
-    case float64:
-        return int64(v)
-
-    default:
-        return 0
-    }
+	return user.UserID
 }
 
 func GetEmail(c *fiber.Ctx) string {

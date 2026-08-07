@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 
 	"velocity/internal/persistence/postgres/mapper"
 	"velocity/internal/service/walletservice"
 	"velocity/internal/transport/http/dto/request"
+	dtoresponse "velocity/internal/transport/http/dto/response"
+	"velocity/internal/transport/http/middleware"
 	"velocity/pkg/response"
 )
 
@@ -26,19 +26,16 @@ func NewWalletHandler(
 
 func (h *WalletHandler) List(c *fiber.Ctx) error {
 
-	userID, err := strconv.ParseInt(
-		c.Params("userID"),
-		10,
-		64,
-	)
+	userID := middleware.GetUserID(c)
 
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{
-				"error": "invalid user id",
-			})
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
 	}
-
 
 	wallets, err := h.service.List(
 		c.Context(),
@@ -46,32 +43,40 @@ func (h *WalletHandler) List(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		return response.Error(
+			c,
+			fiber.StatusInternalServerError,
+			"failed to retrieve wallets",
+			err.Error(),
+		)
 	}
 
+	walletResponses := make([]dtoresponse.WalletResponse, len(wallets))
 
-	return c.JSON(wallets)
+	for i, w := range wallets {
+		walletResponses[i] = mapper.ToWalletResponse(w)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"wallets retrieved successfully",
+		walletResponses,
+	)
 }
 
 func (h *WalletHandler) GetByAsset(
 	c *fiber.Ctx,
 ) error {
 
-	userID, err := strconv.ParseInt(
-		c.Params("userID"),
-		10,
-		64,
-	)
+	userID := middleware.GetUserID(c)
 
-	if err != nil {
+	if userID == 0 {
 		return response.Error(
 			c,
-			fiber.StatusBadRequest,
-			"invalid user id",
-			err.Error(),
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
 		)
 	}
 
@@ -100,7 +105,6 @@ func (h *WalletHandler) GetByAsset(
 	)
 }
 
-
 func (h *WalletHandler) Deposit(
 	c *fiber.Ctx,
 ) error {
@@ -116,24 +120,18 @@ func (h *WalletHandler) Deposit(
 		)
 	}
 
+	userID := middleware.GetUserID(c)
 
-	userID, err := strconv.ParseInt(
-		req.UserID,
-		10,
-		64,
-	)
-
-	if err != nil {
+	if userID == 0 {
 		return response.Error(
 			c,
-			fiber.StatusBadRequest,
-			"invalid user id",
-			err.Error(),
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
 		)
 	}
 
-
-	err = h.service.Deposit(
+	err := h.service.Deposit(
 		c.Context(),
 		userID,
 		req.Asset,
@@ -148,7 +146,6 @@ func (h *WalletHandler) Deposit(
 			err.Error(),
 		)
 	}
-
 
 	wallet, err := h.service.GetWalletByAsset(
 		c.Context(),
@@ -165,7 +162,6 @@ func (h *WalletHandler) Deposit(
 		)
 	}
 
-
 	return response.Success(
 		c,
 		fiber.StatusOK,
@@ -173,7 +169,6 @@ func (h *WalletHandler) Deposit(
 		mapper.ToWalletResponse(wallet),
 	)
 }
-
 
 func (h *WalletHandler) Withdraw(
 	c *fiber.Ctx,
@@ -190,24 +185,18 @@ func (h *WalletHandler) Withdraw(
 		)
 	}
 
+	userID := middleware.GetUserID(c)
 
-	userID, err := strconv.ParseInt(
-		req.UserID,
-		10,
-		64,
-	)
-
-	if err != nil {
+	if userID == 0 {
 		return response.Error(
 			c,
-			fiber.StatusBadRequest,
-			"invalid user id",
-			err.Error(),
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
 		)
 	}
 
-
-	err = h.service.Withdraw(
+	err := h.service.Withdraw(
 		c.Context(),
 		userID,
 		req.Asset,
@@ -223,7 +212,6 @@ func (h *WalletHandler) Withdraw(
 		)
 	}
 
-
 	wallet, err := h.service.GetWalletByAsset(
 		c.Context(),
 		userID,
@@ -238,7 +226,6 @@ func (h *WalletHandler) Withdraw(
 			err.Error(),
 		)
 	}
-
 
 	return response.Success(
 		c,

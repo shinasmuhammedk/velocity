@@ -27,6 +27,7 @@ type OrderRepository interface {
 	UpdateOrderAfterTrade(ctx context.Context, params generated.UpdateOrderAfterTradeParams) error
 	ListOpenOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	ListOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
+    GetByUserAndID(ctx context.Context, params generated.GetOrderByUserAndIDParams) (generated.Order, error)
 }
 
 type TradeRepository interface {

@@ -36,17 +36,23 @@ func TestSettlement_Rollback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	buyerID := uuid.New()
-	sellerID := uuid.New()
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
 
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID: buyerID,
-			Email: uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           buyerID,
+			Email:        uuid.NewString() + "@buyer.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -54,11 +60,11 @@ func TestSettlement_Rollback(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID: sellerID,
-			Email: uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           sellerID,
+			Email:        uuid.NewString() + "@seller.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -66,13 +72,13 @@ func TestSettlement_Rollback(t *testing.T) {
 	// Buyer wallets
 	_, _ = tc.WalletRepo.Create(tc.Ctx, generated.CreateWalletParams{
 		UserID: buyerID,
-		Asset: "USDT",
+		Asset:  "USDT",
 		Locked: 50000,
 	})
 
 	_, _ = tc.WalletRepo.Create(tc.Ctx, generated.CreateWalletParams{
 		UserID: buyerID,
-		Asset: "BTC",
+		Asset:  "BTC",
 	})
 
 	// Seller ONLY has USDT wallet.
@@ -80,7 +86,7 @@ func TestSettlement_Rollback(t *testing.T) {
 
 	_, _ = tc.WalletRepo.Create(tc.Ctx, generated.CreateWalletParams{
 		UserID: sellerID,
-		Asset: "USDT",
+		Asset:  "USDT",
 	})
 
 	price := pgtype.Int8{
@@ -88,54 +94,49 @@ func TestSettlement_Rollback(t *testing.T) {
 		Valid: true,
 	}
 
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
-
 	_, _ = tc.OrderRepo.Create(tc.Ctx, generated.CreateOrderParams{
-		ID: buyOrderID,
-		UserID: buyerID,
-		Symbol: symbol,
-		Side: "BUY",
-		OrderType: "LIMIT",
+		ID:          buyOrderID,
+		UserID:      buyerID,
+		Symbol:      symbol,
+		Side:        "BUY",
+		OrderType:   "LIMIT",
 		TimeInForce: "GTC",
-		Status: string(constants.OrderStatusOpen),
-		Price: price,
-		Quantity: 1,
-		Remaining: 1,
+		Status:      string(constants.OrderStatusOpen),
+		Price:       price,
+		Quantity:    1,
+		Remaining:   1,
 	})
 
 	_, _ = tc.OrderRepo.Create(tc.Ctx, generated.CreateOrderParams{
-		ID: sellOrderID,
-		UserID: sellerID,
-		Symbol: symbol,
-		Side: "SELL",
-		OrderType: "LIMIT",
+		ID:          sellOrderID,
+		UserID:      sellerID,
+		Symbol:      symbol,
+		Side:        "SELL",
+		OrderType:   "LIMIT",
 		TimeInForce: "GTC",
-		Status: string(constants.OrderStatusOpen),
-		Price: price,
-		Quantity: 1,
-		Remaining: 1,
+		Status:      string(constants.OrderStatusOpen),
+		Price:       price,
+		Quantity:    1,
+		Remaining:   1,
 	})
-
-	tradeID := uuid.New()
 
 	err = service.Settle(
 		tc.Ctx,
 		settlementservice.SettlementRequest{
 			TradeID: tradeID,
 
-			BuyOrderID: buyOrderID,
+			BuyOrderID:  buyOrderID,
 			SellOrderID: sellOrderID,
 
-			BuyerID: buyerID,
+			BuyerID:  buyerID,
 			SellerID: sellerID,
 
 			Symbol: symbol,
 
-			BaseAsset: "BTC",
+			BaseAsset:  "BTC",
 			QuoteAsset: "USDT",
 
-			Price: 50000,
+			Price:    50000,
 			Quantity: 1,
 		},
 	)

@@ -115,3 +115,14 @@ func (r *orderRepository) ListOrdersByUser(
         userID,
     )
 }
+
+func (r *orderRepository) GetByUserAndID(
+	ctx context.Context,
+	params generated.GetOrderByUserAndIDParams,
+) (generated.Order, error) {
+
+	return r.queries.GetOrderByUserAndID(
+		ctx,
+		params,
+	)
+}

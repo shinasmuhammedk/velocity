@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newOrder(id string) *order.Order {
+func newOrder(id int64) *order.Order {
 	return &order.Order{
 		ID:          id,
-		UserID:      "user-" + id,
+		UserID:      id + 1000,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -31,7 +31,7 @@ func newOrder(id string) *order.Order {
 func TestPriceLevelAddAndFront(t *testing.T) {
 	level := pricelevel.New(1000)
 
-	order1 := newOrder("1")
+	order1 := newOrder(1)
 
 	level.AddOrder(order1)
 
@@ -44,27 +44,27 @@ func TestPriceLevelAddAndFront(t *testing.T) {
 func TestPriceLevelFIFO(t *testing.T) {
 	level := pricelevel.New(1000)
 
-	order1 := newOrder("1")
-	order2 := newOrder("2")
-	order3 := newOrder("3")
+	order1 := newOrder(1)
+	order2 := newOrder(2)
+	order3 := newOrder(3)
 
 	level.AddOrder(order1)
 	level.AddOrder(order2)
 	level.AddOrder(order3)
 
-	assert.Equal(t, "1", level.Front().ID)
+	assert.Equal(t, int64(1), level.Front().ID)
 
 	level.RemoveFront()
-	assert.Equal(t, "2", level.Front().ID)
+	assert.Equal(t, int64(2), level.Front().ID)
 
 	level.RemoveFront()
-	assert.Equal(t, "3", level.Front().ID)
+	assert.Equal(t, int64(3), level.Front().ID)
 }
 
 func TestPriceLevelRemoveFront(t *testing.T) {
 	level := pricelevel.New(1000)
 
-	order1 := newOrder("1")
+	order1 := newOrder(1)
 
 	level.AddOrder(order1)
 
@@ -81,7 +81,7 @@ func TestPriceLevelIsEmpty(t *testing.T) {
 
 	assert.True(t, level.IsEmpty())
 
-	level.AddOrder(newOrder("1"))
+	level.AddOrder(newOrder(1))
 
 	assert.False(t, level.IsEmpty())
 }

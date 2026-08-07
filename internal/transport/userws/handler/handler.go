@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"strconv"
+	"velocity/internal/transport/http/middleware"
 	"velocity/internal/userstream"
 
 	"github.com/gofiber/contrib/websocket"
@@ -19,50 +19,37 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) Handle(
-	c *websocket.Conn,
-) {
+func (h *Handler) Handle(c *websocket.Conn) {
 
-	userID, err := strconv.ParseInt(
-		c.Query("user_id"),
-		10,
-		64,
-	)
+	user, ok := c.Locals("authUser").(*middleware.AuthenticatedUser)
 
-	if err != nil {
+	if !ok || user == nil || user.UserID == 0 {
 		_ = c.Close()
 		return
 	}
 
+	userID := user.UserID
 
 	client := &userstream.Client{
 		Conn: c,
 	}
-
 
 	h.hub.Subscribe(
 		userID,
 		client,
 	)
 
-
 	defer func() {
-
 		h.hub.Unsubscribe(
 			userID,
 			client,
 		)
-
 		client.Close()
-
 	}()
 
-
 	for {
-
 		if _, _, err := c.ReadMessage(); err != nil {
 			break
 		}
-
 	}
 }

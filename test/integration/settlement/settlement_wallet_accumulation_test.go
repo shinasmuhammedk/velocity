@@ -40,27 +40,32 @@ func TestSettlement_WalletAccumulation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	// Each loop iteration below claims its own block of 10 IDs off this
+	// base so buy/sell order and trade IDs never collide across iterations.
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+
 	//----------------------------------------------------------------------
 	// Users
 	//----------------------------------------------------------------------
 
-	buyerID := uuid.New()
-	sellerID := uuid.New()
-
 	users := []generated.CreateUserParams{
 		{
-			ID: buyerID,
-			Email: uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           buyerID,
+			Email:        uuid.NewString() + "@buyer.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 		{
-			ID: sellerID,
-			Email: uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:           sellerID,
+			Email:        uuid.NewString() + "@seller.com",
+			// PasswordHash: "password",
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
 		},
 	}
 
@@ -75,28 +80,28 @@ func TestSettlement_WalletAccumulation(t *testing.T) {
 
 	wallets := []generated.CreateWalletParams{
 		{
-			UserID: buyerID,
-			Asset: "USDT",
+			UserID:    buyerID,
+			Asset:     "USDT",
 			Available: 0,
-			Locked: 100000,
+			Locked:    100000,
 		},
 		{
-			UserID: buyerID,
-			Asset: "BTC",
+			UserID:    buyerID,
+			Asset:     "BTC",
 			Available: 0,
-			Locked: 0,
+			Locked:    0,
 		},
 		{
-			UserID: sellerID,
-			Asset: "BTC",
+			UserID:    sellerID,
+			Asset:     "BTC",
 			Available: 0,
-			Locked: 2,
+			Locked:    2,
 		},
 		{
-			UserID: sellerID,
-			Asset: "USDT",
+			UserID:    sellerID,
+			Asset:     "USDT",
 			Available: 0,
-			Locked: 0,
+			Locked:    0,
 		},
 	}
 
@@ -116,8 +121,9 @@ func TestSettlement_WalletAccumulation(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 
-		buyOrderID := uuid.New()
-		sellOrderID := uuid.New()
+		buyOrderID := base + 2 + int64(i)*10
+		sellOrderID := base + 3 + int64(i)*10
+		tradeID := base + 4 + int64(i)*10
 
 		_, err = tc.OrderRepo.Create(
 			tc.Ctx,
@@ -162,7 +168,7 @@ func TestSettlement_WalletAccumulation(t *testing.T) {
 		err = service.Settle(
 			tc.Ctx,
 			settlementservice.SettlementRequest{
-				TradeID: uuid.New(),
+				TradeID: tradeID,
 
 				BuyOrderID:  buyOrderID,
 				SellOrderID: sellOrderID,

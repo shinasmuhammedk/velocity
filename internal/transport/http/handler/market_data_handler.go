@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 
 	"velocity/internal/analytics/candles"
 	"velocity/internal/service/marketservice"
-	"velocity/internal/transport/http/dto/response"
+	dtoresponse "velocity/internal/transport/http/dto/response"
+	"velocity/internal/transport/http/middleware"
+	"velocity/pkg/response"
 )
 
 type MarketDataHandler struct {
@@ -55,7 +55,7 @@ func (h *MarketDataHandler) GetOrderBook(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
-		response.OrderBookResponse{
+		dtoresponse.OrderBookResponse{
 			Symbol: orderBook.Symbol,
 			Bids:   orderBook.Bids,
 			Asks:   orderBook.Asks,
@@ -113,17 +113,15 @@ func (h *MarketDataHandler) Symbols(c *fiber.Ctx) error {
 
 func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 
-	userID, err := strconv.ParseInt(
-		c.Params("userID"),
-		10,
-		64,
-	)
+	userID := middleware.GetUserID(c)
 
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).
-			JSON(fiber.Map{
-				"error": "invalid user id",
-			})
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
 	}
 
 	trades, err := h.marketService.GetUserTrades(
@@ -132,13 +130,20 @@ func (h *MarketDataHandler) GetUserTrades(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).
-			JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		return response.Error(
+			c,
+			fiber.StatusInternalServerError,
+			"failed to retrieve trades",
+			err.Error(),
+		)
 	}
 
-	return c.JSON(trades)
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"trades retrieved successfully",
+		trades,
+	)
 }
 
 func (h *MarketDataHandler) GetMarketStats(c *fiber.Ctx) error {

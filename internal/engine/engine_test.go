@@ -14,11 +14,11 @@ import (
 )
 
 func TestPlaceOrderFullFill(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          1,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -34,8 +34,8 @@ func TestPlaceOrderFullFill(t *testing.T) {
 	require.NoError(t, err)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          2,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -80,11 +80,11 @@ func TestPlaceOrderFullFill(t *testing.T) {
 }
 
 func TestPlaceOrderRestingOrder(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -112,11 +112,11 @@ func TestPlaceOrderRestingOrder(t *testing.T) {
 }
 
 func TestPlaceOrderPartialFill(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	sell := &order.Order{
-		ID:          "sell-1",
-		UserID:      "seller-1",
+		ID:          1,
+		UserID:      201,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -132,8 +132,8 @@ func TestPlaceOrderPartialFill(t *testing.T) {
 	require.NoError(t, err)
 
 	buy := &order.Order{
-		ID:          "buy-1",
-		UserID:      "buyer-1",
+		ID:          2,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -177,13 +177,12 @@ func TestPlaceOrderPartialFill(t *testing.T) {
 	assert.Equal(t, int64(1000), bestBid.Price)
 }
 
-
 func TestEngineCancelOrder(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	o := &order.Order{
-		ID:          "1",
-		UserID:      "user-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeLimit,
@@ -206,20 +205,20 @@ func TestEngineCancelOrder(t *testing.T) {
 }
 
 func TestEngineCancelUnknownOrder(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
-	err := e.CancelOrder("does-not-exist")
+	err := e.CancelOrder(9999)
 
 	require.Error(t, err)
 	assert.Equal(t, errors.ErrOrderNotFound, err)
 }
 
 func TestEngineCancelRemovesPriceLevel(t *testing.T) {
-	e := engine.New("BTCUSDT",nil,nil)
+	e := engine.New("BTCUSDT", nil, nil)
 
 	o := &order.Order{
-		ID:          "1",
-		UserID:      "user-1",
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideSell,
 		Type:        constants.OrderTypeLimit,
@@ -242,13 +241,12 @@ func TestEngineCancelRemovesPriceLevel(t *testing.T) {
 	assert.Nil(t, e.OrderBook().BestAsk())
 }
 
-
 func TestPostOnlyMarketOrderRejected(t *testing.T) {
-	engine := engine.New("BTCUSDT",nil,nil)
+	eng := engine.New("BTCUSDT", nil, nil)
 
-	err := engine.SubmitOrder(&order.Order{
-		ID:          "1",
-		UserID:      "user1",
+	err := eng.SubmitOrder(&order.Order{
+		ID:          1,
+		UserID:      101,
 		Symbol:      "BTCUSDT",
 		Side:        constants.OrderSideBuy,
 		Type:        constants.OrderTypeMarket,

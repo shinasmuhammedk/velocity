@@ -10,13 +10,14 @@ import (
 func ToDomainOrder(g generated.Order) *order.Order {
 	return &order.Order{
 		ID:     g.ID,
+		UserID: g.UserID,
 		Symbol: g.Symbol,
 
 		Side: constants.OrderSide(g.Side),
 		Type: constants.OrderType(g.OrderType),
 
 		TimeInForce: constants.TimeInForce(g.TimeInForce),
-		Status:       constants.OrderStatus(g.Status),
+		Status:      constants.OrderStatus(g.Status),
 
 		Price:     g.Price.Int64,
 		StopPrice: g.StopPrice,

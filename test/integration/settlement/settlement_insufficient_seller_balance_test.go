@@ -40,19 +40,25 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Base for generating unique int64 IDs across repeated test runs
+	// against a real database (uuid.New() previously served this role).
+	base := time.Now().UnixNano()
+	buyerID := base
+	sellerID := base + 1
+	buyOrderID := base + 2
+	sellOrderID := base + 3
+	tradeID := base + 4
+
 	//----------------------------------------------------------------------
 	// Users
 	//----------------------------------------------------------------------
-
-	buyerID := uuid.New()
-	sellerID := uuid.New()
 
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:           buyerID,
 			Email:        uuid.NewString() + "@buyer.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -64,7 +70,7 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 		generated.CreateUserParams{
 			ID:           sellerID,
 			Email:        uuid.NewString() + "@seller.com",
-			PasswordHash: "password",
+			// PasswordHash: "password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -132,9 +138,6 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 		Valid: true,
 	}
 
-	buyOrderID := uuid.New()
-	sellOrderID := uuid.New()
-
 	_, err = tc.OrderRepo.Create(
 		tc.Ctx,
 		generated.CreateOrderParams{
@@ -178,8 +181,6 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 	//----------------------------------------------------------------------
 	// Settlement should FAIL
 	//----------------------------------------------------------------------
-
-	tradeID := uuid.New()
 
 	err = service.Settle(
 		tc.Ctx,

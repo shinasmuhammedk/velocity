@@ -14,7 +14,7 @@ import (
 func TestCreateAndGetUser(t *testing.T) {
 	tc := integration.NewTestContext(t)
 
-	userID := uuid.New()
+	userID := time.Now().UnixNano()
 	email := uuid.New().String() + "@velocity.dev"
 
 	user, err := tc.UserRepo.Create(
@@ -22,7 +22,7 @@ func TestCreateAndGetUser(t *testing.T) {
 		generated.CreateUserParams{
 			ID:           userID,
 			Email:        email,
-			PasswordHash: "hashed-password",
+			// PasswordHash: "hashed-password",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		},
@@ -32,7 +32,7 @@ func TestCreateAndGetUser(t *testing.T) {
 
 	require.Equal(t, userID, user.ID)
 	require.Equal(t, email, user.Email)
-	require.Equal(t, "hashed-password", user.PasswordHash)
+	// require.Equal(t, "hashed-password", user.PasswordHash)
 
 	// Fetch by ID
 	dbUser, err := tc.UserRepo.GetByID(
@@ -44,7 +44,7 @@ func TestCreateAndGetUser(t *testing.T) {
 
 	require.Equal(t, user.ID, dbUser.ID)
 	require.Equal(t, user.Email, dbUser.Email)
-	require.Equal(t, user.PasswordHash, dbUser.PasswordHash)
+	// require.Equal(t, user.PasswordHash, dbUser.PasswordHash)
 
 	// Fetch by Email
 	emailUser, err := tc.UserRepo.GetByEmail(
@@ -56,5 +56,5 @@ func TestCreateAndGetUser(t *testing.T) {
 
 	require.Equal(t, user.ID, emailUser.ID)
 	require.Equal(t, user.Email, emailUser.Email)
-	require.Equal(t, user.PasswordHash, emailUser.PasswordHash)
+	// require.Equal(t, user.PasswordHash, emailUser.PasswordHash)
 }

@@ -18,7 +18,7 @@ import (
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
-	"velocity/pkg/idgen"
+	"velocity/pkg/snowflake"
 	"velocity/pkg/timeutil"
 )
 
@@ -34,6 +34,7 @@ type Service struct {
 	logger   *zap.Logger
 
 	UserDispatcher *userstream.Dispatcher
+	idGenerator    *snowflake.Generator
 }
 
 func New(
@@ -48,6 +49,7 @@ func New(
 	logger *zap.Logger,
 
 	userDispatcher *userstream.Dispatcher,
+	idGenerator *snowflake.Generator,
 ) *Service {
 	return &Service{
 		orderRepo:      orderRepo,
@@ -58,6 +60,7 @@ func New(
 		registry:       registry,
 		logger:         logger,
 		UserDispatcher: userDispatcher,
+		idGenerator:    idGenerator,
 	}
 }
 
@@ -98,7 +101,7 @@ func (s *Service) Submit(
 		userID,
 	)
 	fmt.Println(user)
-    fmt.Println(errr)
+	fmt.Println(errr)
 	// fmt.Println(err)
 	if err != nil {
 		return nil, errors.ErrUserNotFound
@@ -119,7 +122,7 @@ func (s *Service) Submit(
 	}
 
 	o := &order.Order{
-		ID:     idgen.Next(),
+		ID:     s.idGenerator.Next(),
 		UserID: req.UserID,
 		Symbol: req.Symbol,
 
@@ -246,6 +249,7 @@ func (s *Service) Submit(
 func (s *Service) Cancel(
 	ctx context.Context,
 	orderID int64,
+	userID int64,
 ) error {
 
 	dbOrder, err := s.orderRepo.GetByID(
@@ -257,7 +261,17 @@ func (s *Service) Cancel(
 		return err
 	}
 
-	// eng := s.registry.Get(dbOrder.Symbol)
+	if dbOrder.UserID != userID {
+		return errors.ErrOrderNotFound
+	}
+
+	switch dbOrder.Status {
+	case string(constants.OrderStatusFilled),
+		string(constants.OrderStatusCancelled),
+		string(constants.OrderStatusRejected):
+
+		return errors.ErrOrderNotCancelable
+	}
 
 	eng, ok := s.registry.Find(dbOrder.Symbol)
 	if !ok {
@@ -267,15 +281,6 @@ func (s *Service) Cancel(
 	err = eng.CancelOrder(orderID)
 	if err != nil {
 		return err
-
-	}
-
-	switch dbOrder.Status {
-	case string(constants.OrderStatusFilled),
-		string(constants.OrderStatusCancelled),
-		string(constants.OrderStatusRejected):
-
-		return errors.ErrOrderNotCancelable
 	}
 
 	metrics.OrdersCancelled.Inc()
@@ -311,6 +316,7 @@ func (s *Service) Cancel(
 func (s *Service) Modify(
 	ctx context.Context,
 	orderID int64,
+	userID int64,
 	req ModifyOrderRequest,
 ) error {
 
@@ -319,6 +325,10 @@ func (s *Service) Modify(
 		orderID,
 	)
 	if err != nil {
+		return errors.ErrOrderNotFound
+	}
+
+	if dbOrder.UserID != userID {
 		return errors.ErrOrderNotFound
 	}
 
@@ -433,6 +443,27 @@ func (s *Service) GetOrderByID(
 ) (*order.Order, error) {
 
 	dbOrder, err := s.orderRepo.GetByID(ctx, orderID)
+	if err != nil {
+		return nil, errors.ErrOrderNotFound
+	}
+
+	return mapper.ToDomainOrder(dbOrder), nil
+}
+
+func (s *Service) GetUserOrderByID(
+	ctx context.Context,
+	orderID int64,
+	userID int64,
+) (*order.Order, error) {
+
+	dbOrder, err := s.orderRepo.GetByUserAndID(
+		ctx,
+		generated.GetOrderByUserAndIDParams{
+			ID:     orderID,
+			UserID: userID,
+		},
+	)
+
 	if err != nil {
 		return nil, errors.ErrOrderNotFound
 	}
