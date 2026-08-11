@@ -48,3 +48,31 @@ func Load() (*Config, error) {
 
 	return cfg, nil
 }
+
+
+func LoadFromPath(path string) (*Config, error) {
+	v := viper.New()
+
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+
+	v.SetEnvPrefix("VELOCITY")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	cfg := new(Config)
+
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := Validate(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}

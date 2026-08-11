@@ -22,7 +22,7 @@ func New(book *orderbook.OrderBook) *Matcher {
 	}
 }
 
-func (m *Matcher) Match(order *order.Order) ([]*trade.Trade, error) {
+func (m *Matcher) Match(order *order.Order) ([]trade.Trade, error) {
 
 	if m.isPostOnlyCrossing(order) {
 		order.Status = constants.OrderStatusRejected
@@ -51,9 +51,9 @@ func (m *Matcher) Match(order *order.Order) ([]*trade.Trade, error) {
 	return m.matchSellOrder(order), nil
 }
 
-func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
+func (m *Matcher) matchBuyOrder(incoming *order.Order) []trade.Trade {
 
-	var trades []*trade.Trade
+	trades := make([]trade.Trade, 0, 1)
 	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {
@@ -79,7 +79,7 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 			resting.Remaining,
 		)
 
-		t := &trade.Trade{
+		t := trade.Trade{
 			ID: idgen.Next(),
 
 			BuyOrderID:  incoming.ID,
@@ -145,9 +145,9 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []*trade.Trade {
 	return trades
 }
 
-func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
+func (m *Matcher) matchSellOrder(incoming *order.Order) []trade.Trade {
 
-	var trades []*trade.Trade
+	trades := make([]trade.Trade, 0, 1)
 	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {
@@ -175,7 +175,7 @@ func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
 			resting.Remaining,
 		)
 
-		t := &trade.Trade{
+		t := trade.Trade{
 			ID: idgen.Next(),
 
 			BuyOrderID:  resting.ID,
@@ -242,8 +242,6 @@ func (m *Matcher) matchSellOrder(incoming *order.Order) []*trade.Trade {
 
 		m.book.AddOrder(incoming)
 	}
-
-
 
 	return trades
 }

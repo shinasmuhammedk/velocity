@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"velocity/internal/config"
@@ -17,8 +19,8 @@ import (
 type TestContext struct {
 	Ctx context.Context
 	DB  *pgxpool.Pool
-    
-    TxManager tx.Manager
+
+	TxManager tx.Manager
 
 	UserRepo     repository.UserRepository
 	OrderRepo    repository.OrderRepository
@@ -26,13 +28,28 @@ type TestContext struct {
 	WalletRepo   repository.WalletRepository
 	PositionRepo repository.PositionRepository
 	SymbolRepo   repository.SymbolRepository
-    UserDispatcher *userstream.Dispatcher
+
+	UserDispatcher *userstream.Dispatcher
 }
 
 func NewTestContext(t *testing.T) *TestContext {
 	t.Helper()
 
-	cfg, err := config.Load()
+	_, currentFile, _, _ := runtime.Caller(0)
+
+	projectRoot := filepath.Join(
+		filepath.Dir(currentFile),
+		"..",
+		"..",
+	)
+
+	configPath := filepath.Join(
+		projectRoot,
+		"configs",
+		"config.development.yaml",
+	)
+
+	cfg, err := config.LoadFromPath(configPath)
 	require.NoError(t, err)
 
 	db, err := postgres.New(cfg.Database)
@@ -42,17 +59,22 @@ func NewTestContext(t *testing.T) *TestContext {
 		db.Close()
 	})
 
+	hub := userstream.NewHub()
+	publisher := userstream.NewPublisher(hub)
+	dispatcher := userstream.NewDispatcher(publisher)
+
 	return &TestContext{
 		Ctx: context.Background(),
 		DB:  db,
-        
-        TxManager: tx.NewManager(db),
 
-		UserRepo:     repository.NewUserRepository(db),
-		OrderRepo:    repository.NewOrderRepository(db),
-		TradeRepo:    repository.NewTradeRepository(db),
-		WalletRepo:   repository.NewWalletRepository(db),
-		PositionRepo: repository.NewPositionRepository(db),
-		SymbolRepo:   repository.NewSymbolRepository(db),
+		TxManager: tx.NewManager(db),
+
+		UserRepo:       repository.NewUserRepository(db),
+		OrderRepo:      repository.NewOrderRepository(db),
+		TradeRepo:      repository.NewTradeRepository(db),
+		WalletRepo:     repository.NewWalletRepository(db),
+		PositionRepo:   repository.NewPositionRepository(db),
+		SymbolRepo:     repository.NewSymbolRepository(db),
+		UserDispatcher: dispatcher,
 	}
 }

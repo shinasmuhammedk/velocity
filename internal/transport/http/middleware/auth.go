@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"strings"
 
 	"velocity/internal/transport/grpc/client/identity"
@@ -71,12 +70,7 @@ func (m *AuthMiddleware) Authenticate(c *fiber.Ctx) error {
 			"error": "authentication service unavailable",
 		})
 	}
-	fmt.Printf("ValidateToken Response: %+v\n", resp)
-	fmt.Println("Valid :", resp.Valid)
-	fmt.Println("UserID:", resp.UserId)
-	fmt.Println("Email :", resp.Email)
-	fmt.Println("Role  :", resp.Role)
-
+    
 	if !resp.Valid {
 
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

@@ -23,6 +23,14 @@ bin/
 # Generated
 internal/persistence/postgres/generated/
 
+# Profiling outputs
+cpu*.out
+mem*.out
+escape.txt
+
+# WAL runtime files
+wal/*.wal
+
 # OS
 .DS_Store
 Thumbs.db

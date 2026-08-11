@@ -4,6 +4,7 @@ import (
 	"context"
 	"velocity/internal/persistence/postgres/generated"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -27,7 +28,7 @@ type OrderRepository interface {
 	UpdateOrderAfterTrade(ctx context.Context, params generated.UpdateOrderAfterTradeParams) error
 	ListOpenOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	ListOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
-    GetByUserAndID(ctx context.Context, params generated.GetOrderByUserAndIDParams) (generated.Order, error)
+	GetByUserAndID(ctx context.Context, params generated.GetOrderByUserAndIDParams) (generated.Order, error)
 }
 
 type TradeRepository interface {
@@ -58,6 +59,7 @@ type WalletRepository interface {
 	Create(ctx context.Context, params generated.CreateWalletParams) (generated.Wallet, error)
 	Get(ctx context.Context, userID int64, asset string) (generated.Wallet, error)
 	Update(ctx context.Context, params generated.UpdateWalletParams) error
+	LockFunds(ctx context.Context, walletID uuid.UUID, amount int64) error
 	List(ctx context.Context, userID int64) ([]generated.Wallet, error)
 	WithTx(tx pgx.Tx) WalletRepository
 }

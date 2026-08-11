@@ -56,20 +56,34 @@ func (e *Engine) start() {
 					continue
 				}
 
+				seq := e.incrementSequence()
+
+				if e.walWriter != nil {
+					event := wal.NewSubmitEvent(
+						seq,
+						e.symbol,
+						c.Order,
+					)
+
+					if err := e.walWriter.Write(event); err != nil {
+						// Do not mutate the engine if WAL persistence failed.
+						continue
+					}
+				}
+
 				trades, err := e.matcher.Match(c.Order)
 				if err != nil {
 					continue
 				}
 
-				e.incrementSequence()
+				// e.incrementSequence()
 
 				for _, t := range trades {
-
 
 					e.lastTradePrice.Store(t.Price)
 					metrics.TradesExecuted.Inc()
 
-					e.tradeQueue <- t
+					e.tradeQueue <- &t
 
 					e.publish(events.TradeExecutedEvent{
 						BaseEvent: events.NewBaseEvent(),
@@ -92,33 +106,57 @@ func (e *Engine) start() {
 
 			case command.CancelOrderCommand:
 
+				seq := e.incrementSequence()
+
+				if e.walWriter != nil {
+					event := wal.NewCancelEvent(
+						seq,
+						e.symbol,
+						c.OrderID,
+					)
+
+					if err := e.walWriter.Write(event); err != nil {
+						c.Result <- err
+						continue
+					}
+				}
+
 				err := e.stopBook.CancelOrder(c.OrderID)
 
 				if err == nil {
-					e.incrementSequence()
 					c.Result <- nil
 					continue
 				}
 
 				err = e.book.CancelOrder(c.OrderID)
 
-				if err == nil {
-					e.incrementSequence()
-				}
-
 				c.Result <- err
 
 				// in engine.go's start()
 			case command.ModifyOrderCommand:
+
+				seq := e.incrementSequence()
+
+				if e.walWriter != nil {
+					event := wal.NewModifyEvent(
+						seq,
+						e.symbol,
+						c.OrderID,
+						c.NewPrice,
+						c.NewQuantity,
+					)
+
+					if err := e.walWriter.Write(event); err != nil {
+						c.Result <- err
+						continue
+					}
+				}
+
 				err := e.book.ModifyOrder(
 					c.OrderID,
 					c.NewPrice,
 					c.NewQuantity,
 				)
-
-				if err == nil {
-					e.incrementSequence()
-				}
 
 				c.Result <- err
 			}
@@ -185,11 +223,9 @@ func (e *Engine) SubmitOrder(
 		}
 	}
 
-
 	e.commandQueue <- command.SubmitOrderCommand{
 		Order: order,
 	}
-
 
 	return nil
 }
@@ -259,7 +295,7 @@ func (e *Engine) processTriggeredStops() {
 
 			for _, trade := range trades {
 				e.lastTradePrice.Store(trade.Price)
-				e.tradeQueue <- trade
+				e.tradeQueue <- &trade
 			}
 		}
 	}

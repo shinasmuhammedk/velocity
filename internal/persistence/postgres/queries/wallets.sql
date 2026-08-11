@@ -31,3 +31,12 @@ WHERE id = $1;
 SELECT *
 FROM wallets
 WHERE user_id = $1;
+
+-- name: LockWalletFunds :execrows
+UPDATE wallets
+SET
+    available = available - $2,
+    locked = locked + $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND available >= $2;

@@ -323,8 +323,8 @@ func (h *OrderHandler) GetByID(
 
 	order, err := h.orderService.GetUserOrderByID(
 		c.Context(),
-		user.UserID,
 		orderID,
+		user.UserID,
 	)
 
 	if err != nil {
