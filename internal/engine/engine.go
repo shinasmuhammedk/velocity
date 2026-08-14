@@ -333,6 +333,34 @@ func (e *Engine) RecoverOrder(o *order.Order) {
 	}
 }
 
+func (e *Engine) ReplayWAL(reader *wal.Reader) error {
+	replayer := wal.NewReplayer(reader)
+
+	events, err := replayer.Events(e.Sequence())
+	if err != nil {
+		return err
+	}
+
+	applier := wal.NewApplier(
+		e.book,
+		e.stopBook,
+	)
+
+	for _, event := range events {
+		if err := applier.Apply(event); err != nil {
+			return err
+		}
+
+		e.SetSequence(event.Sequence)
+
+		if event.Order != nil {
+			e.SetLastTradePrice(e.LastTradePrice())
+		}
+	}
+
+	return nil
+}
+
 func (e *Engine) Sequence() uint64 {
 	return e.sequence.Load()
 }
@@ -363,25 +391,18 @@ func (e *Engine) SnapshotState() *snapshot.Snapshot {
 func (e *Engine) RestoreSnapshot(
 	s *snapshot.Snapshot,
 ) {
-
-	e.sequence.Store(
-		s.Sequence,
-	)
+	e.sequence.Store(s.Sequence)
 
 	e.lastTradePrice.Store(
 		s.LastTradePrice,
 	)
 
 	for _, o := range s.ActiveOrders {
-
 		e.book.AddOrder(o)
-
 	}
 
 	for _, o := range s.StopOrders {
-
 		e.stopBook.Add(o)
-
 	}
 }
 

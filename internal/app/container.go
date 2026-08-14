@@ -11,6 +11,7 @@ import (
 	"velocity/internal/engine/recovery"
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/wal"
+	"velocity/internal/infrastructure/redis"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -45,8 +46,10 @@ type Container struct {
 	// Infrastructure
 	// --------------------------------------------------
 
-	DB   *pgxpool.Pool
-	HTTP *fiber.App
+	DB          *pgxpool.Pool
+	HTTP        *fiber.App
+	Redis       *redis.Client
+	MarketCache *redis.MarketCache
 
 	// --------------------------------------------------
 	// Utilities

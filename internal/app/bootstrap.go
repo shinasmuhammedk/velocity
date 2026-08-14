@@ -11,6 +11,7 @@ import (
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/wal"
 	"velocity/internal/infrastructure/metrics"
+	"velocity/internal/infrastructure/redis"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -50,6 +51,15 @@ func Bootstrap() (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	container.Redis = redis.New(container.Config.Redis)
+	if err := container.Redis.Ping(context.Background()); err != nil {
+		return nil, err
+	}
+	container.Logger.Info("redis initialized")
+
+	container.MarketCache = redis.NewMarketCache(container.Redis)
+	container.Logger.Info("market data cache initialized")
 
 	container.IDGenerator = snowflake.New(1)
 	container.Logger.Info("snowflake id generator initialized")
@@ -187,10 +197,6 @@ func Bootstrap() (*Container, error) {
 		events.TradeExecutedEventType,
 		candleSubscriber,
 	)
-	container.Registry.Publisher().Subscribe(
-		events.TradeExecutedEventType,
-		candleSubscriber,
-	)
 	container.Logger.Info("Candle subscriber registered")
 
 	provider := func(symbol string) *orderbook.OrderBook {
@@ -212,6 +218,7 @@ func Bootstrap() (*Container, error) {
 	snapshotRecovery := recovery.NewSnapshotRecovery(
 		snapshotLoader,
 		container.Registry,
+		container.WALManager,
 	)
 
 	container.Recovery = recovery.New(
@@ -298,6 +305,7 @@ func Bootstrap() (*Container, error) {
 		container.TradeRepository,
 		container.MarketStatsService,
 		container.CandleService,
+		container.MarketCache,
 	)
 
 	container.PositionService = positionservice.New(
@@ -328,7 +336,7 @@ func Bootstrap() (*Container, error) {
 		container.Logger,
 		container.UserDispatcher,
 		// container.IdentityClient,
-        container.IDGenerator,
+		container.IDGenerator,
 	)
 	container.Logger.Info("order service initialized")
 
@@ -382,7 +390,7 @@ func Bootstrap() (*Container, error) {
 	userwsRouter.Register(
 		container.HTTP,
 		container.UserWSHandler,
-        container.AuthMiddleware,
+		container.AuthMiddleware,
 	)
 
 	container.Logger.Info("application bootstrap completed")

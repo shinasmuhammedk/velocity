@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 
 	"velocity/internal/analytics/candles"
@@ -47,6 +49,7 @@ func (h *MarketDataHandler) GetOrderBook(c *fiber.Ctx) error {
 	limit := c.QueryInt("limit", 20)
 
 	orderBook, err := h.marketService.GetOrderBook(
+		context.Background(),
 		symbol,
 		limit,
 	)
@@ -67,7 +70,7 @@ func (h *MarketDataHandler) GetTicker(c *fiber.Ctx) error {
 
 	symbol := c.Params("symbol")
 
-	ticker, err := h.marketService.GetTicker(symbol)
+	ticker, err := h.marketService.GetTicker(context.Background(), symbol)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),

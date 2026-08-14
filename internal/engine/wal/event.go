@@ -14,12 +14,12 @@ const (
 )
 
 type Event struct {
-	Sequence  uint64    `json:"sequence"`
-	Type      EventType `json:"type"`
-	Symbol    string    `json:"symbol"`
-	OrderID   int64    `json:"order_id,omitempty"`
+	Sequence uint64    `json:"sequence"`
+	Type     EventType `json:"type"`
+	Symbol   string    `json:"symbol"`
+	OrderID  int64     `json:"order_id,omitempty"`
 
-	Order     *order.Order `json:"order,omitempty"`
+	Order *order.Order `json:"order,omitempty"`
 
 	NewPrice    int64 `json:"new_price,omitempty"`
 	NewQuantity int64 `json:"new_quantity,omitempty"`

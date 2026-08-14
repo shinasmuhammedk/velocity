@@ -6,19 +6,20 @@ import (
 	"velocity/internal/analytics/stats"
 	"velocity/internal/domain/depth"
 	"velocity/internal/engine/registry"
+	"velocity/internal/infrastructure/redis"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/errors"
-
 )
 
 type Service struct {
-	registry  *registry.Registry
-    symbolRepo repository.SymbolRepository
-	tradeRepo repository.TradeRepository
-    
-    statsService *stats.Service
-    candleService *candles.Service
+	registry   *registry.Registry
+	symbolRepo repository.SymbolRepository
+	tradeRepo  repository.TradeRepository
+
+	statsService  *stats.Service
+	candleService *candles.Service
+	marketCache   *redis.MarketCache
 }
 
 type Ticker struct {
@@ -33,17 +34,19 @@ type Ticker struct {
 
 func New(
 	reg *registry.Registry,
-    symbolRepo repository.SymbolRepository,
+	symbolRepo repository.SymbolRepository,
 	tradeRepo repository.TradeRepository,
-    statsService *stats.Service,
-    candleService *candles.Service,
+	statsService *stats.Service,
+	candleService *candles.Service,
+	marketCache *redis.MarketCache,
 ) *Service {
 	return &Service{
-		registry:  reg,
-        symbolRepo: symbolRepo,
-		tradeRepo: tradeRepo,
-        statsService: statsService,
-        candleService: candleService,
+		registry:      reg,
+		symbolRepo:    symbolRepo,
+		tradeRepo:     tradeRepo,
+		statsService:  statsService,
+		candleService: candleService,
+		marketCache:   marketCache,
 	}
 }
 
@@ -53,24 +56,87 @@ type OrderBook struct {
 	Asks   []depth.Level
 }
 
-func (s *Service) GetOrderBook(symbol string, limit int) (*OrderBook, error) {
+func (s *Service) GetOrderBook(
+	ctx context.Context,
+	symbol string,
+	limit int,
+) (*OrderBook, error) {
 
-	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
+	if _, err := s.symbolRepo.GetBySymbol(ctx, symbol); err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
 
+	// Cache can satisfy requests up to the configured cached depth.
+	if limit <= redis.MarketOrderBookDepth {
+
+		var cached OrderBook
+
+		if err := s.marketCache.GetOrderBook(
+			ctx,
+			symbol,
+			&cached,
+		); err == nil {
+
+			if limit < len(cached.Bids) {
+				cached.Bids = cached.Bids[:limit]
+			}
+
+			if limit < len(cached.Asks) {
+				cached.Asks = cached.Asks[:limit]
+			}
+
+			return &cached, nil
+		}
+	}
+
 	engine := s.registry.Get(symbol)
+
+	if engine == nil {
+		return nil, errors.ErrSymbolNotFound
+	}
+
 	book := engine.OrderBook()
 
-	return &OrderBook{
+	// Requests above the cached depth are served directly
+	// from the live order book.
+	if limit > redis.MarketOrderBookDepth {
+		return &OrderBook{
+			Symbol: symbol,
+			Bids:   book.BidLevels(limit),
+			Asks:   book.AskLevels(limit),
+		}, nil
+	}
+
+	// Redis miss/error: fetch the configured cache depth
+	// from the live order book.
+	result := &OrderBook{
 		Symbol: symbol,
-		Bids:   book.BidLevels(limit),
-		Asks:   book.AskLevels(limit),
-	}, nil
+		Bids:   book.BidLevels(redis.MarketOrderBookDepth),
+		Asks:   book.AskLevels(redis.MarketOrderBookDepth),
+	}
+
+	// Best-effort cache write. Redis failure must not
+	// make the market-data endpoint unavailable.
+	_ = s.marketCache.SetOrderBook(
+		ctx,
+		symbol,
+		result,
+	)
+
+	// Return exactly what the caller requested.
+	if limit < len(result.Bids) {
+		result.Bids = result.Bids[:limit]
+	}
+
+	if limit < len(result.Asks) {
+		result.Asks = result.Asks[:limit]
+	}
+
+	return result, nil
 }
 
-
 func (s *Service) GetTicker(
+	ctx context.Context,
 	symbol string,
 ) (*Ticker, error) {
 
@@ -78,7 +144,16 @@ func (s *Service) GetTicker(
 		return nil, errors.ErrSymbolNotFound
 	}
 
+	var cached Ticker
+
+	if err := s.marketCache.GetTicker(ctx, symbol, &cached); err == nil {
+		return &cached, nil
+	}
+
 	engine := s.registry.Get(symbol)
+	if engine == nil {
+		return nil, errors.ErrSymbolNotFound
+	}
 
 	book := engine.OrderBook()
 
@@ -101,13 +176,18 @@ func (s *Service) GetTicker(
 		spread = ask - bid
 	}
 
-	return &Ticker{
+	ticker := &Ticker{
 		Symbol:    symbol,
 		LastPrice: engine.LastTradePrice(),
 		BestBid:   bid,
 		BestAsk:   ask,
 		Spread:    spread,
-	}, nil
+	}
+
+	_ = s.marketCache.SetTicker(ctx, symbol, ticker)
+
+	return ticker, nil
+
 }
 
 func (s *Service) GetRecentTrades(
@@ -125,16 +205,14 @@ func (s *Service) GetRecentTrades(
 	)
 }
 
-
 func (s *Service) GetSymbols(
-    ctx context.Context,
+	ctx context.Context,
 ) ([]generated.Symbol, error) {
 
-    return s.symbolRepo.List(
-        ctx,
-    )
+	return s.symbolRepo.List(
+		ctx,
+	)
 }
-
 
 func (s *Service) GetUserTrades(
 	ctx context.Context,
@@ -160,7 +238,6 @@ func (s *Service) GetMarketStats(symbol string) (*stats.MarketStats, error) {
 
 	return marketStats, nil
 }
-
 
 func (s *Service) GetCandles(
 	symbol string,
