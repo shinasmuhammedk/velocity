@@ -1,0 +1,127 @@
+openapi: 3.0.0
+info:
+  title: Velocity Exchange API
+  version: 0.1.0
+  description: API for the Velocity Trading Engine
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+paths:
+  # ==========================================
+  # WALLETS
+  # ==========================================
+  /wallets/:
+    get:
+      summary: List all balances
+      tags: [Wallets]
+  /wallets/{asset}:
+    get:
+      summary: Get balance by asset
+      tags: [Wallets]
+      parameters:
+        - in: path
+          name: asset
+          required: true
+          schema:
+            type: string
+  /wallets/deposit:
+    post:
+      summary: Deposit funds
+      tags: [Wallets]
+  /wallets/withdraw:
+    post:
+      summary: Withdraw funds
+      tags: [Wallets]
+
+  # ==========================================
+  # ORDERS
+  # ==========================================
+  /orders/:
+    post:
+      summary: Submit a new order
+      tags: [Orders]
+  /orders/open:
+    get:
+      summary: Get open orders
+      tags: [Orders]
+  /orders/history:
+    get:
+      summary: Get order history
+      tags: [Orders]
+  /orders/{id}:
+    get:
+      summary: Get order by ID
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+    patch:
+      summary: Modify an order
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+    delete:
+      summary: Cancel an order
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+
+  # ==========================================
+  # MARKET DATA
+  # ==========================================
+  /market/symbols:
+    get:
+      summary: Get all tradable symbols
+      tags: [Market Data]
+  /market/orderbook/{symbol}:
+    get:
+      summary: Get orderbook for a symbol
+      tags: [Market Data]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+  /market/ticker/{symbol}:
+    get:
+      summary: Get ticker for a symbol
+      tags: [Market Data]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+  /market/trades/{symbol}:
+    get:
+      summary: Get recent trades
+      tags: [Market Data]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+  /market/stats/{symbol}:
+    get:
+      summary: Get market stats
+      tags: [Market Data]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string

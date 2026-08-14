@@ -19,7 +19,7 @@ func New(
     userService *userservice.Service,
 ) (*Server, error) {
 
-	lis, err := net.Listen("tcp", ":50052")
+	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func New(
 }
 
 func (s *Server) Start() error {
-	fmt.Println("Velocity gRPC listening on :50052")
+	fmt.Println("Velocity gRPC listening on :50053")
 	return s.grpcServer.Serve(s.listener)
 }
 

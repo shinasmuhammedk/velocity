@@ -54,14 +54,12 @@ func Bootstrap() (*Container, error) {
 	container.IDGenerator = snowflake.New(1)
 	container.Logger.Info("snowflake id generator initialized")
 
-	identityClient, err := identityclient.New("localhost:50051")
+	identityClient, err := identityclient.New("localhost:50052")
 	if err != nil {
 		return nil, err
 	}
 
 	container.IdentityClient = identityClient
-
-	container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
 
 	container.Logger.Info("identity grpc client initialized")
 
@@ -260,6 +258,11 @@ func Bootstrap() (*Container, error) {
 	container.UserService = userservice.New(
 		container.UserRepository,
 		container.WalletService,
+	)
+
+	container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(
+		container.IdentityClient,
+		container.UserService,
 	)
 
 	container.Logger.Info("user service initialized")

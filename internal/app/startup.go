@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"velocity/internal/config"
@@ -57,6 +58,11 @@ func Startup() (*Container, error) {
 
 	// HTTP Server
 	container.HTTP = fiber.New()
+	container.HTTP.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+	}))
 	container.HTTP.Use(func(c *fiber.Ctx) error {
 		return c.Next()
 	})

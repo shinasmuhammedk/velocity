@@ -3,6 +3,7 @@ package middleware
 import (
 	"strings"
 
+	"velocity/internal/service/userservice"
 	"velocity/internal/transport/grpc/client/identity"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,14 +11,17 @@ import (
 
 type AuthMiddleware struct {
 	identityClient *identity.Client
+	userService    *userservice.Service
 }
 
 func NewAuthMiddleware(
 	identityClient *identity.Client,
+	userService *userservice.Service,
 ) *AuthMiddleware {
 
 	return &AuthMiddleware{
 		identityClient: identityClient,
+		userService:    userService,
 	}
 }
 
@@ -88,6 +92,14 @@ func (m *AuthMiddleware) Authenticate(c *fiber.Ctx) error {
 		Role:   resp.Role,
 	})
 
+	// -------------------------
+	// Lazy Sync User
+	// -------------------------
+	_, _ = m.userService.CreateUser(c.Context(), userservice.CreateUserRequest{
+		ID:    int64(resp.UserId),
+		Email: resp.Email,
+	})
+
 	return c.Next()
 }
 
@@ -123,6 +135,11 @@ func (m *AuthMiddleware) AuthenticateWS(c *fiber.Ctx) error {
 		UserID: int64(resp.UserId),
 		Email:  resp.Email,
 		Role:   resp.Role,
+	})
+
+	_, _ = m.userService.CreateUser(c.Context(), userservice.CreateUserRequest{
+		ID:    int64(resp.UserId),
+		Email: resp.Email,
 	})
 
 	return c.Next()
