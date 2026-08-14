@@ -59,4 +59,5 @@ const (
     CodeInsufficientLockedBalance Code = "INSUFFICIENT_LOCKED_BALANCE"
     
     CodeInvalidOrderID Code = "INVALID_ORDER_ID"
+    CodeOrderNotSettleable Code = "ORDER_IS_NOT_IN_A_SETTLEABLE_FORM"
 )

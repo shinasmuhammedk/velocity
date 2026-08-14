@@ -178,8 +178,13 @@ var (
 		CodeInsufficientLockedBalance,
 		"insufficient locked balance",
 	)
-    ErrInvalidOrderID = New(
-        CodeInvalidOrderID, 
-        "invalid order id",
-    )
+	ErrInvalidOrderID = New(
+		CodeInvalidOrderID,
+		"invalid order id",
+	)
+
+	ErrOrderNotSettleable = New(
+		CodeOrderNotSettleable,
+		"order is not in a settleable state",
+	)
 )

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"velocity/internal/persistence/postgres/generated"
+	"velocity/pkg/errors"
 )
 
 type walletRepository struct {
@@ -28,28 +30,28 @@ func (r *walletRepository) Create(
 }
 
 func (r *walletRepository) Get(
-    ctx context.Context,
-    userID int64,
-    asset string,
+	ctx context.Context,
+	userID int64,
+	asset string,
 ) (generated.Wallet, error) {
 
-    fmt.Println("================================")
-    fmt.Println("GET WALLET")
-    fmt.Println("USER :", userID)
-    fmt.Println("ASSET:", asset)
+	fmt.Println("================================")
+	fmt.Println("GET WALLET")
+	fmt.Println("USER :", userID)
+	fmt.Println("ASSET:", asset)
 
-    wallet, err := r.q.GetWallet(
-        ctx,
-        generated.GetWalletParams{
-            UserID: userID,
-            Asset:  asset,
-        },
-    )
+	wallet, err := r.q.GetWallet(
+		ctx,
+		generated.GetWalletParams{
+			UserID: userID,
+			Asset:  asset,
+		},
+	)
 
-    fmt.Println("ERR:", err)
-    fmt.Println("================================")
+	fmt.Println("ERR:", err)
+	fmt.Println("================================")
 
-    return wallet, err
+	return wallet, err
 }
 
 func (r *walletRepository) Update(
@@ -72,4 +74,29 @@ func (r *walletRepository) WithTx(tx pgx.Tx) WalletRepository {
 	return &walletRepository{
 		q: generated.New(tx),
 	}
+}
+
+func (r *walletRepository) LockFunds(
+	ctx context.Context,
+	walletID uuid.UUID,
+	amount int64,
+) error {
+
+	rows, err := r.q.LockWalletFunds(
+		ctx,
+		generated.LockWalletFundsParams{
+			ID:        walletID,
+			Available: amount,
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return errors.ErrInsufficientBalance
+	}
+
+	return nil
 }

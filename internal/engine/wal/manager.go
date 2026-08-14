@@ -1,6 +1,7 @@
 package wal
 
 import (
+	"path/filepath"
 	"sync"
 )
 
@@ -78,4 +79,17 @@ func (m *Manager) Close() error {
 	}
 
 	return nil
+}
+
+// Reader returns a WAL reader for a symbol.
+func (m *Manager) Reader(symbol string) (*Reader, error) {
+	path := filepath.Join(
+		m.directory,
+		symbol+".wal",
+	)
+
+	return NewReader(
+		path,
+		m.serializer,
+	)
 }

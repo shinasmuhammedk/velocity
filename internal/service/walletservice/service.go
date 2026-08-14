@@ -51,17 +51,10 @@ func (s *Service) LockFunds(
 		return err
 	}
 
-	if wallet.Available < amount {
-		return errors.ErrInsufficientBalance
-	}
-
-	return s.walletRepo.Update(
+	return s.walletRepo.LockFunds(
 		ctx,
-		generated.UpdateWalletParams{
-			ID:        wallet.ID,
-			Available: wallet.Available - amount,
-			Locked:    wallet.Locked + amount,
-		},
+		wallet.ID,
+		amount,
 	)
 }
 
@@ -217,4 +210,3 @@ func (s *Service) GetWalletByAsset(
 		asset,
 	)
 }
-

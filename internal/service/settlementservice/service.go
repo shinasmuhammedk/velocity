@@ -7,6 +7,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
+	"velocity/pkg/errors"
 
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/persistence/postgres/tx"
@@ -14,6 +15,19 @@ import (
 
 	"github.com/jackc/pgx/v5"
 )
+
+// isSettleable reports whether an order is still eligible to be settled
+// against a trade. Only orders that are open or partially filled can
+// accept further fills; orders that are already fully filled, cancelled,
+// or rejected must never be settled again.
+func isSettleable(status string) bool {
+	switch constants.OrderStatus(status) {
+	case constants.OrderStatusOpen, constants.OrderStatusPartiallyFilled:
+		return true
+	default:
+		return false
+	}
+}
 
 type Service struct {
 	txManager tx.Manager
@@ -79,6 +93,32 @@ func (s *Service) Settle(
 				tradeAlreadySettled = true
 
 				return nil
+			}
+
+			buyOrder, err := orderRepo.GetByID(
+				ctx,
+				req.BuyOrderID,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			sellOrder, err := orderRepo.GetByID(
+				ctx,
+				req.SellOrderID,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			if !isSettleable(buyOrder.Status) {
+				return errors.ErrOrderNotSettleable
+			}
+
+			if !isSettleable(sellOrder.Status) {
+				return errors.ErrOrderNotSettleable
 			}
 
 			err = walletService.ConsumeLockedFunds(
@@ -164,8 +204,8 @@ func (s *Service) Settle(
 					Quantity:    req.Quantity,
 				},
 			)
-            
-            if err != nil {
+
+			if err != nil {
 				return err
 			}
 
@@ -182,26 +222,6 @@ func (s *Service) Settle(
 
 				Price:    req.Price,
 				Quantity: req.Quantity,
-			}
-
-			
-
-			buyOrder, err := orderRepo.GetByID(
-				ctx,
-				req.BuyOrderID,
-			)
-
-			if err != nil {
-				return err
-			}
-
-			sellOrder, err := orderRepo.GetByID(
-				ctx,
-				req.SellOrderID,
-			)
-
-			if err != nil {
-				return err
 			}
 
 			buyRemaining := buyOrder.Remaining - req.Quantity
@@ -223,10 +243,9 @@ func (s *Service) Settle(
 					Status:    buyStatus,
 				},
 			)
-            if err != nil {
+			if err != nil {
 				return err
 			}
-
 
 			buyOrderEvent = &order.Order{
 				ID:        buyOrder.ID,
@@ -239,7 +258,6 @@ func (s *Service) Settle(
 				Remaining: buyRemaining,
 			}
 
-			
 			sellRemaining := sellOrder.Remaining - req.Quantity
 			sellFilledQty := sellOrder.Filled + req.Quantity
 

@@ -1,12 +1,14 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"velocity/internal/config"
+	"velocity/internal/infrastructure/redis"
 	"velocity/internal/persistence/postgres"
 	"velocity/pkg/logger"
 )
@@ -50,10 +52,22 @@ func Startup() (*Container, error) {
 
 	container.DB = db
 
-
 	container.Logger.Info(
 		"postgres connection established",
 	)
+
+	//redis
+	redisClient := redis.New(cfg.Redis)
+	if err := redisClient.Ping(context.Background()); err != nil {
+		_ = redisClient.Close()
+
+		return nil, fmt.Errorf(
+			"initialize redis: %w",
+			err,
+		)
+	}
+	container.Redis = redisClient
+	container.Logger.Info("redis connection established")
 
 	// HTTP Server
 	container.HTTP = fiber.New()

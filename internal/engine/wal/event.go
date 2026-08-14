@@ -14,12 +14,12 @@ const (
 )
 
 type Event struct {
-	Sequence  uint64    `json:"sequence"`
-	Type      EventType `json:"type"`
-	Symbol    string    `json:"symbol"`
-	OrderID   string    `json:"order_id,omitempty"`
+	Sequence uint64    `json:"sequence"`
+	Type     EventType `json:"type"`
+	Symbol   string    `json:"symbol"`
+	OrderID  int64     `json:"order_id,omitempty"`
 
-	Order     *order.Order `json:"order,omitempty"`
+	Order *order.Order `json:"order,omitempty"`
 
 	NewPrice    int64 `json:"new_price,omitempty"`
 	NewQuantity int64 `json:"new_quantity,omitempty"`
@@ -44,7 +44,7 @@ func NewSubmitEvent(
 func NewCancelEvent(
 	sequence uint64,
 	symbol string,
-	orderID string,
+	orderID int64,
 ) *Event {
 	return &Event{
 		Sequence:  sequence,
@@ -58,7 +58,7 @@ func NewCancelEvent(
 func NewModifyEvent(
 	sequence uint64,
 	symbol string,
-	orderID string,
+	orderID int64,
 	newPrice int64,
 	newQuantity int64,
 ) *Event {
