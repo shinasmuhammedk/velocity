@@ -54,9 +54,9 @@ func (c *TradeConsumer) Start(
 				}
 
 				fmt.Println("TRADE:", t.Symbol)
-				if t == nil {
-					continue
-				}
+				// if t == nil {
+				// 	continue
+				// }
 
 				symbol, err := c.symbolRepo.GetBySymbol(
 					ctx,

@@ -121,6 +121,7 @@ func (e *Engine) start() {
 					}
 				}
 
+				// First try stop orders.
 				err := e.stopBook.CancelOrder(c.OrderID)
 
 				if err == nil {
@@ -128,9 +129,24 @@ func (e *Engine) start() {
 					continue
 				}
 
-				err = e.book.CancelOrder(c.OrderID)
+				// Otherwise cancel from the normal order book.
+				cancelledOrder, err := e.book.CancelOrder(c.OrderID)
 
-				c.Result <- err
+				if err != nil {
+					c.Result <- err
+					continue
+				}
+
+				// Publish only after successful cancellation.
+				e.publish(events.OrderCancelledEvent{
+					BaseEvent: events.NewBaseEvent(),
+
+					OrderID: cancelledOrder.ID,
+					Symbol:  cancelledOrder.Symbol,
+					UserID:  cancelledOrder.UserID,
+				})
+
+				c.Result <- nil
 
 				// in engine.go's start()
 			case command.ModifyOrderCommand:
@@ -158,7 +174,21 @@ func (e *Engine) start() {
 					c.NewQuantity,
 				)
 
-				c.Result <- err
+				if err != nil {
+					c.Result <- err
+					continue
+				}
+
+				e.publish(events.OrderModifiedEvent{
+					BaseEvent: events.NewBaseEvent(),
+
+					OrderID:     c.OrderID,
+					Symbol:      e.symbol,
+					NewPrice:    c.NewPrice,
+					NewQuantity: c.NewQuantity,
+				})
+
+				c.Result <- nil
 			}
 		}
 	}()

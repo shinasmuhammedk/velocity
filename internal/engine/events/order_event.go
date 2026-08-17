@@ -1,6 +1,5 @@
 package events
 
-
 type OrderAcceptedEvent struct {
 	BaseEvent
 
@@ -37,9 +36,9 @@ func (e OrderRejectedEvent) Type() EventType {
 type OrderCancelledEvent struct {
 	BaseEvent
 
-	OrderID string
+	OrderID int64
 	Symbol  string
-	UserID  string
+	UserID  int64
 }
 
 func (e OrderCancelledEvent) Type() EventType {
@@ -52,7 +51,7 @@ func (e OrderCancelledEvent) Type() EventType {
 type OrderModifiedEvent struct {
 	BaseEvent
 
-	OrderID string
+	OrderID int64
 	Symbol  string
 
 	NewPrice    int64

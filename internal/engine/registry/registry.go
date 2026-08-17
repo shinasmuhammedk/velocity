@@ -82,8 +82,8 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 
 	manager := snapshot.NewManager(
 		r.snapshotWriter,
-		30*time.Second,
-		100000,
+		5*time.Second,
+		1,
 	)
 
 	manager.Start(e)

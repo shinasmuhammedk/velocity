@@ -10,6 +10,7 @@ import (
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/wal"
+	"velocity/internal/infrastructure/kafka"
 	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/infrastructure/redis"
 	"velocity/internal/marketdata"
@@ -57,6 +58,12 @@ func Bootstrap() (*Container, error) {
 		return nil, err
 	}
 	container.Logger.Info("redis initialized")
+
+	container.KafkaProducer = kafka.NewProducer(
+		container.Config.Kafka.Brokers,
+		container.Config.Kafka.Topic,
+	)
+	container.Logger.Info("kafka producer initialized")
 
 	container.MarketCache = redis.NewMarketCache(container.Redis)
 	container.Logger.Info("market data cache initialized")
@@ -160,6 +167,43 @@ func Bootstrap() (*Container, error) {
 		writer,
 		container.WALManager,
 	)
+
+	kafkaPublisher := kafka.NewEventPublisher(
+		container.KafkaProducer,
+		container.Config.Kafka.Topic,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.TradeExecutedEventType,
+		kafkaPublisher,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.OrderAcceptedEventType,
+		kafkaPublisher,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.OrderRejectedEventType,
+		kafkaPublisher,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.OrderCancelledEventType,
+		kafkaPublisher,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.OrderModifiedEventType,
+		kafkaPublisher,
+	)
+
+	container.Registry.Publisher().Subscribe(
+		events.OrderTriggeredEventType,
+		kafkaPublisher,
+	)
+
+	container.Logger.Info("Kafka event publisher registered")
 
 	container.MarketStatsManager = stats.NewManager()
 	container.MarketStatsService = stats.NewService(
