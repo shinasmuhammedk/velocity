@@ -9,6 +9,15 @@ func Shutdown(container *Container) {
 		}
 	}
 
+	if container.KafkaProducer != nil {
+		if err := container.KafkaProducer.Close(); err != nil {
+			container.Logger.Error(
+				"kafka producer shutdown error",
+				logger.ErrorField(err),
+			)
+		}
+	}
+
 	if container.DB != nil {
 		container.DB.Close()
 	}

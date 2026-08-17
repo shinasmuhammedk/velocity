@@ -193,24 +193,24 @@ func (b *OrderBook) RemoveAskLevel(price int64) {
 	delete(b.Asks, price)
 }
 
-func (b *OrderBook) CancelOrder(orderID int64) error {
+func (b *OrderBook) CancelOrder(orderID int64) (*order.Order, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	location, exists := b.Orders[orderID]
 	if !exists {
-		return errors.ErrOrderNotFound
+		return nil, errors.ErrOrderNotFound
 	}
 
 	o := location.Order
 	level := location.Level
 
 	if o.Status == constants.OrderStatusFilled {
-		return errors.ErrOrderFilled
+		return nil, errors.ErrOrderFilled
 	}
 
 	if o.Status == constants.OrderStatusCancelled {
-		return errors.ErrOrderCancelled
+		return nil, errors.ErrOrderCancelled
 	}
 
 	// Remove order from the FIFO queue
@@ -232,8 +232,9 @@ func (b *OrderBook) CancelOrder(orderID int64) error {
 	// Remove from order index
 	delete(b.Orders, orderID)
 
-	return nil
+	return o, nil
 }
+
 
 func (b *OrderBook) RemoveOrderIndex(orderID int64) {
 	b.mu.Lock()

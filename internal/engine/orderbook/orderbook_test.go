@@ -104,7 +104,7 @@ func TestCancelOrder(t *testing.T) {
 
 	book.AddOrder(o)
 
-	err := book.CancelOrder(o.ID)
+	_, err := book.CancelOrder(o.ID)
 
 	require.NoError(t, err)
 
@@ -115,7 +115,7 @@ func TestCancelOrder(t *testing.T) {
 func TestCancelUnknownOrder(t *testing.T) {
 	book := orderbook.New("BTCUSDT")
 
-	err := book.CancelOrder(9999)
+	_, err := book.CancelOrder(9999)
 
 	require.Error(t, err)
 	assert.Equal(t, errors.ErrOrderNotFound, err)
@@ -128,10 +128,10 @@ func TestCancelAlreadyCancelledOrder(t *testing.T) {
 
 	book.AddOrder(o)
 
-	err := book.CancelOrder(o.ID)
+	_, err := book.CancelOrder(o.ID)
 	require.NoError(t, err)
 
-	err = book.CancelOrder(o.ID)
+	_, err = book.CancelOrder(o.ID)
 
 	require.Error(t, err)
 	assert.Equal(t, errors.ErrOrderNotFound, err)
@@ -146,7 +146,7 @@ func TestCancelRemovesPriceLevel(t *testing.T) {
 
 	require.NotNil(t, book.BestAsk())
 
-	err := book.CancelOrder(o.ID)
+	_, err := book.CancelOrder(o.ID)
 
 	require.NoError(t, err)
 
@@ -172,7 +172,7 @@ func TestOrderRemovedFromIndexOnCancel(t *testing.T) {
 
 	book.AddOrder(o)
 
-	err := book.CancelOrder(o.ID)
+	_, err := book.CancelOrder(o.ID)
 
 	require.NoError(t, err)
 

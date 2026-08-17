@@ -66,7 +66,8 @@ func (a *Applier) applyCancel(event *Event) error {
 	}
 
 	// Otherwise it is a normal order.
-	return a.book.CancelOrder(event.OrderID)
+	_, err := a.book.CancelOrder(event.OrderID)
+	return err
 }
 
 func (a *Applier) applyModify(event *Event) error {
