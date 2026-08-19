@@ -31,6 +31,7 @@ import (
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
+    "velocity/pkg/constants"
 	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
@@ -67,6 +68,8 @@ func Bootstrap() (*Container, error) {
 
 	container.MarketCache = redis.NewMarketCache(container.Redis)
 	container.Logger.Info("market data cache initialized")
+
+	container.RedisHealth = redis.NewHealthChecker(container.Redis)
 
 	container.IDGenerator = snowflake.New(1)
 	container.Logger.Info("snowflake id generator initialized")
@@ -408,8 +411,15 @@ func Bootstrap() (*Container, error) {
 	container.PositionHandler = handler.NewPositionHandler(
 		container.PositionService,
 	)
+	container.HealthHandler = handler.NewHealthHandler(
+		container.DB,
+		container.RedisHealth,
+	)
+    container.AdminHandler = handler.NewAdminHandler(
+		container.MarketService,
+	)
 
-	//router
+	// router
 	router.Register(
 		container.HTTP,
 		// container.IdentityClient,
@@ -417,7 +427,10 @@ func Bootstrap() (*Container, error) {
 		container.MarketDataHandler,
 		container.WalletHandler,
 		container.PositionHandler,
+		container.HealthHandler,
+        container.AdminHandler,
 		container.AuthMiddleware.Authenticate,
+        httpmiddleware.RequireRole(constants.RoleAdmin),
 	)
 
 	container.HTTP.Get(

@@ -1,8 +1,8 @@
 {
  "symbol": "BTCUSDT",
- "sequence": 1,
- "last_trade_price": 0,
- "created_at": "2026-08-17T16:29:15.2901979Z",
+ "sequence": 9,
+ "last_trade_price": 298000,
+ "created_at": "2026-08-19T06:45:56.4391194Z",
  "active_orders": [
   {
    "ID": 344036460644536320,
@@ -21,54 +21,6 @@
    "UpdatedAt": "2026-08-07T14:08:04.106147+05:30"
   },
   {
-   "ID": 344141233305686016,
-   "UserID": 9,
-   "Symbol": "BTCUSDT",
-   "Side": "BUY",
-   "Type": "LIMIT",
-   "TimeInForce": "GTC",
-   "Status": "OPEN",
-   "Price": 300000,
-   "StopPrice": 0,
-   "Quantity": 1,
-   "Remaining": 1,
-   "Filled": 0,
-   "CreatedAt": "2026-08-07T21:04:23.855854+05:30",
-   "UpdatedAt": "2026-08-07T21:04:23.855854+05:30"
-  },
-  {
-   "ID": 347637671348146176,
-   "UserID": 2,
-   "Symbol": "BTCUSDT",
-   "Side": "BUY",
-   "Type": "LIMIT",
-   "TimeInForce": "GTC",
-   "Status": "OPEN",
-   "Price": 300000,
-   "StopPrice": 0,
-   "Quantity": 1,
-   "Remaining": 1,
-   "Filled": 0,
-   "CreatedAt": "2026-08-17T12:37:59.645856+05:30",
-   "UpdatedAt": "2026-08-17T12:37:59.645856+05:30"
-  },
-  {
-   "ID": 347670150863917056,
-   "UserID": 2,
-   "Symbol": "BTCUSDT",
-   "Side": "BUY",
-   "Type": "LIMIT",
-   "TimeInForce": "GTC",
-   "Status": "OPEN",
-   "Price": 300000,
-   "StopPrice": 0,
-   "Quantity": 1,
-   "Remaining": 1,
-   "Filled": 0,
-   "CreatedAt": "2026-08-17T14:47:03.365844+05:30",
-   "UpdatedAt": "2026-08-17T14:47:03.365844+05:30"
-  },
-  {
    "ID": 347678426255069184,
    "UserID": 8,
    "Symbol": "BTCUSDT",
@@ -83,38 +35,6 @@
    "Filled": 0,
    "CreatedAt": "2026-08-17T15:19:56.372066+05:30",
    "UpdatedAt": "2026-08-17T15:19:56.372066+05:30"
-  },
-  {
-   "ID": 347688013767118848,
-   "UserID": 2,
-   "Symbol": "BTCUSDT",
-   "Side": "BUY",
-   "Type": "LIMIT",
-   "TimeInForce": "GTC",
-   "Status": "OPEN",
-   "Price": 299000,
-   "StopPrice": 0,
-   "Quantity": 1,
-   "Remaining": 1,
-   "Filled": 0,
-   "CreatedAt": "2026-08-17T15:58:02.213533+05:30",
-   "UpdatedAt": "2026-08-17T15:58:02.213533+05:30"
-  },
-  {
-   "ID": 347688545776832512,
-   "UserID": 2,
-   "Symbol": "BTCUSDT",
-   "Side": "BUY",
-   "Type": "LIMIT",
-   "TimeInForce": "GTC",
-   "Status": "OPEN",
-   "Price": 299000,
-   "StopPrice": 0,
-   "Quantity": 1,
-   "Remaining": 1,
-   "Filled": 0,
-   "CreatedAt": "2026-08-17T16:00:09.054899+05:30",
-   "UpdatedAt": "2026-08-17T16:00:09.054899+05:30"
   },
   {
    "ID": 347778902082457600,
@@ -133,7 +53,7 @@
    "UpdatedAt": "2026-08-17T16:29:11.6763027Z"
   },
   {
-   "ID": 347688067416461312,
+   "ID": 348020839964217344,
    "UserID": 2,
    "Symbol": "BTCUSDT",
    "Side": "BUY",
@@ -145,11 +65,11 @@
    "Quantity": 1,
    "Remaining": 1,
    "Filled": 0,
-   "CreatedAt": "2026-08-17T15:58:15.004837+05:30",
-   "UpdatedAt": "2026-08-17T15:58:15.004837+05:30"
+   "CreatedAt": "2026-08-18T08:30:34.1629915Z",
+   "UpdatedAt": "2026-08-18T08:30:34.1629915Z"
   },
   {
-   "ID": 347688480383438848,
+   "ID": 348086892941545472,
    "UserID": 2,
    "Symbol": "BTCUSDT",
    "Side": "BUY",
@@ -158,11 +78,59 @@
    "Status": "OPEN",
    "Price": 298000,
    "StopPrice": 0,
-   "Quantity": 2,
-   "Remaining": 2,
+   "Quantity": 1,
+   "Remaining": 1,
    "Filled": 0,
-   "CreatedAt": "2026-08-17T15:59:53.46385+05:30",
-   "UpdatedAt": "2026-08-17T15:59:53.46385+05:30"
+   "CreatedAt": "2026-08-18T12:53:02.4191408Z",
+   "UpdatedAt": "2026-08-18T12:53:02.4191408Z"
+  },
+  {
+   "ID": 348089137921789952,
+   "UserID": 2,
+   "Symbol": "BTCUSDT",
+   "Side": "BUY",
+   "Type": "LIMIT",
+   "TimeInForce": "GTC",
+   "Status": "OPEN",
+   "Price": 298000,
+   "StopPrice": 0,
+   "Quantity": 1,
+   "Remaining": 1,
+   "Filled": 0,
+   "CreatedAt": "2026-08-18T13:01:57.6647698Z",
+   "UpdatedAt": "2026-08-18T13:01:57.6647698Z"
+  },
+  {
+   "ID": 348091553480183808,
+   "UserID": 2,
+   "Symbol": "BTCUSDT",
+   "Side": "BUY",
+   "Type": "LIMIT",
+   "TimeInForce": "GTC",
+   "Status": "OPEN",
+   "Price": 202000,
+   "StopPrice": 0,
+   "Quantity": 1,
+   "Remaining": 1,
+   "Filled": 0,
+   "CreatedAt": "2026-08-18T13:11:33.5782222Z",
+   "UpdatedAt": "2026-08-18T13:11:33.5782222Z"
+  },
+  {
+   "ID": 348091632601534464,
+   "UserID": 2,
+   "Symbol": "BTCUSDT",
+   "Side": "BUY",
+   "Type": "LIMIT",
+   "TimeInForce": "GTC",
+   "Status": "OPEN",
+   "Price": 200000,
+   "StopPrice": 0,
+   "Quantity": 1,
+   "Remaining": 1,
+   "Filled": 0,
+   "CreatedAt": "2026-08-18T13:11:52.4429503Z",
+   "UpdatedAt": "2026-08-18T13:11:52.4429503Z"
   },
   {
    "ID": 344052596094275584,
@@ -275,6 +243,22 @@
    "Filled": 0,
    "CreatedAt": "2026-08-17T15:58:58.846925+05:30",
    "UpdatedAt": "2026-08-17T15:58:58.846925+05:30"
+  },
+  {
+   "ID": 348089355933323264,
+   "UserID": 8,
+   "Symbol": "BTCUSDT",
+   "Side": "SELL",
+   "Type": "LIMIT",
+   "TimeInForce": "GTC",
+   "Status": "OPEN",
+   "Price": 301000,
+   "StopPrice": 0,
+   "Quantity": 4,
+   "Remaining": 4,
+   "Filled": 0,
+   "CreatedAt": "2026-08-18T13:02:49.6420898Z",
+   "UpdatedAt": "2026-08-18T13:02:49.6420898Z"
   }
  ],
  "stop_orders": []
