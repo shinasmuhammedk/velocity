@@ -51,6 +51,7 @@ type Container struct {
 	HTTP          *fiber.App
 	Redis         *redis.Client
 	MarketCache   *redis.MarketCache
+	RedisHealth   *redis.HealthChecker
 	KafkaProducer *kafka.Producer
 
 	// --------------------------------------------------
@@ -141,6 +142,8 @@ type Container struct {
 	OrderHandler      *handler.OrderHandler
 	MarketDataHandler *handler.MarketDataHandler
 	WalletHandler     *handler.WalletHandler
+    HealthHandler     *handler.HealthHandler
+    AdminHandler      *handler.AdminHandler
 	PositionHandler   *handler.PositionHandler
 
 	MarketStatsManager *stats.Manager

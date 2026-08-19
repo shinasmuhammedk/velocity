@@ -14,8 +14,16 @@ func Register(
 	marketHandler *handler.MarketDataHandler,
 	walletHandler *handler.WalletHandler,
 	positionHandler *handler.PositionHandler,
+	healthHandler *handler.HealthHandler,
+	adminHandler *handler.AdminHandler,
 	auth fiber.Handler,
+	requireAdmin fiber.Handler,
 ) {
+	// Health checks live at the top level, not under /api, since
+	// orchestrators (Docker, k8s) and load balancers conventionally
+	// probe /health directly, and it must never require auth.
+	RegisterHealthRoutes(app, healthHandler)
+
 	api := app.Group("/api")
 
 	// Protected
@@ -26,6 +34,10 @@ func Register(
 	RegisterOrderRoutes(private, orderHandler)
 	RegisterWalletRoutes(private, walletHandler)
 	RegisterPositionRoutes(private, positionHandler)
+
+	// Admin - auth first, then role check, in that order, so an
+	// unauthenticated caller gets 401 rather than 403.
+	RegisterAdminRoutes(api, adminHandler, auth, requireAdmin)
 
 	// Public
 	RegisterMarketRoutes(api, marketHandler)

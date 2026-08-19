@@ -45,7 +45,8 @@ type SymbolRepository interface {
 	Get(ctx context.Context, symbol string) (generated.Symbol, error)
 	List(ctx context.Context) ([]generated.Symbol, error)
 	ListActive(ctx context.Context) ([]generated.Symbol, error)
-	GetBySymbol(ctx context.Context, symbol string) (generated.Symbol, error)
+    GetBySymbol(ctx context.Context, symbol string) (generated.Symbol, error)
+	UpdateStatus(ctx context.Context, params generated.UpdateSymbolStatusParams) error
 }
 
 type PositionRepository interface {

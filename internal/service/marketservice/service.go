@@ -259,3 +259,74 @@ func (s *Service) GetCandles(
 
 	return candleList, nil
 }
+
+
+// -------------------------
+// Admin
+// -------------------------
+
+type CreateSymbolRequest struct {
+	Symbol      string
+	DisplayName string
+	BaseAsset   string
+	QuoteAsset  string
+	TickSize    int64
+	LotSize     int64
+	IsActive    bool
+}
+
+// CreateSymbol registers a new tradeable symbol.
+//
+// It does not start a matching engine for the symbol - the engine
+// registry (Registry.Get) creates one lazily on first order/lookup,
+// so nothing further is needed here for the symbol to become tradeable
+// once IsActive is true.
+func (s *Service) CreateSymbol(
+	ctx context.Context,
+	req CreateSymbolRequest,
+) (generated.Symbol, error) {
+
+	// Existence is checked before insert rather than relying on the
+	// DB unique constraint's error code, to keep this consistent with
+	// the rest of the service layer. This leaves a small race window
+	// between two concurrent creates of the same symbol; acceptable
+	// here since this is an admin-only, low-frequency operation, and
+	// the DB unique constraint on `symbol` still prevents a duplicate
+	// row from actually being persisted either way.
+	if _, err := s.symbolRepo.GetBySymbol(ctx, req.Symbol); err == nil {
+		return generated.Symbol{}, errors.ErrSymbolAlreadyExists
+	}
+
+	return s.symbolRepo.Create(
+		ctx,
+		generated.CreateSymbolParams{
+			Symbol:      req.Symbol,
+			DisplayName: req.DisplayName,
+			BaseAsset:   req.BaseAsset,
+			QuoteAsset:  req.QuoteAsset,
+			TickSize:    req.TickSize,
+			LotSize:     req.LotSize,
+			IsActive:    req.IsActive,
+		},
+	)
+}
+
+// UpdateSymbolStatus enables or disables trading for an existing symbol.
+func (s *Service) UpdateSymbolStatus(
+	ctx context.Context,
+	symbol string,
+	isActive bool,
+) error {
+
+	if _, err := s.symbolRepo.GetBySymbol(ctx, symbol); err != nil {
+		return errors.ErrSymbolNotFound
+	}
+
+	return s.symbolRepo.UpdateStatus(
+		ctx,
+		generated.UpdateSymbolStatusParams{
+			Symbol:   symbol,
+			IsActive: isActive,
+		},
+	)
+}

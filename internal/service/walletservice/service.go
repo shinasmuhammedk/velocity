@@ -194,7 +194,6 @@ func (s *Service) ConsumeLockedFunds(
 			Locked:    wallet.Locked - amount,
 		},
 	)
-    return err
 }
 
 

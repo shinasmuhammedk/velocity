@@ -113,6 +113,10 @@ var (
 		CodeSymbolInactive,
 		"symbol inactive",
 	)
+    ErrSymbolAlreadyExists = New(
+		CodeConflict,
+		"symbol already exists",
+	)
 
 	ErrEngineUnavailable = New(
 		CodeEngineUnavailable,

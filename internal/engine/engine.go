@@ -53,6 +53,7 @@ func (e *Engine) start() {
 
 					e.incrementSequence()
 
+					c.Result <- nil
 					continue
 				}
 
@@ -66,17 +67,16 @@ func (e *Engine) start() {
 					)
 
 					if err := e.walWriter.Write(event); err != nil {
-						// Do not mutate the engine if WAL persistence failed.
+						c.Result <- err
 						continue
 					}
 				}
 
 				trades, err := e.matcher.Match(c.Order)
 				if err != nil {
+					c.Result <- err
 					continue
 				}
-
-				// e.incrementSequence()
 
 				for _, t := range trades {
 
@@ -102,7 +102,10 @@ func (e *Engine) start() {
 						Quantity: t.Quantity,
 					})
 				}
+
 				e.processTriggeredStops()
+
+				c.Result <- nil
 
 			case command.CancelOrderCommand:
 
@@ -210,10 +213,12 @@ func New(
 		publisher:    publisher,
 		commandQueue: make(chan command.Command, 100000),
 		tradeQueue:   make(chan *trade.Trade, 100000),
-		// lastTradePrice: 0,
-		done: make(chan struct{}),
+		done:         make(chan struct{}),
 	}
 
+	if walWriter != nil {
+		e.SetSequence(walWriter.Sequence())
+	}
 	e.start()
 
 	return e
@@ -253,11 +258,14 @@ func (e *Engine) SubmitOrder(
 		}
 	}
 
+	resultCh := make(chan error, 1)
+
 	e.commandQueue <- command.SubmitOrderCommand{
-		Order: order,
+		Order:  order,
+		Result: resultCh,
 	}
 
-	return nil
+	return <-resultCh
 }
 
 // read-only channel accessor.
