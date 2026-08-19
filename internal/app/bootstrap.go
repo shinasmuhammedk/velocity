@@ -31,7 +31,7 @@ import (
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
-    "velocity/pkg/constants"
+	"velocity/pkg/constants"
 	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
@@ -92,6 +92,7 @@ func Bootstrap() (*Container, error) {
 	container.PositionRepository = repository.NewPositionRepository(container.DB)
 	container.SymbolRepository = repository.NewSymbolRepository(container.DB)
 	container.WalletRepository = repository.NewWalletRepository(container.DB)
+	container.FailedSettlementRepository = repository.NewFailedSettlementRepository(container.DB)
 
 	container.Logger.Info("repositories initialized")
 
@@ -174,7 +175,10 @@ func Bootstrap() (*Container, error) {
 	kafkaPublisher := kafka.NewEventPublisher(
 		container.KafkaProducer,
 		container.Config.Kafka.Topic,
+        container.Logger,
 	)
+    
+    container.KafkaEventPublisher = kafkaPublisher
 
 	container.Registry.Publisher().Subscribe(
 		events.TradeExecutedEventType,
@@ -362,8 +366,10 @@ func Bootstrap() (*Container, error) {
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.SettlementService,
 		container.SymbolRepository,
+        container.FailedSettlementRepository,
 		container.MarketBroadcaster,
 		provider,
+		container.Logger,
 	)
 	container.Logger.Info("trade consumer initialized")
 
@@ -415,7 +421,7 @@ func Bootstrap() (*Container, error) {
 		container.DB,
 		container.RedisHealth,
 	)
-    container.AdminHandler = handler.NewAdminHandler(
+	container.AdminHandler = handler.NewAdminHandler(
 		container.MarketService,
 	)
 
@@ -428,9 +434,9 @@ func Bootstrap() (*Container, error) {
 		container.WalletHandler,
 		container.PositionHandler,
 		container.HealthHandler,
-        container.AdminHandler,
+		container.AdminHandler,
 		container.AuthMiddleware.Authenticate,
-        httpmiddleware.RequireRole(constants.RoleAdmin),
+		httpmiddleware.RequireRole(constants.RoleAdmin),
 	)
 
 	container.HTTP.Get(

@@ -64,3 +64,11 @@ type WalletRepository interface {
 	List(ctx context.Context, userID int64) ([]generated.Wallet, error)
 	WithTx(tx pgx.Tx) WalletRepository
 }
+
+type FailedSettlementRepository interface {
+	Create(ctx context.Context, params generated.CreateFailedSettlementParams) (generated.FailedSettlement, error)
+	Get(ctx context.Context, id uuid.UUID) (generated.FailedSettlement, error)
+	ListUnresolved(ctx context.Context) ([]generated.FailedSettlement, error)
+	IncrementRetryCount(ctx context.Context, id uuid.UUID) error
+	Resolve(ctx context.Context, id uuid.UUID) error
+}

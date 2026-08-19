@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"velocity/internal/engine/events"
 
 	"github.com/segmentio/kafka-go"
@@ -23,6 +25,7 @@ func TestEventPublisher(t *testing.T) {
 	publisher := NewEventPublisher(
 		producer,
 		"velocity-events-test",
+        zap.NewNop(),
 	)
 
 	event := events.TradeExecutedEvent{

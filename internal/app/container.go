@@ -47,12 +47,13 @@ type Container struct {
 	// Infrastructure
 	// --------------------------------------------------
 
-	DB            *pgxpool.Pool
-	HTTP          *fiber.App
-	Redis         *redis.Client
-	MarketCache   *redis.MarketCache
-	RedisHealth   *redis.HealthChecker
-	KafkaProducer *kafka.Producer
+	DB                  *pgxpool.Pool
+	HTTP                *fiber.App
+	Redis               *redis.Client
+	MarketCache         *redis.MarketCache
+	RedisHealth         *redis.HealthChecker
+	KafkaProducer       *kafka.Producer
+	KafkaEventPublisher *kafka.EventPublisher
 
 	// --------------------------------------------------
 	// Utilities
@@ -73,12 +74,13 @@ type Container struct {
 	// Repositories
 	// --------------------------------------------------
 
-	UserRepository     repository.UserRepository
-	OrderRepository    repository.OrderRepository
-	TradeRepository    repository.TradeRepository
-	PositionRepository repository.PositionRepository
-	SymbolRepository   repository.SymbolRepository
-	WalletRepository   repository.WalletRepository
+	UserRepository             repository.UserRepository
+	OrderRepository            repository.OrderRepository
+	TradeRepository            repository.TradeRepository
+	PositionRepository         repository.PositionRepository
+	SymbolRepository           repository.SymbolRepository
+	WalletRepository           repository.WalletRepository
+	FailedSettlementRepository repository.FailedSettlementRepository
 	// --------------------------------------------------
 	// Transactions
 	// --------------------------------------------------
@@ -142,8 +144,8 @@ type Container struct {
 	OrderHandler      *handler.OrderHandler
 	MarketDataHandler *handler.MarketDataHandler
 	WalletHandler     *handler.WalletHandler
-    HealthHandler     *handler.HealthHandler
-    AdminHandler      *handler.AdminHandler
+	HealthHandler     *handler.HealthHandler
+	AdminHandler      *handler.AdminHandler
 	PositionHandler   *handler.PositionHandler
 
 	MarketStatsManager *stats.Manager
