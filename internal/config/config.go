@@ -72,11 +72,11 @@ type LoggerConfig struct {
 //
 
 type EngineConfig struct {
-	QueueSize          int  `mapstructure:"queue_size"`
-	WorkerCount        int  `mapstructure:"worker_count"`
-	SnapshotInterval   int  `mapstructure:"snapshot_interval"`
-	PersistenceBuffer  int  `mapstructure:"persistence_buffer"`
-	RecoveryEnabled    bool `mapstructure:"recovery_enabled"`
+	QueueSize         int  `mapstructure:"queue_size"`
+	WorkerCount       int  `mapstructure:"worker_count"`
+	SnapshotInterval  int  `mapstructure:"snapshot_interval"`
+	PersistenceBuffer int  `mapstructure:"persistence_buffer"`
+	RecoveryEnabled   bool `mapstructure:"recovery_enabled"`
 }
 
 //
@@ -126,9 +126,10 @@ type RedisConfig struct {
 //
 
 type KafkaConfig struct {
-	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
-	GroupID string   `mapstructure:"group_id"`
+	Brokers  []string `mapstructure:"brokers"`
+	Topic    string   `mapstructure:"topic"`
+	DLQTopic string   `mapstructure:"dlq_topic"`
+	GroupID  string   `mapstructure:"group_id"`
 }
 
 //

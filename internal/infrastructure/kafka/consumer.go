@@ -12,6 +12,7 @@ type MessageHandler func(ctx context.Context, message kafka.Message) error
 type Consumer struct {
 	reader  *kafka.Reader
 	handler MessageHandler
+	dlq     DLQPublisher
 }
 
 func NewConsumer(
@@ -19,6 +20,7 @@ func NewConsumer(
 	topic string,
 	groupID string,
 	handler MessageHandler,
+	dlq DLQPublisher,
 ) *Consumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: brokers,
@@ -34,6 +36,7 @@ func NewConsumer(
 	return &Consumer{
 		reader:  reader,
 		handler: handler,
+		dlq:     dlq,
 	}
 }
 
@@ -58,18 +61,33 @@ func (c *Consumer) Start(ctx context.Context) error {
 		}
 
 		if err := c.handler(ctx, message); err != nil {
-			// A handler failure means THIS ONE message was bad
-			// (malformed JSON, unknown event type, etc) — not that
-			// Kafka itself is broken. Log it and move on to the next
-			// message instead of taking the whole consumer down.
+			if c.dlq == nil {
+				return fmt.Errorf(
+					"message handling failed and no DLQ configured: %w",
+					err,
+				)
+			}
+
+			if dlqErr := c.dlq.Publish(
+				ctx,
+				message,
+				err,
+			); dlqErr != nil {
+				return fmt.Errorf(
+					"publish failed message to DLQ: %w",
+					dlqErr,
+				)
+			}
+
 			fmt.Println(
-				"KAFKA MESSAGE HANDLING ERROR (skipped):",
+				"KAFKA MESSAGE SENT TO DLQ:",
 				"topic:", message.Topic,
 				"partition:", message.Partition,
 				"offset:", message.Offset,
 				"key:", string(message.Key),
 				"error:", err,
 			)
+
 			continue
 		}
 	}

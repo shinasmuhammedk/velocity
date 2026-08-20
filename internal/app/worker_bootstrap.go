@@ -12,11 +12,12 @@ import (
 )
 
 type WorkerContainer struct {
-	Config     *config.Config
-	Logger     *zap.Logger
-	Consumer   *kafka.Consumer
-	Subscriber *kafka.EventSubscriber
-	Dispatcher *events.Dispatcher
+	Config      *config.Config
+	Logger      *zap.Logger
+	Consumer    *kafka.Consumer
+	Subscriber  *kafka.EventSubscriber
+	Dispatcher  *events.Dispatcher
+	DLQProducer *kafka.Producer
 }
 
 func WorkerBootstrap() (*WorkerContainer, error) {
@@ -49,20 +50,31 @@ func WorkerBootstrap() (*WorkerContainer, error) {
 		dispatcher,
 	)
 
+	dlqProducer := kafka.NewProducer(
+		cfg.Kafka.Brokers,
+		cfg.Kafka.DLQTopic,
+	)
+
+	dlq := kafka.NewKafkaDLQPublisher(
+		dlqProducer,
+	)
+
 	consumer := kafka.NewConsumer(
 		cfg.Kafka.Brokers,
 		cfg.Kafka.Topic,
 		cfg.Kafka.GroupID,
 		subscriber.HandleMessage,
+		dlq,
 	)
 
 	log.Info("kafka consumer initialized")
 
 	return &WorkerContainer{
-		Config:     cfg,
-		Logger:     log,
-		Consumer:   consumer,
-		Subscriber: subscriber,
-		Dispatcher: dispatcher,
+		Config:      cfg,
+		Logger:      log,
+		Consumer:    consumer,
+		Subscriber:  subscriber,
+		Dispatcher:  dispatcher,
+		DLQProducer: dlqProducer,
 	}, nil
 }
