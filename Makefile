@@ -1,4 +1,4 @@
-DB_URL=postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable
+DB_URL=postgres://postgres:1234@localhost:5432/velocity_engine?sslmode=disable
 
 test:
 	go test ./... -v

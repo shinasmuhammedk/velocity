@@ -14,6 +14,7 @@ func Register(
 	marketHandler *handler.MarketDataHandler,
 	walletHandler *handler.WalletHandler,
 	positionHandler *handler.PositionHandler,
+	sellerHandler *handler.SellerHandler,
 	auth fiber.Handler,
 ) {
 	api := app.Group("/api")
@@ -29,4 +30,6 @@ func Register(
 
 	// Public
 	RegisterMarketRoutes(api, marketHandler)
+
+	RegisterSellerRoutes(private, sellerHandler)
 }

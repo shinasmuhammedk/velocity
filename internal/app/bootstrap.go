@@ -70,6 +70,7 @@ func Bootstrap() (*Container, error) {
 	container.PositionRepository = repository.NewPositionRepository(container.DB)
 	container.SymbolRepository = repository.NewSymbolRepository(container.DB)
 	container.WalletRepository = repository.NewWalletRepository(container.DB)
+	container.SellerRepository = repository.NewSellerRepository(container.DB)
 
 	container.Logger.Info("repositories initialized")
 
@@ -360,6 +361,10 @@ func Bootstrap() (*Container, error) {
 		container.PositionService,
 	)
 
+	container.SellerHandler = handler.NewSellerHandler(
+		container.SellerRepository,
+	)
+
 	//router
 	router.Register(
 		container.HTTP,
@@ -368,6 +373,7 @@ func Bootstrap() (*Container, error) {
 		container.MarketDataHandler,
 		container.WalletHandler,
 		container.PositionHandler,
+		container.SellerHandler,
 		container.AuthMiddleware.Authenticate,
 	)
 

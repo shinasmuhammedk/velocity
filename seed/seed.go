@@ -28,5 +28,9 @@ func Run(
 		log.Println("SeedPositions:", err)
 	}
 
+	if err := SeedSellerProducts(ctx, db); err != nil {
+		log.Println("SeedSellerProducts:", err)
+	}
+
 	return nil
 }

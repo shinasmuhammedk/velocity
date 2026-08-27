@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	dsn := "postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable"
+	dsn := "postgres://postgres:1234@localhost:5432/velocity_engine?sslmode=disable"
 
 	m, err := migrate.New(
 		"file://migrations",

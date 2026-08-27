@@ -55,6 +55,14 @@ type PositionRepository interface {
 	WithTx(tx pgx.Tx) PositionRepository
 }
 
+type SellerRepository interface {
+	CreateSellerProduct(ctx context.Context, params generated.CreateSellerProductParams) (generated.SellerProduct, error)
+	ListSellerProducts(ctx context.Context, sellerID int64) ([]generated.SellerProduct, error)
+	GetAllSellerProducts(ctx context.Context) ([]generated.SellerProduct, error)
+	GetSellerStats(ctx context.Context, sellerID int64) (generated.GetSellerStatsRow, error)
+	GetSellerActivity(ctx context.Context, sellerID int64) ([]generated.GetSellerActivityRow, error)
+}
+
 type WalletRepository interface {
 	Create(ctx context.Context, params generated.CreateWalletParams) (generated.Wallet, error)
 	Get(ctx context.Context, userID int64, asset string) (generated.Wallet, error)

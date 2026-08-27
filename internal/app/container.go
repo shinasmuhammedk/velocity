@@ -73,6 +73,7 @@ type Container struct {
 	PositionRepository repository.PositionRepository
 	SymbolRepository   repository.SymbolRepository
 	WalletRepository   repository.WalletRepository
+	SellerRepository   repository.SellerRepository
 	// --------------------------------------------------
 	// Transactions
 	// --------------------------------------------------
@@ -132,11 +133,11 @@ type Container struct {
 	// --------------------------------------------------
 	// HTTP Handlers
 	// --------------------------------------------------
-
 	OrderHandler      *handler.OrderHandler
 	MarketDataHandler *handler.MarketDataHandler
 	WalletHandler     *handler.WalletHandler
 	PositionHandler   *handler.PositionHandler
+	SellerHandler     *handler.SellerHandler
 
 	MarketStatsManager *stats.Manager
 	MarketStatsService *stats.Service
