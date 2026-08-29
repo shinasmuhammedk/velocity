@@ -22,12 +22,13 @@ type TestContext struct {
 
 	TxManager tx.Manager
 
-	UserRepo     repository.UserRepository
-	OrderRepo    repository.OrderRepository
-	TradeRepo    repository.TradeRepository
-	WalletRepo   repository.WalletRepository
-	PositionRepo repository.PositionRepository
-	SymbolRepo   repository.SymbolRepository
+	UserRepo             repository.UserRepository
+	OrderRepo            repository.OrderRepository
+	TradeRepo            repository.TradeRepository
+	WalletRepo           repository.WalletRepository
+	PositionRepo         repository.PositionRepository
+	SymbolRepo           repository.SymbolRepository
+	FailedSettlementRepo repository.FailedSettlementRepository
 
 	UserDispatcher *userstream.Dispatcher
 }
@@ -69,12 +70,13 @@ func NewTestContext(t *testing.T) *TestContext {
 
 		TxManager: tx.NewManager(db),
 
-		UserRepo:       repository.NewUserRepository(db),
-		OrderRepo:      repository.NewOrderRepository(db),
-		TradeRepo:      repository.NewTradeRepository(db),
-		WalletRepo:     repository.NewWalletRepository(db),
-		PositionRepo:   repository.NewPositionRepository(db),
-		SymbolRepo:     repository.NewSymbolRepository(db),
-		UserDispatcher: dispatcher,
+		UserRepo:             repository.NewUserRepository(db),
+		OrderRepo:            repository.NewOrderRepository(db),
+		TradeRepo:            repository.NewTradeRepository(db),
+		WalletRepo:           repository.NewWalletRepository(db),
+		PositionRepo:         repository.NewPositionRepository(db),
+		SymbolRepo:           repository.NewSymbolRepository(db),
+		UserDispatcher:       dispatcher,
+		FailedSettlementRepo: repository.NewFailedSettlementRepository(db),
 	}
 }

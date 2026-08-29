@@ -51,3 +51,10 @@ func (r *failedSettlementRepository) Resolve(
 ) error {
 	return r.queries.ResolveFailedSettlement(ctx, id)
 }
+
+func (r *failedSettlementRepository) MarkDead(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	return r.queries.MarkFailedSettlementDead(ctx, id)
+}

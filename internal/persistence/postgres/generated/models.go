@@ -26,6 +26,7 @@ type FailedSettlement struct {
 	Resolved     bool               `json:"resolved"`
 	CreatedAt    time.Time          `json:"created_at"`
 	ResolvedAt   pgtype.Timestamptz `json:"resolved_at"`
+	IsDead       bool               `json:"is_dead"`
 }
 
 type Order struct {

@@ -73,4 +73,5 @@ type FailedSettlementRepository interface {
 	ListUnresolved(ctx context.Context) ([]generated.FailedSettlement, error)
 	IncrementRetryCount(ctx context.Context, id uuid.UUID) error
 	Resolve(ctx context.Context, id uuid.UUID) error
+	MarkDead(ctx context.Context, id uuid.UUID) error
 }

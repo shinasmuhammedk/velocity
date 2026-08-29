@@ -62,6 +62,7 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListWallets(ctx context.Context, userID int64) ([]Wallet, error)
 	LockWalletFunds(ctx context.Context, arg LockWalletFundsParams) (int64, error)
+	MarkFailedSettlementDead(ctx context.Context, id uuid.UUID) error
 	RecoveryOrders(ctx context.Context) ([]Order, error)
 	RejectOrder(ctx context.Context, id int64) error
 	ResolveFailedSettlement(ctx context.Context, id uuid.UUID) error

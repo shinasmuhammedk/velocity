@@ -28,6 +28,7 @@ RETURNING *;
 SELECT *
 FROM failed_settlements
 WHERE resolved = false
+  AND is_dead = false
 ORDER BY created_at ASC;
 
 
@@ -48,3 +49,10 @@ UPDATE failed_settlements
 SET resolved = true,
     resolved_at = now()
 WHERE id = $1;
+
+
+-- name: MarkFailedSettlementDead :exec
+UPDATE failed_settlements
+SET is_dead = true
+WHERE id = $1
+  AND resolved = false;

@@ -34,7 +34,7 @@ VALUES (
     $8,
     $9
 )
-RETURNING id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at
+RETURNING id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
 `
 
 type CreateFailedSettlementParams struct {
@@ -77,12 +77,13 @@ func (q *Queries) CreateFailedSettlement(ctx context.Context, arg CreateFailedSe
 		&i.Resolved,
 		&i.CreatedAt,
 		&i.ResolvedAt,
+		&i.IsDead,
 	)
 	return i, err
 }
 
 const getFailedSettlement = `-- name: GetFailedSettlement :one
-SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at
+SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
 FROM failed_settlements
 WHERE id = $1
 `
@@ -105,6 +106,7 @@ func (q *Queries) GetFailedSettlement(ctx context.Context, id uuid.UUID) (Failed
 		&i.Resolved,
 		&i.CreatedAt,
 		&i.ResolvedAt,
+		&i.IsDead,
 	)
 	return i, err
 }
@@ -121,9 +123,10 @@ func (q *Queries) IncrementFailedSettlementRetryCount(ctx context.Context, id uu
 }
 
 const listUnresolvedFailedSettlements = `-- name: ListUnresolvedFailedSettlements :many
-SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at
+SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
 FROM failed_settlements
 WHERE resolved = false
+  AND is_dead = false
 ORDER BY created_at ASC
 `
 
@@ -151,6 +154,7 @@ func (q *Queries) ListUnresolvedFailedSettlements(ctx context.Context) ([]Failed
 			&i.Resolved,
 			&i.CreatedAt,
 			&i.ResolvedAt,
+			&i.IsDead,
 		); err != nil {
 			return nil, err
 		}
@@ -160,6 +164,18 @@ func (q *Queries) ListUnresolvedFailedSettlements(ctx context.Context) ([]Failed
 		return nil, err
 	}
 	return items, nil
+}
+
+const markFailedSettlementDead = `-- name: MarkFailedSettlementDead :exec
+UPDATE failed_settlements
+SET is_dead = true
+WHERE id = $1
+  AND resolved = false
+`
+
+func (q *Queries) MarkFailedSettlementDead(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, markFailedSettlementDead, id)
+	return err
 }
 
 const resolveFailedSettlement = `-- name: ResolveFailedSettlement :exec
