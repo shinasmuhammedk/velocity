@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -43,6 +45,9 @@ type Container struct {
 	Config *config.Config
 	Logger *zap.Logger
 
+	ShutdownContext context.Context
+	ShutdownCancel  context.CancelFunc
+
 	// --------------------------------------------------
 	// Infrastructure
 	// --------------------------------------------------
@@ -54,6 +59,7 @@ type Container struct {
 	RedisHealth         *redis.HealthChecker
 	KafkaProducer       *kafka.Producer
 	KafkaEventPublisher *kafka.EventPublisher
+	KafkaHealth         *kafka.HealthChecker
 
 	// --------------------------------------------------
 	// Utilities
@@ -91,8 +97,8 @@ type Container struct {
 	// Workers
 	// --------------------------------------------------
 
-	TradeWorker   worker.TradePersistenceWorker
-	TradeConsumer *worker.TradeConsumer
+	TradeConsumer          *worker.TradeConsumer
+	FailedSettlementWorker *worker.FailedSettlementWorker
 
 	// --------------------------------------------------
 	// Market Data
@@ -148,8 +154,9 @@ type Container struct {
 	AdminHandler      *handler.AdminHandler
 	PositionHandler   *handler.PositionHandler
 
-	MarketStatsManager *stats.Manager
-	MarketStatsService *stats.Service
-	CandleManager      *candles.Manager
-	CandleService      *candles.Service
+	MarketStatsManager    *stats.Manager
+	MarketStatsService    *stats.Service
+	CandleManager         *candles.Manager
+	CandleService         *candles.Service
+	CandleBackfillService *candles.BackfillService
 }

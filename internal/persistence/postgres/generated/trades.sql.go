@@ -75,6 +75,73 @@ func (q *Queries) CreateTrade(ctx context.Context, arg CreateTradeParams) (Trade
 	return i, err
 }
 
+const createTradeIfNotExists = `-- name: CreateTradeIfNotExists :one
+
+INSERT INTO trades (
+    id,
+    buy_order_id,
+    sell_order_id,
+    buyer_id,
+    seller_id,
+    symbol,
+    price,
+    quantity,
+    executed_at
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9
+)
+ON CONFLICT (id) DO NOTHING
+RETURNING id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, executed_at
+`
+
+type CreateTradeIfNotExistsParams struct {
+	ID          int64     `json:"id"`
+	BuyOrderID  int64     `json:"buy_order_id"`
+	SellOrderID int64     `json:"sell_order_id"`
+	BuyerID     int64     `json:"buyer_id"`
+	SellerID    int64     `json:"seller_id"`
+	Symbol      string    `json:"symbol"`
+	Price       int64     `json:"price"`
+	Quantity    int64     `json:"quantity"`
+	ExecutedAt  time.Time `json:"executed_at"`
+}
+
+func (q *Queries) CreateTradeIfNotExists(ctx context.Context, arg CreateTradeIfNotExistsParams) (Trade, error) {
+	row := q.db.QueryRow(ctx, createTradeIfNotExists,
+		arg.ID,
+		arg.BuyOrderID,
+		arg.SellOrderID,
+		arg.BuyerID,
+		arg.SellerID,
+		arg.Symbol,
+		arg.Price,
+		arg.Quantity,
+		arg.ExecutedAt,
+	)
+	var i Trade
+	err := row.Scan(
+		&i.ID,
+		&i.BuyOrderID,
+		&i.SellOrderID,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.Symbol,
+		&i.Price,
+		&i.Quantity,
+		&i.ExecutedAt,
+	)
+	return i, err
+}
+
 const getLastTradePrice = `-- name: GetLastTradePrice :one
 SELECT price
 FROM trades
@@ -417,6 +484,43 @@ ORDER BY executed_at DESC
 
 func (q *Queries) ListTradesBySymbol(ctx context.Context, symbol string) ([]Trade, error) {
 	rows, err := q.db.Query(ctx, listTradesBySymbol, symbol)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Trade{}
+	for rows.Next() {
+		var i Trade
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuyOrderID,
+			&i.SellOrderID,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.Symbol,
+			&i.Price,
+			&i.Quantity,
+			&i.ExecutedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTradesBySymbolAsc = `-- name: ListTradesBySymbolAsc :many
+SELECT id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, executed_at
+FROM trades
+WHERE symbol = $1
+ORDER BY executed_at ASC, id ASC
+`
+
+func (q *Queries) ListTradesBySymbolAsc(ctx context.Context, symbol string) ([]Trade, error) {
+	rows, err := q.db.Query(ctx, listTradesBySymbolAsc, symbol)
 	if err != nil {
 		return nil, err
 	}

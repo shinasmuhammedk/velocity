@@ -60,6 +60,7 @@ kafka:
   brokers:
     - localhost:9092
   topic: velocity-events
+  dlq_topic: velocity-events-dlq
   group_id: velocity-group
 
 tracing:

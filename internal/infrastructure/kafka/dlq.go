@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+
+	"velocity/internal/infrastructure/metrics"
 )
 
 type DLQMessage struct {
@@ -42,7 +44,6 @@ func (p *KafkaDLQPublisher) Publish(
 	message kafka.Message,
 	reason error,
 ) error {
-
 	dlqMessage := DLQMessage{
 		OriginalTopic:     message.Topic,
 		OriginalPartition: message.Partition,
@@ -53,9 +54,16 @@ func (p *KafkaDLQPublisher) Publish(
 		FailedAt:          time.Now().UTC(),
 	}
 
-	return p.producer.Publish(
+	err := p.producer.Publish(
 		ctx,
 		string(message.Key),
 		dlqMessage,
 	)
+	if err != nil {
+		return err
+	}
+
+	metrics.KafkaDLQMessages.Inc()
+
+	return nil
 }

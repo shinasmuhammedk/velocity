@@ -24,6 +24,34 @@ VALUES (
 RETURNING *;
 
 
+-- name: CreateTradeIfNotExists :one
+
+INSERT INTO trades (
+    id,
+    buy_order_id,
+    sell_order_id,
+    buyer_id,
+    seller_id,
+    symbol,
+    price,
+    quantity,
+    executed_at
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9
+)
+ON CONFLICT (id) DO NOTHING
+RETURNING *;
+
+
 -- name: GetTradeByID :one
 SELECT *
 FROM trades
@@ -110,6 +138,12 @@ SELECT *
 FROM trades
 WHERE symbol = $1
 ORDER BY executed_at DESC;
+
+-- name: ListTradesBySymbolAsc :many
+SELECT *
+FROM trades
+WHERE symbol = $1
+ORDER BY executed_at ASC, id ASC;
 
 
 -- name: TradeExists :one

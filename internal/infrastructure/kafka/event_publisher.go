@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"velocity/internal/engine/events"
+	"velocity/internal/infrastructure/metrics"
 )
 
 const (
@@ -86,6 +87,8 @@ func (p *EventPublisher) Handle(event events.Event) {
 		// down. Drop rather than block the matching engine; this
 		// event is lost from the Kafka stream, but matching itself
 		// is never affected.
+		metrics.KafkaEventQueueDropped.Inc()
+
 		p.logger.Warn(
 			"kafka event queue full, dropping event",
 			zap.String("type", envelope.Type),

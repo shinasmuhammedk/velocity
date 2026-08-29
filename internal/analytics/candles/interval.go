@@ -34,5 +34,19 @@ func (i Interval) Duration() time.Duration {
 		return 24 * time.Hour
 	}
 
-	return time.Minute
+	return 0
+}
+
+func (i Interval) IsValid() bool {
+	switch i {
+	case Interval1m,
+		Interval5m,
+		Interval15m,
+		Interval1h,
+		Interval4h,
+		Interval1d:
+		return true
+	default:
+		return false
+	}
 }

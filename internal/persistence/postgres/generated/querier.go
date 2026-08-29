@@ -17,6 +17,7 @@ type Querier interface {
 	CreatePosition(ctx context.Context, arg CreatePositionParams) (Position, error)
 	CreateSymbol(ctx context.Context, arg CreateSymbolParams) (Symbol, error)
 	CreateTrade(ctx context.Context, arg CreateTradeParams) (Trade, error)
+	CreateTradeIfNotExists(ctx context.Context, arg CreateTradeIfNotExistsParams) (Trade, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error)
 	DeletePosition(ctx context.Context, arg DeletePositionParams) error
@@ -55,6 +56,7 @@ type Querier interface {
 	ListPositionsByUser(ctx context.Context, userID int64) ([]Position, error)
 	ListSymbols(ctx context.Context) ([]Symbol, error)
 	ListTradesBySymbol(ctx context.Context, symbol string) ([]Trade, error)
+	ListTradesBySymbolAsc(ctx context.Context, symbol string) ([]Trade, error)
 	ListTradesByUser(ctx context.Context, buyerID int64) ([]Trade, error)
 	ListUnresolvedFailedSettlements(ctx context.Context) ([]FailedSettlement, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,20 +15,190 @@ var errTestMessage = errors.New(
 	"intentional DLQ test failure",
 )
 
+// waitForKafkaTopic waits until Kafka exposes the topic metadata.
+//
+// Creating a topic and being able to immediately produce to it are
+// not necessarily the same moment. Kafka may need some time to
+// propagate the topic metadata. This helper removes that race from
+// the integration test.
+func waitForKafkaTopic(
+	ctx context.Context,
+	brokers []string,
+	topic string,
+) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		conn, err := kafka.Dial("tcp", brokers[0])
+		if err == nil {
+			partitions, partitionErr := conn.ReadPartitions(topic)
+			conn.Close()
+
+			if partitionErr == nil && len(partitions) > 0 {
+				leaderConn, leaderErr := kafka.DialLeader(
+					ctx,
+					"tcp",
+					brokers[0],
+					topic,
+					0,
+				)
+
+				if leaderErr == nil {
+					leaderConn.Close()
+					return nil
+				}
+
+				if leaderConn != nil {
+					leaderConn.Close()
+				}
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf(
+				"timeout waiting for Kafka topic %s leader: %w",
+				topic,
+				ctx.Err(),
+			)
+
+		case <-ticker.C:
+		}
+	}
+}
+
+// waitForKafkaConnection waits until the Kafka broker itself is reachable.
+func waitForKafkaConnection(
+	ctx context.Context,
+	brokers []string,
+) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		conn, err := kafka.Dial("tcp", brokers[0])
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf(
+				"timeout waiting for Kafka broker: %w",
+				ctx.Err(),
+			)
+
+		case <-ticker.C:
+		}
+	}
+}
+
 func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	brokers := []string{"localhost:9092"}
 
-	// Dedicated topics for this integration test.
-	// Do not use the production topics here because they may
-	// already contain old messages.
-	sourceTopic := "velocity-events-dlq-test"
-	dlqTopic := "velocity-events-dlq-test-dlq"
+	// ------------------------------------------------------------
+	// Test context
+	// ------------------------------------------------------------
 
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
-		15*time.Second,
+		30*time.Second,
 	)
 	defer cancel()
+
+	// ------------------------------------------------------------
+	// Kafka broker readiness
+	// ------------------------------------------------------------
+
+	if err := waitForKafkaConnection(ctx, brokers); err != nil {
+		t.Fatalf(
+			"Kafka broker is not ready: %v",
+			err,
+		)
+	}
+
+	// ------------------------------------------------------------
+	// Unique test topics
+	// ------------------------------------------------------------
+
+	testID := time.Now().Format(
+		"20060102150405.000000000",
+	)
+
+	sourceTopic := "velocity-events-dlq-test-" + testID
+	dlqTopic := sourceTopic + "-dlq"
+
+	// ------------------------------------------------------------
+	// Topic provisioning
+	// ------------------------------------------------------------
+
+	testTopics := []string{
+		sourceTopic,
+		dlqTopic,
+	}
+
+	for _, topic := range testTopics {
+		err := EnsureTopics(
+			brokers,
+			TopicConfig{
+				Name:              topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+			},
+		)
+		if err != nil {
+			t.Fatalf(
+				"failed to provision Kafka topic %s: %v",
+				topic,
+				err,
+			)
+		}
+
+		// Ensure Kafka metadata has propagated before continuing.
+		if err := waitForKafkaTopic(
+			ctx,
+			brokers,
+			topic,
+		); err != nil {
+			t.Fatalf(
+				"Kafka topic %s did not become ready: %v",
+				topic,
+				err,
+			)
+		}
+	}
+
+	// ------------------------------------------------------------
+	// Cleanup
+	// ------------------------------------------------------------
+
+	t.Cleanup(func() {
+		conn, err := kafka.Dial(
+			"tcp",
+			brokers[0],
+		)
+		if err != nil {
+			t.Logf(
+				"failed to connect for topic cleanup: %v",
+				err,
+			)
+			return
+		}
+
+		defer conn.Close()
+
+		if err := conn.DeleteTopics(
+			sourceTopic,
+			dlqTopic,
+		); err != nil {
+			t.Logf(
+				"failed to delete test topics: %v",
+				err,
+			)
+		}
+	})
 
 	// ------------------------------------------------------------
 	// DLQ producer
@@ -37,7 +208,15 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		brokers,
 		dlqTopic,
 	)
-	defer dlqProducer.Close()
+
+	t.Cleanup(func() {
+		if err := dlqProducer.Close(); err != nil {
+			t.Logf(
+				"failed to close DLQ producer: %v",
+				err,
+			)
+		}
+	})
 
 	dlqPublisher := NewKafkaDLQPublisher(
 		dlqProducer,
@@ -47,24 +226,33 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	// Consumer
 	// ------------------------------------------------------------
 
+	consumerGroup := "velocity-dlq-test-" + testID
+
 	consumer := NewConsumer(
 		brokers,
 		sourceTopic,
-		"velocity-dlq-test-"+time.Now().Format(
-			"20060102150405.000000000",
-		),
+		consumerGroup,
 		func(
 			ctx context.Context,
 			message kafka.Message,
 		) error {
-			// Deliberately fail the message so that the consumer
-			// sends it to the DLQ.
+			// Deliberately fail every message.
+			//
+			// The Consumer must send this message to the DLQ
+			// instead of silently dropping it.
 			return errTestMessage
 		},
 		dlqPublisher,
 	)
 
-	defer consumer.Close()
+	t.Cleanup(func() {
+		if err := consumer.Close(); err != nil {
+			t.Logf(
+				"failed to close consumer: %v",
+				err,
+			)
+		}
+	})
 
 	consumerDone := make(chan error, 1)
 
@@ -73,10 +261,20 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	}()
 
 	// ------------------------------------------------------------
-	// Give consumer time to connect
+	// Give the consumer a moment to establish its connection.
+	//
+	// This is NOT used for topic readiness. Topic readiness is
+	// handled explicitly above.
 	// ------------------------------------------------------------
 
-	time.Sleep(1 * time.Second)
+	select {
+	case <-time.After(250 * time.Millisecond):
+	case <-ctx.Done():
+		t.Fatalf(
+			"context cancelled while starting consumer: %v",
+			ctx.Err(),
+		)
+	}
 
 	// ------------------------------------------------------------
 	// Source producer
@@ -86,17 +284,31 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		brokers,
 		sourceTopic,
 	)
-	defer sourceProducer.Close()
 
-	testKey := "DLQTEST-" + time.Now().Format(
-		"20060102150405.000000000",
-	)
+	t.Cleanup(func() {
+		if err := sourceProducer.Close(); err != nil {
+			t.Logf(
+				"failed to close source producer: %v",
+				err,
+			)
+		}
+	})
+
+	// ------------------------------------------------------------
+	// Test message
+	// ------------------------------------------------------------
+
+	testKey := "DLQTEST-" + testID
 
 	testValue := map[string]any{
 		"type":    "invalid.dlq.test",
 		"symbol":  "BTCUSDT",
 		"message": "this message should go to the DLQ",
 	}
+
+	// ------------------------------------------------------------
+	// Publish source message
+	// ------------------------------------------------------------
 
 	if err := sourceProducer.Publish(
 		ctx,
@@ -110,22 +322,37 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	}
 
 	// ------------------------------------------------------------
-	// Read DLQ
+	// DLQ reader
 	// ------------------------------------------------------------
 
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: brokers,
-		Topic:   dlqTopic,
+	reader := kafka.NewReader(
+		kafka.ReaderConfig{
+			Brokers: brokers,
+			Topic:   dlqTopic,
 
-		GroupID: "velocity-dlq-reader-" +
-			time.Now().Format(
-				"20060102150405.000000000",
-			),
+			GroupID: "velocity-dlq-reader-" +
+				testID,
 
-		StartOffset: kafka.FirstOffset,
+			StartOffset: kafka.FirstOffset,
+
+			// Small fetch size is enough for this integration test.
+			MinBytes: 1,
+			MaxBytes: 10e6,
+		},
+	)
+
+	t.Cleanup(func() {
+		if err := reader.Close(); err != nil {
+			t.Logf(
+				"failed to close DLQ reader: %v",
+				err,
+			)
+		}
 	})
 
-	defer reader.Close()
+	// ------------------------------------------------------------
+	// Read DLQ message
+	// ------------------------------------------------------------
 
 	var dlqMessage DLQMessage
 
@@ -150,8 +377,7 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 			)
 		}
 
-		// Ignore unrelated messages if the test DLQ already
-		// contains anything from a previous test run.
+		// Ignore anything that does not belong to this test.
 		if candidate.OriginalKey != testKey {
 			continue
 		}
@@ -161,7 +387,7 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	}
 
 	// ------------------------------------------------------------
-	// Verify DLQ metadata
+	// Verify original topic
 	// ------------------------------------------------------------
 
 	if dlqMessage.OriginalTopic != sourceTopic {
@@ -172,6 +398,10 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		)
 	}
 
+	// ------------------------------------------------------------
+	// Verify original partition
+	// ------------------------------------------------------------
+
 	if dlqMessage.OriginalPartition < 0 {
 		t.Fatalf(
 			"expected valid original partition, got %d",
@@ -179,12 +409,20 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		)
 	}
 
+	// ------------------------------------------------------------
+	// Verify original offset
+	// ------------------------------------------------------------
+
 	if dlqMessage.OriginalOffset < 0 {
 		t.Fatalf(
 			"expected valid original offset, got %d",
 			dlqMessage.OriginalOffset,
 		)
 	}
+
+	// ------------------------------------------------------------
+	// Verify original key
+	// ------------------------------------------------------------
 
 	if dlqMessage.OriginalKey != testKey {
 		t.Fatalf(
@@ -194,12 +432,18 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		)
 	}
 
+	// ------------------------------------------------------------
+	// Verify original value exists
+	// ------------------------------------------------------------
+
 	if len(dlqMessage.OriginalValue) == 0 {
-		t.Fatal("expected original message value")
+		t.Fatal(
+			"expected original message value",
+		)
 	}
 
 	// ------------------------------------------------------------
-	// Verify original payload
+	// Decode original value
 	// ------------------------------------------------------------
 
 	var originalValue map[string]any
@@ -214,12 +458,20 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		)
 	}
 
+	// ------------------------------------------------------------
+	// Verify original event type
+	// ------------------------------------------------------------
+
 	if originalValue["type"] != "invalid.dlq.test" {
 		t.Fatalf(
 			"expected original type invalid.dlq.test, got %v",
 			originalValue["type"],
 		)
 	}
+
+	// ------------------------------------------------------------
+	// Verify original symbol
+	// ------------------------------------------------------------
 
 	if originalValue["symbol"] != "BTCUSDT" {
 		t.Fatalf(
@@ -228,7 +480,12 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		)
 	}
 
-	if originalValue["message"] != "this message should go to the DLQ" {
+	// ------------------------------------------------------------
+	// Verify original message
+	// ------------------------------------------------------------
+
+	if originalValue["message"] !=
+		"this message should go to the DLQ" {
 		t.Fatalf(
 			"unexpected original message: %v",
 			originalValue["message"],
@@ -248,15 +505,25 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 	}
 
 	// ------------------------------------------------------------
-	// Verify timestamp
+	// Verify failure timestamp
 	// ------------------------------------------------------------
 
 	if dlqMessage.FailedAt.IsZero() {
-		t.Fatal("expected FailedAt to be set")
+		t.Fatal(
+			"expected FailedAt to be set",
+		)
+	}
+
+	// Make sure the timestamp is sensible.
+	if dlqMessage.FailedAt.After(time.Now().UTC()) {
+		t.Fatalf(
+			"expected FailedAt to be in the past, got %s",
+			dlqMessage.FailedAt,
+		)
 	}
 
 	// ------------------------------------------------------------
-	// Final verification
+	// Success
 	// ------------------------------------------------------------
 
 	t.Logf(
@@ -268,8 +535,10 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		dlqMessage.Error,
 	)
 
-	// The consumer should still be running after successfully
-	// moving the failed message to the DLQ.
+	// ------------------------------------------------------------
+	// Verify consumer remains alive
+	// ------------------------------------------------------------
+
 	select {
 	case err := <-consumerDone:
 		if err != nil {
@@ -278,6 +547,12 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 				err,
 			)
 		}
+
+		t.Fatal(
+			"consumer stopped unexpectedly after DLQ processing",
+		)
+
 	default:
+		// Consumer is still running. This is expected.
 	}
 }

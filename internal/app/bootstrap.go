@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/analytics/stats"
 	"velocity/internal/engine/events"
@@ -54,17 +55,28 @@ func Bootstrap() (*Container, error) {
 		return nil, err
 	}
 
-	container.Redis = redis.New(container.Config.Redis)
-	if err := container.Redis.Ping(context.Background()); err != nil {
-		return nil, err
-	}
-	container.Logger.Info("redis initialized")
+	container.ShutdownContext, container.ShutdownCancel =
+		context.WithCancel(context.Background())
+
+	// container.Redis = redis.New(container.Config.Redis)
+	// if err := container.Redis.Ping(context.Background()); err != nil {
+	// 	return nil, err
+	// }
+	// container.Logger.Info("redis initialized")
 
 	container.KafkaProducer = kafka.NewProducer(
 		container.Config.Kafka.Brokers,
 		container.Config.Kafka.Topic,
 	)
 	container.Logger.Info("kafka producer initialized")
+
+	container.KafkaHealth = kafka.NewHealthChecker(
+		container.Config.Kafka.Brokers,
+		container.Config.Kafka.Topic,
+		container.Config.Kafka.DLQTopic,
+	)
+
+	container.Logger.Info("kafka health checker initialized")
 
 	container.MarketCache = redis.NewMarketCache(container.Redis)
 	container.Logger.Info("market data cache initialized")
@@ -125,15 +137,6 @@ func Bootstrap() (*Container, error) {
 		container.UserPublisher,
 	)
 
-	//workers
-	container.TradeWorker = worker.NewTradePersistenceWorker(
-		container.TxManager,
-		container.OrderRepository,
-		container.TradeRepository,
-		container.PositionRepository,
-	)
-	container.Logger.Info("trade persistence worker initialized")
-
 	// Register services
 	//
 	// Register HTTP handlers
@@ -175,10 +178,10 @@ func Bootstrap() (*Container, error) {
 	kafkaPublisher := kafka.NewEventPublisher(
 		container.KafkaProducer,
 		container.Config.Kafka.Topic,
-        container.Logger,
+		container.Logger,
 	)
-    
-    container.KafkaEventPublisher = kafkaPublisher
+
+	container.KafkaEventPublisher = kafkaPublisher
 
 	container.Registry.Publisher().Subscribe(
 		events.TradeExecutedEventType,
@@ -233,6 +236,12 @@ func Bootstrap() (*Container, error) {
 	container.CandleService = candles.NewService(
 		container.CandleManager,
 	)
+	container.CandleBackfillService = candles.NewBackfillService(
+		container.TradeRepository,
+		container.CandleManager,
+	)
+
+	container.Logger.Info("candle backfill service initialized")
 
 	container.MarketBroadcaster = marketdata.NewBroadcaster(
 		container.MarketPublisher,
@@ -311,6 +320,15 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("database recovery completed")
 
+	if err := container.CandleBackfillService.BackfillSymbols(
+		context.Background(),
+		symbols,
+	); err != nil {
+		return nil, err
+	}
+
+	container.Logger.Info("candle backfill completed")
+
 	container.WalletService = walletservice.New(
 		container.WalletRepository,
 	)
@@ -366,12 +384,26 @@ func Bootstrap() (*Container, error) {
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.SettlementService,
 		container.SymbolRepository,
-        container.FailedSettlementRepository,
+		container.FailedSettlementRepository,
 		container.MarketBroadcaster,
 		provider,
 		container.Logger,
 	)
 	container.Logger.Info("trade consumer initialized")
+
+	container.FailedSettlementWorker = worker.NewFailedSettlementWorker(
+		container.SettlementService,
+		container.FailedSettlementRepository,
+		container.SymbolRepository,
+		container.Logger,
+		5*time.Second,
+	)
+
+	container.FailedSettlementWorker.Start(
+		container.ShutdownContext,
+	)
+
+	container.Logger.Info("failed settlement worker initialized")
 
 	// 4. Inject consumer into registry
 	container.Registry.SetConsumer(
@@ -420,6 +452,7 @@ func Bootstrap() (*Container, error) {
 	container.HealthHandler = handler.NewHealthHandler(
 		container.DB,
 		container.RedisHealth,
+		container.KafkaHealth,
 	)
 	container.AdminHandler = handler.NewAdminHandler(
 		container.MarketService,

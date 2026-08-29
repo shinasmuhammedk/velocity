@@ -36,6 +36,28 @@ func WorkerBootstrap() (*WorkerContainer, error) {
 	log := logger.Logger()
 	log.Info("worker configuration loaded")
 
+	err = kafka.EnsureTopics(
+		cfg.Kafka.Brokers,
+		kafka.TopicConfig{
+			Name:              cfg.Kafka.Topic,
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		},
+		kafka.TopicConfig{
+			Name:              cfg.Kafka.DLQTopic,
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"ensure kafka topics: %w",
+			err,
+		)
+	}
+
+	log.Info("kafka topics verified")
+
 	dispatcher := events.NewDispatcher()
 
 	audit := NewEventAuditSubscriber()

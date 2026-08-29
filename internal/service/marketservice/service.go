@@ -2,6 +2,7 @@ package marketservice
 
 import (
 	"context"
+	"time"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/analytics/stats"
 	"velocity/internal/domain/depth"
@@ -242,15 +243,24 @@ func (s *Service) GetMarketStats(symbol string) (*stats.MarketStats, error) {
 func (s *Service) GetCandles(
 	symbol string,
 	interval candles.Interval,
+	limit int,
+	startTime *time.Time,
+	endTime *time.Time,
 ) ([]*candles.Candle, error) {
 
-	if _, err := s.symbolRepo.GetBySymbol(context.Background(), symbol); err != nil {
+	if _, err := s.symbolRepo.GetBySymbol(
+		context.Background(),
+		symbol,
+	); err != nil {
 		return nil, errors.ErrSymbolNotFound
 	}
 
-	candleList, ok := s.candleService.Get(
+	candleList, ok := s.candleService.Query(
 		symbol,
 		interval,
+		limit,
+		startTime,
+		endTime,
 	)
 
 	if !ok {
@@ -259,7 +269,6 @@ func (s *Service) GetCandles(
 
 	return candleList, nil
 }
-
 
 // -------------------------
 // Admin

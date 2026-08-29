@@ -5,9 +5,14 @@ import (
 	"fmt"
 
 	"github.com/segmentio/kafka-go"
+
+	"velocity/internal/infrastructure/metrics"
 )
 
-type MessageHandler func(ctx context.Context, message kafka.Message) error
+type MessageHandler func(
+	ctx context.Context,
+	message kafka.Message,
+) error
 
 type Consumer struct {
 	reader  *kafka.Reader
@@ -48,13 +53,15 @@ func (c *Consumer) Start(ctx context.Context) error {
 				return nil
 			}
 
-			// A read failure means something is wrong with the
-			// connection to Kafka itself (broker down, network issue,
-			// etc). That's fatal — there's nothing more this consumer
-			// can do, so it stops and lets the caller decide what to do
-			// (e.g. restart the process).
-			return fmt.Errorf("read kafka message: %w", err)
+			metrics.KafkaConsumeFailures.Inc()
+
+			return fmt.Errorf(
+				"read kafka message: %w",
+				err,
+			)
 		}
+
+		metrics.KafkaMessagesConsumed.Inc()
 
 		if c.handler == nil {
 			continue
@@ -62,6 +69,8 @@ func (c *Consumer) Start(ctx context.Context) error {
 
 		if err := c.handler(ctx, message); err != nil {
 			if c.dlq == nil {
+				metrics.KafkaConsumeFailures.Inc()
+
 				return fmt.Errorf(
 					"message handling failed and no DLQ configured: %w",
 					err,
@@ -73,6 +82,8 @@ func (c *Consumer) Start(ctx context.Context) error {
 				message,
 				err,
 			); dlqErr != nil {
+				metrics.KafkaConsumeFailures.Inc()
+
 				return fmt.Errorf(
 					"publish failed message to DLQ: %w",
 					dlqErr,
