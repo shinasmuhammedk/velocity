@@ -1,8 +1,8 @@
 package router
 
 import (
-	"velocity/internal/transport/userws/handler"
 	"velocity/internal/transport/http/middleware"
+	"velocity/internal/transport/userws/handler"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"

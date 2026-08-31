@@ -16,6 +16,7 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	Kafka     KafkaConfig     `mapstructure:"kafka"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 //
@@ -72,11 +73,11 @@ type LoggerConfig struct {
 //
 
 type EngineConfig struct {
-	QueueSize          int  `mapstructure:"queue_size"`
-	WorkerCount        int  `mapstructure:"worker_count"`
-	SnapshotInterval   int  `mapstructure:"snapshot_interval"`
-	PersistenceBuffer  int  `mapstructure:"persistence_buffer"`
-	RecoveryEnabled    bool `mapstructure:"recovery_enabled"`
+	QueueSize         int  `mapstructure:"queue_size"`
+	WorkerCount       int  `mapstructure:"worker_count"`
+	SnapshotInterval  int  `mapstructure:"snapshot_interval"`
+	PersistenceBuffer int  `mapstructure:"persistence_buffer"`
+	RecoveryEnabled   bool `mapstructure:"recovery_enabled"`
 }
 
 //
@@ -126,9 +127,10 @@ type RedisConfig struct {
 //
 
 type KafkaConfig struct {
-	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
-	GroupID string   `mapstructure:"group_id"`
+	Brokers  []string `mapstructure:"brokers"`
+	Topic    string   `mapstructure:"topic"`
+	DLQTopic string   `mapstructure:"dlq_topic"`
+	GroupID  string   `mapstructure:"group_id"`
 }
 
 //
@@ -139,4 +141,17 @@ type TracingConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
 	Exporter string `mapstructure:"exporter"`
 	Endpoint string `mapstructure:"endpoint"`
+}
+
+type RateLimitConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+
+	SubmitRate  float64 `mapstructure:"submit_rate"`
+	SubmitBurst int     `mapstructure:"submit_burst"`
+
+	CancelRate  float64 `mapstructure:"cancel_rate"`
+	CancelBurst int     `mapstructure:"cancel_burst"`
+
+	ModifyRate  float64 `mapstructure:"modify_rate"`
+	ModifyBurst int     `mapstructure:"modify_burst"`
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -167,9 +168,23 @@ func (h *MarketDataHandler) GetCandles(
 	c *fiber.Ctx,
 ) error {
 
+	const (
+		defaultLimit = 500
+		maxLimit     = 1000
+	)
+
 	symbol := c.Params("symbol")
 
+	if symbol == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "symbol is required",
+			},
+		)
+	}
+
 	intervalStr := c.Query("interval")
+
 	if intervalStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(
 			fiber.Map{
@@ -180,10 +195,93 @@ func (h *MarketDataHandler) GetCandles(
 
 	interval := candles.Interval(intervalStr)
 
+	if !interval.IsValid() {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error":               "invalid interval",
+				"supported_intervals": candles.SupportedIntervals,
+			},
+		)
+	}
+
+	limit := c.QueryInt("limit", defaultLimit)
+
+	if limit <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "limit must be greater than 0",
+			},
+		)
+	}
+
+	if limit > maxLimit {
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "limit must not exceed 1000",
+			},
+		)
+	}
+
+	var startTime *time.Time
+	var endTime *time.Time
+
+	startTimeStr := c.Query("startTime")
+
+	if startTimeStr != "" {
+		parsed, err := time.Parse(
+			time.RFC3339,
+			startTimeStr,
+		)
+
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(
+				fiber.Map{
+					"error": "invalid startTime; expected RFC3339 timestamp",
+				},
+			)
+		}
+
+		startTime = &parsed
+	}
+
+	endTimeStr := c.Query("endTime")
+
+	if endTimeStr != "" {
+		parsed, err := time.Parse(
+			time.RFC3339,
+			endTimeStr,
+		)
+
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(
+				fiber.Map{
+					"error": "invalid endTime; expected RFC3339 timestamp",
+				},
+			)
+		}
+
+		endTime = &parsed
+	}
+
+	if startTime != nil &&
+		endTime != nil &&
+		startTime.After(*endTime) {
+
+		return c.Status(fiber.StatusBadRequest).JSON(
+			fiber.Map{
+				"error": "startTime must not be after endTime",
+			},
+		)
+	}
+
 	candleData, err := h.marketService.GetCandles(
 		symbol,
 		interval,
+		limit,
+		startTime,
+		endTime,
 	)
+
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(
 			fiber.Map{

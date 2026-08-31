@@ -6,8 +6,8 @@ type TradeMessage struct {
 	TradeID  string `json:"trade_id"`
 	Price    int64  `json:"price"`
 	Quantity int64  `json:"quantity"`
-	BuyerID  int64 `json:"buyer_id"`
-	SellerID int64 `json:"seller_id"`
+	BuyerID  int64  `json:"buyer_id"`
+	SellerID int64  `json:"seller_id"`
 }
 
 type TickerMessage struct {

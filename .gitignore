@@ -20,16 +20,17 @@ bin/
 # Environment
 .env
 
-# Generated
-internal/persistence/postgres/generated/
-
 # Profiling outputs
 cpu*.out
 mem*.out
+*.prof
 escape.txt
 
 # WAL runtime files
 wal/*.wal
+
+# Engine snapshots
+snapshots/
 
 # OS
 .DS_Store

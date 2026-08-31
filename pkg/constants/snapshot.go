@@ -1,5 +1,5 @@
 package constants
 
 const (
-    SnapshotFolder = "./snapshots"
+	SnapshotFolder = "./snapshots"
 )

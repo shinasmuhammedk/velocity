@@ -11,12 +11,10 @@ var ErrSnapshotNotFound = errors.New(
 	"snapshot not found",
 )
 
-
 type Loader struct {
 	directory  string
 	serializer Serializer
 }
-
 
 func NewLoader(
 	directory string,
@@ -24,28 +22,24 @@ func NewLoader(
 ) *Loader {
 
 	return &Loader{
-		directory: directory,
+		directory:  directory,
 		serializer: serializer,
 	}
 }
 
-
 func (l *Loader) Load(
 	symbol string,
 ) (*Snapshot, error) {
-
 
 	filename := fmt.Sprintf(
 		"%s.snapshot",
 		symbol,
 	)
 
-
 	path := filepath.Join(
 		l.directory,
 		filename,
 	)
-
 
 	data, err := os.ReadFile(path)
 
@@ -57,7 +51,6 @@ func (l *Loader) Load(
 
 		return nil, err
 	}
-
 
 	return l.serializer.Deserialize(data)
 }

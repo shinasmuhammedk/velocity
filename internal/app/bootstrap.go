@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/analytics/stats"
 	"velocity/internal/engine/events"
@@ -31,7 +32,7 @@ import (
 	wsHandler "velocity/internal/transport/ws/handler"
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
-    "velocity/pkg/constants"
+	"velocity/pkg/constants"
 	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
@@ -54,10 +55,19 @@ func Bootstrap() (*Container, error) {
 		return nil, err
 	}
 
+	container.ShutdownContext, container.ShutdownCancel =
+		context.WithCancel(context.Background())
+
+	// --------------------------------------------------
+	// Redis
+	// --------------------------------------------------
+
 	container.Redis = redis.New(container.Config.Redis)
+
 	if err := container.Redis.Ping(context.Background()); err != nil {
 		return nil, err
 	}
+
 	container.Logger.Info("redis initialized")
 
 	container.KafkaProducer = kafka.NewProducer(
@@ -66,10 +76,25 @@ func Bootstrap() (*Container, error) {
 	)
 	container.Logger.Info("kafka producer initialized")
 
+	container.KafkaHealth = kafka.NewHealthChecker(
+		container.Config.Kafka.Brokers,
+		container.Config.Kafka.Topic,
+		container.Config.Kafka.DLQTopic,
+	)
+
+	container.Logger.Info("kafka health checker initialized")
+
 	container.MarketCache = redis.NewMarketCache(container.Redis)
 	container.Logger.Info("market data cache initialized")
 
 	container.RedisHealth = redis.NewHealthChecker(container.Redis)
+	container.Logger.Info("redis health checker initialized")
+
+	container.RateLimiter = redis.NewRateLimiter(
+		container.Redis,
+	)
+
+	container.Logger.Info("redis rate limiter initialized")
 
 	container.IDGenerator = snowflake.New(1)
 	container.Logger.Info("snowflake id generator initialized")
@@ -83,7 +108,13 @@ func Bootstrap() (*Container, error) {
 
 	container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
 
+	container.RateLimitMiddleware = httpmiddleware.NewRateLimitMiddleware(
+		container.RateLimiter,
+		container.Config.RateLimit,
+	)
+
 	container.Logger.Info("identity grpc client initialized")
+	container.Logger.Info("rate limit middleware initialized")
 
 	// Register repositories
 	container.UserRepository = repository.NewUserRepository(container.DB)
@@ -92,6 +123,7 @@ func Bootstrap() (*Container, error) {
 	container.PositionRepository = repository.NewPositionRepository(container.DB)
 	container.SymbolRepository = repository.NewSymbolRepository(container.DB)
 	container.WalletRepository = repository.NewWalletRepository(container.DB)
+	container.FailedSettlementRepository = repository.NewFailedSettlementRepository(container.DB)
 
 	container.Logger.Info("repositories initialized")
 
@@ -123,15 +155,6 @@ func Bootstrap() (*Container, error) {
 	container.UserDispatcher = userstream.NewDispatcher(
 		container.UserPublisher,
 	)
-
-	//workers
-	container.TradeWorker = worker.NewTradePersistenceWorker(
-		container.TxManager,
-		container.OrderRepository,
-		container.TradeRepository,
-		container.PositionRepository,
-	)
-	container.Logger.Info("trade persistence worker initialized")
 
 	// Register services
 	//
@@ -174,7 +197,10 @@ func Bootstrap() (*Container, error) {
 	kafkaPublisher := kafka.NewEventPublisher(
 		container.KafkaProducer,
 		container.Config.Kafka.Topic,
+		container.Logger,
 	)
+
+	container.KafkaEventPublisher = kafkaPublisher
 
 	container.Registry.Publisher().Subscribe(
 		events.TradeExecutedEventType,
@@ -229,6 +255,12 @@ func Bootstrap() (*Container, error) {
 	container.CandleService = candles.NewService(
 		container.CandleManager,
 	)
+	container.CandleBackfillService = candles.NewBackfillService(
+		container.TradeRepository,
+		container.CandleManager,
+	)
+
+	container.Logger.Info("candle backfill service initialized")
 
 	container.MarketBroadcaster = marketdata.NewBroadcaster(
 		container.MarketPublisher,
@@ -307,6 +339,15 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("database recovery completed")
 
+	if err := container.CandleBackfillService.BackfillSymbols(
+		context.Background(),
+		symbols,
+	); err != nil {
+		return nil, err
+	}
+
+	container.Logger.Info("candle backfill completed")
+
 	container.WalletService = walletservice.New(
 		container.WalletRepository,
 	)
@@ -362,10 +403,26 @@ func Bootstrap() (*Container, error) {
 	container.TradeConsumer = worker.NewTradeConsumer(
 		container.SettlementService,
 		container.SymbolRepository,
+		container.FailedSettlementRepository,
 		container.MarketBroadcaster,
 		provider,
+		container.Logger,
 	)
 	container.Logger.Info("trade consumer initialized")
+
+	container.FailedSettlementWorker = worker.NewFailedSettlementWorker(
+		container.SettlementService,
+		container.FailedSettlementRepository,
+		container.SymbolRepository,
+		container.Logger,
+		5*time.Second,
+	)
+
+	container.FailedSettlementWorker.Start(
+		container.ShutdownContext,
+	)
+
+	container.Logger.Info("failed settlement worker initialized")
 
 	// 4. Inject consumer into registry
 	container.Registry.SetConsumer(
@@ -414,8 +471,9 @@ func Bootstrap() (*Container, error) {
 	container.HealthHandler = handler.NewHealthHandler(
 		container.DB,
 		container.RedisHealth,
+		container.KafkaHealth,
 	)
-    container.AdminHandler = handler.NewAdminHandler(
+	container.AdminHandler = handler.NewAdminHandler(
 		container.MarketService,
 	)
 
@@ -428,9 +486,10 @@ func Bootstrap() (*Container, error) {
 		container.WalletHandler,
 		container.PositionHandler,
 		container.HealthHandler,
-        container.AdminHandler,
+		container.AdminHandler,
 		container.AuthMiddleware.Authenticate,
-        httpmiddleware.RequireRole(constants.RoleAdmin),
+		httpmiddleware.RequireRole(constants.RoleAdmin),
+		container.RateLimitMiddleware,
 	)
 
 	container.HTTP.Get(

@@ -6,7 +6,6 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/pkg/errors"
-
 )
 
 type Service struct {
@@ -195,7 +194,6 @@ func (s *Service) ConsumeLockedFunds(
 		},
 	)
 }
-
 
 func (s *Service) GetWalletByAsset(
 	ctx context.Context,

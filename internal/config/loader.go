@@ -20,7 +20,7 @@ func Load() (*Config, error) {
 	v.AddConfigPath("../../configs")
 
 	// Configuration file
-    env := CurrentEnvironment()
+	env := CurrentEnvironment()
 	v.SetConfigName(env.ConfigFile())
 	v.SetConfigType("yaml")
 
@@ -48,7 +48,6 @@ func Load() (*Config, error) {
 
 	return cfg, nil
 }
-
 
 func LoadFromPath(path string) (*Config, error) {
 	v := viper.New()

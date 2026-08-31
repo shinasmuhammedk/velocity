@@ -46,7 +46,7 @@ func (r *SnapshotRecovery) Restore(symbol string) (bool, error) {
 
 	// Restore the snapshot first.
 	engine.RestoreSnapshot(snap)
-    // engine.SetSequence(snap.Sequence)
+	// engine.SetSequence(snap.Sequence)
 
 	// Open the WAL for this symbol.
 	reader, err := r.walManager.Reader(symbol)

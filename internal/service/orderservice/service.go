@@ -222,7 +222,6 @@ func (s *Service) Submit(
 	return o, nil
 }
 
-
 func (s *Service) Cancel(
 	ctx context.Context,
 	orderID int64,

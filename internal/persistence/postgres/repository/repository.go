@@ -33,8 +33,10 @@ type OrderRepository interface {
 
 type TradeRepository interface {
 	Create(ctx context.Context, params generated.CreateTradeParams) (generated.Trade, error)
+	CreateIfNotExists(ctx context.Context, params generated.CreateTradeIfNotExistsParams) (generated.Trade, error)
 	ListByUser(ctx context.Context, userID int64) ([]generated.Trade, error)
 	ListBySymbol(ctx context.Context, symbol string) ([]generated.Trade, error)
+	ListBySymbolAsc(ctx context.Context, symbol string) ([]generated.Trade, error)
 	GetByID(ctx context.Context, id int64) (generated.Trade, error)
 	WithTx(tx pgx.Tx) TradeRepository
 	TradeExists(ctx context.Context, id int64) (bool, error)
@@ -45,7 +47,7 @@ type SymbolRepository interface {
 	Get(ctx context.Context, symbol string) (generated.Symbol, error)
 	List(ctx context.Context) ([]generated.Symbol, error)
 	ListActive(ctx context.Context) ([]generated.Symbol, error)
-    GetBySymbol(ctx context.Context, symbol string) (generated.Symbol, error)
+	GetBySymbol(ctx context.Context, symbol string) (generated.Symbol, error)
 	UpdateStatus(ctx context.Context, params generated.UpdateSymbolStatusParams) error
 }
 
@@ -63,4 +65,13 @@ type WalletRepository interface {
 	LockFunds(ctx context.Context, walletID uuid.UUID, amount int64) error
 	List(ctx context.Context, userID int64) ([]generated.Wallet, error)
 	WithTx(tx pgx.Tx) WalletRepository
+}
+
+type FailedSettlementRepository interface {
+	Create(ctx context.Context, params generated.CreateFailedSettlementParams) (generated.FailedSettlement, error)
+	Get(ctx context.Context, id uuid.UUID) (generated.FailedSettlement, error)
+	ListUnresolved(ctx context.Context) ([]generated.FailedSettlement, error)
+	IncrementRetryCount(ctx context.Context, id uuid.UUID) error
+	Resolve(ctx context.Context, id uuid.UUID) error
+	MarkDead(ctx context.Context, id uuid.UUID) error
 }

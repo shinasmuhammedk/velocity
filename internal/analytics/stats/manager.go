@@ -18,7 +18,6 @@ func NewManager() *Manager {
 func (m *Manager) Get(symbol string) (*MarketStats, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-    
 
 	s, ok := m.stats[symbol]
 	return s, ok

@@ -22,10 +22,10 @@ func (v *QuantityValidator) Validate(
 	if qty <= 0 {
 		return errors.ErrInvalidQuantity
 	}
-    
-    if qty > MaxOrderQuantity {
+
+	if qty > MaxOrderQuantity {
 		return errors.ErrQuantityTooLarge
 	}
-    
-    return nil
+
+	return nil
 }

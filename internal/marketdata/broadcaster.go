@@ -40,14 +40,14 @@ func (d *Broadcaster) DispatchTrade(
 		trade.Price,
 		book,
 	)
-    fmt.Println("Ticker published")
+	fmt.Println("Ticker published")
 
 	// Publish updated orderbook
 	d.publisher.PublishDepth(
 		trade.Symbol,
 		book,
 	)
-    fmt.Println("Depth published")
+	fmt.Println("Depth published")
 
 	if candle, ok := d.candleService.Latest(
 		trade.Symbol,
@@ -58,6 +58,6 @@ func (d *Broadcaster) DispatchTrade(
 			trade.Symbol,
 			candle,
 		)
-        fmt.Println("Kline published")
+		fmt.Println("Kline published")
 	}
 }

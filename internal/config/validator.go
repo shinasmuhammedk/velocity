@@ -36,6 +36,10 @@ func Validate(cfg *Config) error {
 		return err
 	}
 
+	if err := validateKafka(cfg.Kafka); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -157,6 +161,40 @@ func validateJWT(cfg JWTConfig) error {
 
 	if strings.TrimSpace(cfg.Issuer) == "" {
 		return errors.NewConfigMissing("jwt.issuer is required")
+	}
+
+	return nil
+}
+
+// ----------------------------------------------------
+// Kafka
+// ----------------------------------------------------
+
+func validateKafka(cfg KafkaConfig) error {
+	if len(cfg.Brokers) == 0 {
+		return errors.NewConfigMissing("kafka.brokers is required")
+	}
+
+	for _, broker := range cfg.Brokers {
+		if strings.TrimSpace(broker) == "" {
+			return errors.NewConfigMissing("kafka.brokers must not contain empty entries")
+		}
+	}
+
+	if strings.TrimSpace(cfg.Topic) == "" {
+		return errors.NewConfigMissing("kafka.topic is required")
+	}
+
+	if strings.TrimSpace(cfg.DLQTopic) == "" {
+		return errors.NewConfigMissing("kafka.dlq_topic is required")
+	}
+
+	if cfg.Topic == cfg.DLQTopic {
+		return errors.NewConfigMissing("kafka.topic and kafka.dlq_topic must be different")
+	}
+
+	if strings.TrimSpace(cfg.GroupID) == "" {
+		return errors.NewConfigMissing("kafka.group_id is required")
 	}
 
 	return nil

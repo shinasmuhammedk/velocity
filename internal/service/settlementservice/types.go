@@ -1,6 +1,5 @@
 package settlementservice
 
-
 type SettlementRequest struct {
 	TradeID int64
 

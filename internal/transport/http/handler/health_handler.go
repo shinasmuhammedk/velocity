@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"velocity/internal/infrastructure/kafka"
 	"velocity/internal/infrastructure/redis"
 	"velocity/pkg/response"
 )
@@ -14,25 +15,24 @@ import (
 type HealthHandler struct {
 	db          *pgxpool.Pool
 	redisHealth *redis.HealthChecker
+	kafkaHealth *kafka.HealthChecker
 }
 
 func NewHealthHandler(
 	db *pgxpool.Pool,
 	redisHealth *redis.HealthChecker,
+	kafkaHealth *kafka.HealthChecker,
 ) *HealthHandler {
-
 	return &HealthHandler{
 		db:          db,
 		redisHealth: redisHealth,
+		kafkaHealth: kafkaHealth,
 	}
 }
 
-// Live reports whether the process itself is up.
+// Live reports whether the process itself is running.
 //
-// It intentionally does not check any dependency (DB, Redis, Kafka).
-// This is what an orchestrator should call to decide whether to
-// restart the container - a dependency being down should not cause
-// a healthy process to be killed.
+// It intentionally does not check dependencies.
 func (h *HealthHandler) Live(c *fiber.Ctx) error {
 	return response.Success(
 		c,
@@ -46,19 +46,23 @@ func (h *HealthHandler) Live(c *fiber.Ctx) error {
 
 // Ready reports whether the process can currently serve traffic.
 //
-// Unlike Live, this checks downstream dependencies. It's meant for
-// load balancers / k8s readiness probes deciding whether to route
-// traffic to this instance.
+// Readiness checks all critical downstream dependencies:
+// PostgreSQL, Redis, and Kafka.
+//
+// Kafka readiness additionally verifies that the required
+// Velocity topics exist and contain partitions.
 func (h *HealthHandler) Ready(c *fiber.Ctx) error {
-
-	ctx, cancel := context.WithTimeout(c.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(
+		c.Context(),
+		2*time.Second,
+	)
 	defer cancel()
 
 	checks := fiber.Map{}
 	allHealthy := true
 
 	// -------------------------
-	// Postgres
+	// PostgreSQL
 	// -------------------------
 
 	if err := h.db.Ping(ctx); err != nil {
@@ -66,6 +70,7 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 			"status": "down",
 			"error":  err.Error(),
 		}
+
 		allHealthy = false
 	} else {
 		checks["database"] = fiber.Map{
@@ -82,6 +87,7 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 			"status": "down",
 			"error":  err.Error(),
 		}
+
 		allHealthy = false
 	} else {
 		checks["redis"] = fiber.Map{
@@ -92,14 +98,18 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 	// -------------------------
 	// Kafka
 	// -------------------------
-	//
-	// Not checked yet: Producer has no ping/dial-check method today.
-	// Marked "unknown" rather than silently omitted, so this endpoint
-	// doesn't imply a guarantee it isn't making.
 
-	checks["kafka"] = fiber.Map{
-		"status": "unknown",
-		"note":   "no connectivity check implemented",
+	if err := h.kafkaHealth.Readiness(ctx); err != nil {
+		checks["kafka"] = fiber.Map{
+			"status": "down",
+			"error":  err.Error(),
+		}
+
+		allHealthy = false
+	} else {
+		checks["kafka"] = fiber.Map{
+			"status": "up",
+		}
 	}
 
 	if !allHealthy {

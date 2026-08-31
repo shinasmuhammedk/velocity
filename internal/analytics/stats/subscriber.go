@@ -18,7 +18,7 @@ func NewSubscriber(
 }
 
 func (s *Subscriber) Handle(event events.Event) {
-        fmt.Println(">>> CANDLE SUBSCRIBER ENTERED")
+	fmt.Println(">>> CANDLE SUBSCRIBER ENTERED")
 
 	tradeEvent, ok := event.(events.TradeExecutedEvent)
 	if !ok {

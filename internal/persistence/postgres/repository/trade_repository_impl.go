@@ -25,6 +25,13 @@ func (r *tradeRepository) Create(
 	return r.queries.CreateTrade(ctx, params)
 }
 
+func (r *tradeRepository) CreateIfNotExists(
+	ctx context.Context,
+	params generated.CreateTradeIfNotExistsParams,
+) (generated.Trade, error) {
+	return r.queries.CreateTradeIfNotExists(ctx, params)
+}
+
 func (r *tradeRepository) GetByID(
 	ctx context.Context,
 	id int64,
@@ -46,6 +53,16 @@ func (r *tradeRepository) ListBySymbol(
 	return r.queries.ListTradesBySymbol(ctx, symbol)
 }
 
+func (r *tradeRepository) ListBySymbolAsc(
+	ctx context.Context,
+	symbol string,
+) ([]generated.Trade, error) {
+	return r.queries.ListTradesBySymbolAsc(
+		ctx,
+		symbol,
+	)
+}
+
 func (r *tradeRepository) WithTx(tx pgx.Tx) TradeRepository {
 	return &tradeRepository{
 		queries: generated.New(tx),
@@ -53,8 +70,8 @@ func (r *tradeRepository) WithTx(tx pgx.Tx) TradeRepository {
 }
 
 func (r *tradeRepository) TradeExists(
-    ctx context.Context,
-    id int64,
+	ctx context.Context,
+	id int64,
 ) (bool, error) {
-    return r.queries.TradeExists(ctx, id)
+	return r.queries.TradeExists(ctx, id)
 }

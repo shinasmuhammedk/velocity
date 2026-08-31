@@ -14,7 +14,6 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-
 // New creates a new business error.
 func New(code Code, message string) *Error {
 	return &Error{
@@ -33,10 +32,10 @@ func Wrap(code Code, message string, err error) *Error {
 }
 
 func NewConfigMissing(field string) *Error {
-    return &Error{
-        Code:    CodeConfigMissing,
-        Message: field + " is required",
-    }
+	return &Error{
+		Code:    CodeConfigMissing,
+		Message: field + " is required",
+	}
 }
 
 func NewConfigInvalid(field string, reason string) *Error {

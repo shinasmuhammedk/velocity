@@ -20,11 +20,11 @@ func TestCreateAndGetUser(t *testing.T) {
 	user, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           userID,
-			Email:        email,
+			ID:    userID,
+			Email: email,
 			// PasswordHash: "hashed-password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 

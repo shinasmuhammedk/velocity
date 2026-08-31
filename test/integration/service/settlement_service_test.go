@@ -7,6 +7,7 @@ import (
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/service/settlementservice"
 	"velocity/pkg/constants"
+	testhelpers "velocity/test/helpers"
 	"velocity/test/integration"
 
 	"github.com/google/uuid"
@@ -40,12 +41,11 @@ func TestSettlement_Success(t *testing.T) {
 
 	// Base for generating unique int64 IDs across repeated test runs
 	// against a real database (uuid.New() previously served this role).
-	base := time.Now().UnixNano()
-	buyerID := base
-	sellerID := base + 1
-	buyOrderID := base + 2
-	sellOrderID := base + 3
-	tradeID := base + 4
+	buyerID := testhelpers.NextID()
+	sellerID := testhelpers.NextID()
+	buyOrderID := testhelpers.NextID()
+	sellOrderID := testhelpers.NextID()
+	tradeID := testhelpers.NextID()
 
 	// ------------------------------------------------------------------
 	// Buyer
@@ -54,11 +54,11 @@ func TestSettlement_Success(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           buyerID,
-			Email:        uuid.NewString() + "@buyer.com",
+			ID:    buyerID,
+			Email: uuid.NewString() + "@buyer.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -70,11 +70,11 @@ func TestSettlement_Success(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           sellerID,
-			Email:        uuid.NewString() + "@seller.com",
+			ID:    sellerID,
+			Email: uuid.NewString() + "@seller.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)

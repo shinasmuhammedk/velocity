@@ -1,4 +1,3 @@
-
 package kafka
 
 import (
@@ -6,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 
 	"velocity/internal/engine/events"
 
@@ -23,6 +24,7 @@ func TestEventPublisher(t *testing.T) {
 	publisher := NewEventPublisher(
 		producer,
 		"velocity-events-test",
+		zap.NewNop(),
 	)
 
 	event := events.TradeExecutedEvent{

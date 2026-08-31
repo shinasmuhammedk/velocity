@@ -49,11 +49,11 @@ func TestCreateAndGetTrade(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           buyerID,
-			Email:        uuid.New().String() + "@test.com",
+			ID:    buyerID,
+			Email: uuid.New().String() + "@test.com",
 			// PasswordHash: "hash",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -65,11 +65,11 @@ func TestCreateAndGetTrade(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           sellerID,
-			Email:        uuid.New().String() + "@test.com",
+			ID:    sellerID,
+			Email: uuid.New().String() + "@test.com",
 			// PasswordHash: "hash",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)

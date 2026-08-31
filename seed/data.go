@@ -75,7 +75,6 @@ var Wallets = []WalletSeed{
 		Locked:    0,
 	},
 
-
 	// ---------- test2 ----------
 	{
 		UserID:    2,
@@ -89,7 +88,6 @@ var Wallets = []WalletSeed{
 		Available: 100000000,
 		Locked:    0,
 	},
-
 
 	// ---------- market maker ----------
 	{
@@ -105,7 +103,6 @@ var Wallets = []WalletSeed{
 		Locked:    0,
 	},
 }
-
 
 var Positions = []PositionSeed{
 

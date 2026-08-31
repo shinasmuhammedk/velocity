@@ -3,7 +3,6 @@ package order
 import (
 	"time"
 	"velocity/pkg/constants"
-
 )
 
 type Order struct {

@@ -4,8 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/segmentio/kafka-go"
+
+	"velocity/internal/infrastructure/metrics"
+)
+
+const (
+	producerMaxAttempts = 10
+	producerRetryDelay  = 500 * time.Millisecond
 )
 
 type Producer struct {
@@ -32,24 +40,60 @@ func (p *Producer) Publish(
 	key string,
 	value any,
 ) error {
-
 	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("marshal kafka message: %w", err)
+		metrics.KafkaProduceFailures.Inc()
+
+		return fmt.Errorf(
+			"marshal kafka message: %w",
+			err,
+		)
 	}
 
-	err = p.writer.WriteMessages(
-		ctx,
-		kafka.Message{
-			Key:   []byte(key),
-			Value: data,
-		},
+	var lastErr error
+
+	for attempt := 1; attempt <= producerMaxAttempts; attempt++ {
+		err = p.writer.WriteMessages(
+			ctx,
+			kafka.Message{
+				Key:   []byte(key),
+				Value: data,
+			},
+		)
+
+		if err == nil {
+			metrics.KafkaMessagesProduced.Inc()
+
+			return nil
+		}
+
+		lastErr = err
+
+		// Count every retry after the initial failed attempt.
+		if attempt < producerMaxAttempts {
+			metrics.KafkaProducerRetries.Inc()
+		}
+
+		select {
+		case <-ctx.Done():
+			metrics.KafkaProduceFailures.Inc()
+
+			return fmt.Errorf(
+				"publish kafka message: %w",
+				ctx.Err(),
+			)
+
+		case <-time.After(producerRetryDelay):
+		}
+	}
+
+	metrics.KafkaProduceFailures.Inc()
+
+	return fmt.Errorf(
+		"publish kafka message after %d attempts: %w",
+		producerMaxAttempts,
+		lastErr,
 	)
-	if err != nil {
-		return fmt.Errorf("publish kafka message: %w", err)
-	}
-
-	return nil
 }
 
 func (p *Producer) Close() error {

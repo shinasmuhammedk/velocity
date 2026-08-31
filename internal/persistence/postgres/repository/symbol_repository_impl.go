@@ -42,8 +42,6 @@ func (r *symbolRepository) ListActive(
 	return r.queries.ListActiveSymbols(ctx)
 }
 
-
-
 func (r *symbolRepository) GetBySymbol(
 	ctx context.Context,
 	symbol string,

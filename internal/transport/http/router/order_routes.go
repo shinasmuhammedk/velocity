@@ -2,6 +2,7 @@ package router
 
 import (
 	"velocity/internal/transport/http/handler"
+	"velocity/internal/transport/http/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -9,15 +10,16 @@ import (
 func RegisterOrderRoutes(
 	api fiber.Router,
 	orderHandler *handler.OrderHandler,
+	rateLimit *middleware.RateLimitMiddleware,
 ) {
 	orders := api.Group("/orders")
 
-	orders.Post("/", orderHandler.Submit)
+	orders.Post("", rateLimit.Submit, orderHandler.Submit)
 
 	orders.Get("/open", orderHandler.GetOpenOrders)
 	orders.Get("/history", orderHandler.OrderHistory)
 
 	orders.Get("/:id", orderHandler.GetByID)
-	orders.Delete("/:id", orderHandler.Cancel)
-	orders.Patch("/:id", orderHandler.Modify)
+	orders.Delete("/:id", rateLimit.Cancel, orderHandler.Cancel)
+	orders.Patch("/:id", rateLimit.Modify, orderHandler.Modify)
 }

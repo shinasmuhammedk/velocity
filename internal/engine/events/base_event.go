@@ -6,13 +6,12 @@ type BaseEvent struct {
 	Time time.Time
 }
 
-func NewBaseEvent() BaseEvent{
-    return BaseEvent{
-        Time: time.Now(),
-    }
+func NewBaseEvent() BaseEvent {
+	return BaseEvent{
+		Time: time.Now(),
+	}
 }
 
-func (b BaseEvent) Timestamp() time.Time{
-    return b.Time
+func (b BaseEvent) Timestamp() time.Time {
+	return b.Time
 }
-

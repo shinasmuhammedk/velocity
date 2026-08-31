@@ -46,7 +46,6 @@ func (r *positionRepository) ListByUser(
 	return r.queries.ListPositionsByUser(ctx, userID)
 }
 
-
 func (r *positionRepository) WithTx(tx pgx.Tx) PositionRepository {
 	return &positionRepository{
 		queries: generated.New(tx),

@@ -148,6 +148,34 @@ func decodeEvent(envelope EventEnvelope) (events.Event, error) {
 
 		return event, nil
 
+	case events.DepthUpdatedEventType:
+		var event events.DepthUpdatedEvent
+
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return nil, fmt.Errorf(
+				"decode depth.updated event: %w",
+				err,
+			)
+		}
+
+		event.BaseEvent = baseEvent
+
+		return event, nil
+
+	case events.TickerUpdatedEventType:
+		var event events.TickerUpdatedEvent
+
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return nil, fmt.Errorf(
+				"decode ticker.updated event: %w",
+				err,
+			)
+		}
+
+		event.BaseEvent = baseEvent
+
+		return event, nil
+
 	default:
 		return nil, fmt.Errorf(
 			"unsupported event type: %s",

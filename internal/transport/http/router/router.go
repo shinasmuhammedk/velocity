@@ -3,6 +3,7 @@ package router
 import (
 	// identityclient "velocity/internal/transport/grpc/client/identity"
 	"velocity/internal/transport/http/handler"
+	"velocity/internal/transport/http/middleware"
 	// "velocity/internal/transport/http/middleware"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,6 +19,7 @@ func Register(
 	adminHandler *handler.AdminHandler,
 	auth fiber.Handler,
 	requireAdmin fiber.Handler,
+	rateLimit *middleware.RateLimitMiddleware,
 ) {
 	// Health checks live at the top level, not under /api, since
 	// orchestrators (Docker, k8s) and load balancers conventionally
@@ -31,7 +33,7 @@ func Register(
 
 	private.Get("/market/trades/user", marketHandler.GetUserTrades)
 
-	RegisterOrderRoutes(private, orderHandler)
+	RegisterOrderRoutes(private, orderHandler, rateLimit)
 	RegisterWalletRoutes(private, walletHandler)
 	RegisterPositionRoutes(private, positionHandler)
 

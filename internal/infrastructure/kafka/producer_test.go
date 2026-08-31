@@ -24,8 +24,8 @@ func TestProducerPublish(t *testing.T) {
 		ctx,
 		"BTCUSDT",
 		map[string]any{
-			"type":   "test",
-			"symbol": "BTCUSDT",
+			"type":    "test",
+			"symbol":  "BTCUSDT",
 			"message": "hello kafka",
 		},
 	)

@@ -70,7 +70,7 @@ func (m *AuthMiddleware) Authenticate(c *fiber.Ctx) error {
 			"error": "authentication service unavailable",
 		})
 	}
-    
+
 	if !resp.Valid {
 
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -90,7 +90,6 @@ func (m *AuthMiddleware) Authenticate(c *fiber.Ctx) error {
 
 	return c.Next()
 }
-
 
 func (m *AuthMiddleware) AuthenticateWS(c *fiber.Ctx) error {
 

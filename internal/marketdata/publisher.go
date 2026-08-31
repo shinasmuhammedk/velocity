@@ -23,8 +23,8 @@ func (p *Publisher) PublishTrade(
 	t *trade.Trade,
 ) {
 
-    fmt.Println("PUBLISH TRADE:", t.Symbol)
-    
+	fmt.Println("PUBLISH TRADE:", t.Symbol)
+
 	p.hub.Broadcast(
 		t.Symbol,
 		Message{

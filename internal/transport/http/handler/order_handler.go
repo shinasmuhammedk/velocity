@@ -8,8 +8,8 @@ import (
 	"velocity/pkg/response"
 
 	httprequest "velocity/internal/transport/http/dto/request"
+	dtoresponse "velocity/internal/transport/http/dto/response"
 	httpresponse "velocity/internal/transport/http/dto/response"
-    dtoresponse "velocity/internal/transport/http/dto/response"
 	"velocity/internal/transport/http/middleware"
 
 	"github.com/gofiber/fiber/v2"
