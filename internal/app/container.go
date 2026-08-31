@@ -57,6 +57,7 @@ type Container struct {
 	Redis               *redis.Client
 	MarketCache         *redis.MarketCache
 	RedisHealth         *redis.HealthChecker
+	RateLimiter         *redis.RateLimiter
 	KafkaProducer       *kafka.Producer
 	KafkaEventPublisher *kafka.EventPublisher
 	KafkaHealth         *kafka.HealthChecker
@@ -74,7 +75,8 @@ type Container struct {
 	IdentityClient *identityclient.Client
 
 	// HTTP Middleware
-	AuthMiddleware *httpmiddleware.AuthMiddleware
+	AuthMiddleware      *httpmiddleware.AuthMiddleware
+	RateLimitMiddleware *httpmiddleware.RateLimitMiddleware
 
 	// --------------------------------------------------
 	// Repositories
