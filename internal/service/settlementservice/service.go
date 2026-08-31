@@ -58,7 +58,7 @@ func (s *Service) Settle(
 		sellerBaseBalance  userstream.BalanceUpdate
 		sellerQuoteBalance userstream.BalanceUpdate
 
-		buyerPositionEvent userstream.PositionUpdate
+		buyerPositionEvent  userstream.PositionUpdate
 		sellerPositionEvent userstream.PositionUpdate
 
 		tradeEvent userstream.TradeExecution
@@ -101,14 +101,14 @@ func (s *Service) Settle(
 			_, err := tradeRepo.CreateIfNotExists(
 				ctx,
 				generated.CreateTradeIfNotExistsParams{
-					ID:         req.TradeID,
-					BuyOrderID: req.BuyOrderID,
+					ID:          req.TradeID,
+					BuyOrderID:  req.BuyOrderID,
 					SellOrderID: req.SellOrderID,
-					BuyerID:    req.BuyerID,
-					SellerID:   req.SellerID,
-					Symbol:     req.Symbol,
-					Price:      req.Price,
-					Quantity:   req.Quantity,
+					BuyerID:     req.BuyerID,
+					SellerID:    req.SellerID,
+					Symbol:      req.Symbol,
+					Price:       req.Price,
+					Quantity:    req.Quantity,
 				},
 			)
 

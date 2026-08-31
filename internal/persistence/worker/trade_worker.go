@@ -6,5 +6,5 @@ import (
 )
 
 type TradePersistenceWorker interface {
-	ProcessTrade(ctx context.Context, t *trade.Trade)error
+	ProcessTrade(ctx context.Context, t *trade.Trade) error
 }

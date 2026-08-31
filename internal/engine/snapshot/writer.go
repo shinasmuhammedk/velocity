@@ -12,9 +12,8 @@ type Writer struct {
 }
 
 type SnapshotWriter interface {
-    Write(*Snapshot) error
+	Write(*Snapshot) error
 }
-
 
 func NewWriter(
 	directory string,

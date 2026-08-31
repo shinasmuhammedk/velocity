@@ -7,4 +7,5 @@ type ModifyOrderCommand struct {
 	NewQuantity int64
 	Result      chan error
 }
+
 func (ModifyOrderCommand) isCommand() {}

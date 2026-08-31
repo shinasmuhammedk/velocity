@@ -18,13 +18,11 @@ func NewOrderRepository(db generated.DBTX) OrderRepository {
 	}
 }
 
-
-func (r *orderRepository) WithTx(tx pgx .Tx) OrderRepository {
+func (r *orderRepository) WithTx(tx pgx.Tx) OrderRepository {
 	return &orderRepository{
 		queries: generated.New(tx),
 	}
 }
-
 
 func (r *orderRepository) Create(
 	ctx context.Context,
@@ -62,35 +60,35 @@ func (r *orderRepository) ListOpenOrders(
 }
 
 func (r *orderRepository) RecoveryOrders(
-    ctx context.Context,
+	ctx context.Context,
 ) ([]generated.Order, error) {
-    return r.queries.RecoveryOrders(ctx)
+	return r.queries.RecoveryOrders(ctx)
 }
 
 func (r *orderRepository) GetPendingStopOrders(
-    ctx context.Context,
+	ctx context.Context,
 ) ([]generated.Order, error) {
-    return r.queries.GetPendingStopOrders(ctx)
+	return r.queries.GetPendingStopOrders(ctx)
 }
 
 func (r *orderRepository) UpdateOrderForModify(
-    ctx context.Context,
-    params generated.UpdateOrderForModifyParams,
+	ctx context.Context,
+	params generated.UpdateOrderForModifyParams,
 ) error {
-    return r.queries.UpdateOrderForModify(
-        ctx,
-        params,
-    )
+	return r.queries.UpdateOrderForModify(
+		ctx,
+		params,
+	)
 }
 
 func (r *orderRepository) UpdateOrderAfterTrade(
-    ctx context.Context,
-    params generated.UpdateOrderAfterTradeParams,
+	ctx context.Context,
+	params generated.UpdateOrderAfterTradeParams,
 ) error {
-    return r.queries.UpdateOrderAfterTrade(
-        ctx,
-        params,
-    )
+	return r.queries.UpdateOrderAfterTrade(
+		ctx,
+		params,
+	)
 }
 
 func (r *orderRepository) ListOpenOrdersByUser(
@@ -104,16 +102,15 @@ func (r *orderRepository) ListOpenOrdersByUser(
 	)
 }
 
-
 func (r *orderRepository) ListOrdersByUser(
-    ctx context.Context,
-    userID int64,
+	ctx context.Context,
+	userID int64,
 ) ([]generated.Order, error) {
 
-    return r.queries.ListOrdersByUser(
-        ctx,
-        userID,
-    )
+	return r.queries.ListOrdersByUser(
+		ctx,
+		userID,
+	)
 }
 
 func (r *orderRepository) GetByUserAndID(

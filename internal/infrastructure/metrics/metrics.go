@@ -110,6 +110,30 @@ var (
 		},
 	)
 
+	RateLimitAllowed = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "velocity_rate_limit_allowed_total",
+			Help: "Total number of requests allowed by the rate limiter",
+		},
+		[]string{"action"},
+	)
+
+	RateLimitRejected = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "velocity_rate_limit_rejected_total",
+			Help: "Total number of requests rejected by the rate limiter",
+		},
+		[]string{"action"},
+	)
+
+	RateLimitErrors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "velocity_rate_limit_errors_total",
+			Help: "Total number of rate limiter infrastructure errors",
+		},
+		[]string{"action"},
+	)
+
 	registerOnce sync.Once
 )
 
@@ -137,6 +161,10 @@ func Register() {
 			KafkaReadiness,
 
 			KafkaEventQueueDropped,
+
+			RateLimitAllowed,
+			RateLimitRejected,
+			RateLimitErrors,
 		)
 	})
 }

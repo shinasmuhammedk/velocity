@@ -1,14 +1,14 @@
 package constants
 
 const (
-    EventTradeExecuted = "trade.executed"
+	EventTradeExecuted = "trade.executed"
 
-    EventOrderAccepted  = "order.accepted"
-    EventOrderRejected  = "order.rejected"
-    EventOrderCancelled = "order.cancelled"
-    EventOrderModified  = "order.modified"
-    EventOrderTriggered = "order.triggered"
+	EventOrderAccepted  = "order.accepted"
+	EventOrderRejected  = "order.rejected"
+	EventOrderCancelled = "order.cancelled"
+	EventOrderModified  = "order.modified"
+	EventOrderTriggered = "order.triggered"
 
-    EventTickerUpdated = "ticker.updated"
-    EventDepthUpdated  = "depth.updated"
+	EventTickerUpdated = "ticker.updated"
+	EventDepthUpdated  = "depth.updated"
 )

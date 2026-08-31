@@ -23,8 +23,6 @@ type RecoveryOrderRepository interface {
 	) ([]generated.Order, error)
 }
 
-
-
 func New(
 	orderRepo RecoveryOrderRepository,
 	registry *registry.Registry,

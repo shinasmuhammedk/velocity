@@ -15,10 +15,10 @@ type Manager struct {
 	writer    SnapshotWriter
 	interval  time.Duration
 	threshold uint64
-    
-    lastSnapshotSequence atomic.Uint64
-    
-    stop chan struct{}
+
+	lastSnapshotSequence atomic.Uint64
+
+	stop chan struct{}
 	done chan struct{}
 }
 
@@ -31,11 +31,10 @@ func NewManager(
 		writer:    writer,
 		interval:  interval,
 		threshold: threshold,
-        stop: make(chan struct{}),
-        done: make(chan struct{}),
+		stop:      make(chan struct{}),
+		done:      make(chan struct{}),
 	}
 }
-
 
 func (m *Manager) Start(target Snapshotable) {
 	go func() {

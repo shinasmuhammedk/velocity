@@ -5,10 +5,10 @@ type TradeExecutedEvent struct {
 
 	TradeID int64
 
-	BuyOrderID int64
+	BuyOrderID  int64
 	SellOrderID int64
 
-	BuyerID int64
+	BuyerID  int64
 	SellerID int64
 
 	Symbol string

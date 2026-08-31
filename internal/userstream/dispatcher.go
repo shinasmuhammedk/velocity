@@ -1,7 +1,6 @@
 package userstream
 
 import (
-
 	"velocity/internal/domain/order"
 )
 

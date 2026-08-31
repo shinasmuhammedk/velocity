@@ -25,7 +25,7 @@ func TestConsumer(t *testing.T) {
 			received <- message
 			return nil
 		},
-        nil,
+		nil,
 	)
 
 	defer consumer.Close()

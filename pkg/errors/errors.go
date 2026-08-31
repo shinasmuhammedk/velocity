@@ -113,7 +113,7 @@ var (
 		CodeSymbolInactive,
 		"symbol inactive",
 	)
-    ErrSymbolAlreadyExists = New(
+	ErrSymbolAlreadyExists = New(
 		CodeConflict,
 		"symbol already exists",
 	)

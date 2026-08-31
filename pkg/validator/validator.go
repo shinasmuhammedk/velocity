@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"strings"
-	velocityerrors "velocity/pkg/errors"    
+	velocityerrors "velocity/pkg/errors"
 )
 
 var validate *validator.Validate

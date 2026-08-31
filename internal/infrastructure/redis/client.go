@@ -18,22 +18,22 @@ func New(cfg config.RedisConfig) *Client {
 		cfg.Host,
 		cfg.Port,
 	)
-    
-    client := goredis.NewClient(&goredis.Options{
-        Addr: addr,
-        Password: cfg.Password,
-        DB: cfg.Database,
-    })
-    
-    return &Client{
-        Client: client,
-    }
+
+	client := goredis.NewClient(&goredis.Options{
+		Addr:     addr,
+		Password: cfg.Password,
+		DB:       cfg.Database,
+	})
+
+	return &Client{
+		Client: client,
+	}
 }
 
-func (c *Client) Ping(ctx context.Context)error{
-    return c.Client.Ping(ctx).Err()
+func (c *Client) Ping(ctx context.Context) error {
+	return c.Client.Ping(ctx).Err()
 }
 
-func (c *Client) Close()error{
-    return c.Client.Close()
+func (c *Client) Close() error {
+	return c.Client.Close()
 }

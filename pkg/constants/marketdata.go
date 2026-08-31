@@ -1,7 +1,7 @@
 package constants
 
 const (
-    DepthLevels = 10
+	DepthLevels = 10
 
-    DefaultSymbol = "BTCUSDT"
+	DefaultSymbol = "BTCUSDT"
 )

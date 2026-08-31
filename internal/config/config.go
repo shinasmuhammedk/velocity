@@ -16,6 +16,7 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	Kafka     KafkaConfig     `mapstructure:"kafka"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 //
@@ -140,4 +141,17 @@ type TracingConfig struct {
 	Enabled  bool   `mapstructure:"enabled"`
 	Exporter string `mapstructure:"exporter"`
 	Endpoint string `mapstructure:"endpoint"`
+}
+
+type RateLimitConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+
+	SubmitRate  float64 `mapstructure:"submit_rate"`
+	SubmitBurst int     `mapstructure:"submit_burst"`
+
+	CancelRate  float64 `mapstructure:"cancel_rate"`
+	CancelBurst int     `mapstructure:"cancel_burst"`
+
+	ModifyRate  float64 `mapstructure:"modify_rate"`
+	ModifyBurst int     `mapstructure:"modify_burst"`
 }

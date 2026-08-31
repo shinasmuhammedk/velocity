@@ -56,11 +56,11 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           buyerID,
-			Email:        uuid.NewString() + "@buyer.com",
+			ID:    buyerID,
+			Email: uuid.NewString() + "@buyer.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)
@@ -68,11 +68,11 @@ func TestSettlement_InsufficientSellerBalance(t *testing.T) {
 	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           sellerID,
-			Email:        uuid.NewString() + "@seller.com",
+			ID:    sellerID,
+			Email: uuid.NewString() + "@seller.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)

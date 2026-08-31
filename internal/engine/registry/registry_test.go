@@ -14,22 +14,22 @@ import (
 
 func TestRegistryCreatesEngine(t *testing.T) {
 
-    walManager := wal.NewManager(
-        t.TempDir(),
-        wal.NewJSONSerializer(),
-    )
+	walManager := wal.NewManager(
+		t.TempDir(),
+		wal.NewJSONSerializer(),
+	)
 
-    r := registry.New(
-        &snapshot.MockWriter{},
-        walManager,
-    )
-    defer r.Shutdown()
+	r := registry.New(
+		&snapshot.MockWriter{},
+		walManager,
+	)
+	defer r.Shutdown()
 
-    e := r.Get("BTCUSDT")
+	e := r.Get("BTCUSDT")
 
-    require.NotNil(t, e)
+	require.NotNil(t, e)
 
-    assert.Equal(t, 1, r.Count())
+	assert.Equal(t, 1, r.Count())
 }
 
 func TestRegistryReturnsSameEngine(t *testing.T) {
@@ -42,7 +42,7 @@ func TestRegistryReturnsSameEngine(t *testing.T) {
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
+	defer r.Shutdown()
 
 	e1 := r.Get("BTCUSDT")
 	e2 := r.Get("BTCUSDT")
@@ -65,8 +65,8 @@ func TestRegistryCreatesDifferentEngines(t *testing.T) {
 		walManager,
 	)
 
-    defer r.Shutdown()
-    
+	defer r.Shutdown()
+
 	btc := r.Get("BTCUSDT")
 	eth := r.Get("ETHUSDT")
 
@@ -93,8 +93,8 @@ func TestRegistryExists(t *testing.T) {
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
-    
+	defer r.Shutdown()
+
 	assert.False(
 		t,
 		r.Exists("BTCUSDT"),
@@ -118,8 +118,8 @@ func TestRegistryRemove(t *testing.T) {
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
-    
+	defer r.Shutdown()
+
 	r.Get("BTCUSDT")
 
 	assert.True(
@@ -151,7 +151,7 @@ func TestRegistrySymbols(t *testing.T) {
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
+	defer r.Shutdown()
 
 	r.Get("BTCUSDT")
 	r.Get("ETHUSDT")
@@ -194,8 +194,8 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
-    
+	defer r.Shutdown()
+
 	var wg sync.WaitGroup
 
 	for i := 0; i < 100; i++ {
@@ -229,7 +229,7 @@ func TestRegistryConcurrentDifferentSymbols(
 		&snapshot.MockWriter{},
 		walManager,
 	)
-    defer r.Shutdown()
+	defer r.Shutdown()
 
 	symbols := []string{
 		"BTCUSDT",

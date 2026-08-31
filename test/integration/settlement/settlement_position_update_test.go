@@ -54,18 +54,18 @@ func TestSettlement_PositionUpdate(t *testing.T) {
 
 	users := []generated.CreateUserParams{
 		{
-			ID:           buyerID,
-			Email:        uuid.NewString() + "@buyer.com",
+			ID:    buyerID,
+			Email: uuid.NewString() + "@buyer.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 		{
-			ID:           sellerID,
-			Email:        uuid.NewString() + "@seller.com",
+			ID:    sellerID,
+			Email: uuid.NewString() + "@seller.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	}
 

@@ -58,11 +58,17 @@ func Bootstrap() (*Container, error) {
 	container.ShutdownContext, container.ShutdownCancel =
 		context.WithCancel(context.Background())
 
-	// container.Redis = redis.New(container.Config.Redis)
-	// if err := container.Redis.Ping(context.Background()); err != nil {
-	// 	return nil, err
-	// }
-	// container.Logger.Info("redis initialized")
+	// --------------------------------------------------
+	// Redis
+	// --------------------------------------------------
+
+	container.Redis = redis.New(container.Config.Redis)
+
+	if err := container.Redis.Ping(context.Background()); err != nil {
+		return nil, err
+	}
+
+	container.Logger.Info("redis initialized")
 
 	container.KafkaProducer = kafka.NewProducer(
 		container.Config.Kafka.Brokers,
@@ -82,6 +88,13 @@ func Bootstrap() (*Container, error) {
 	container.Logger.Info("market data cache initialized")
 
 	container.RedisHealth = redis.NewHealthChecker(container.Redis)
+	container.Logger.Info("redis health checker initialized")
+
+	container.RateLimiter = redis.NewRateLimiter(
+		container.Redis,
+	)
+
+	container.Logger.Info("redis rate limiter initialized")
 
 	container.IDGenerator = snowflake.New(1)
 	container.Logger.Info("snowflake id generator initialized")
@@ -95,7 +108,13 @@ func Bootstrap() (*Container, error) {
 
 	container.AuthMiddleware = httpmiddleware.NewAuthMiddleware(identityClient)
 
+	container.RateLimitMiddleware = httpmiddleware.NewRateLimitMiddleware(
+		container.RateLimiter,
+		container.Config.RateLimit,
+	)
+
 	container.Logger.Info("identity grpc client initialized")
+	container.Logger.Info("rate limit middleware initialized")
 
 	// Register repositories
 	container.UserRepository = repository.NewUserRepository(container.DB)
@@ -470,6 +489,7 @@ func Bootstrap() (*Container, error) {
 		container.AdminHandler,
 		container.AuthMiddleware.Authenticate,
 		httpmiddleware.RequireRole(constants.RoleAdmin),
+		container.RateLimitMiddleware,
 	)
 
 	container.HTTP.Get(

@@ -235,7 +235,6 @@ func (b *OrderBook) CancelOrder(orderID int64) (*order.Order, error) {
 	return o, nil
 }
 
-
 func (b *OrderBook) RemoveOrderIndex(orderID int64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -495,4 +494,3 @@ func (b *OrderBook) ActiveOrders() []*order.Order {
 
 	return orders
 }
-

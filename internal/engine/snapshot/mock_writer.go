@@ -3,7 +3,7 @@ package snapshot
 type MockWriter struct{}
 
 func (m *MockWriter) Write(
-    snapshot *Snapshot,
+	snapshot *Snapshot,
 ) error {
-    return nil
+	return nil
 }

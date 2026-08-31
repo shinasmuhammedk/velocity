@@ -35,30 +35,29 @@ func (s *Service) GetOrCreateWallet(
 	)
 }
 
-
 func (s *Service) CreateDefaultWallets(
-    ctx context.Context,
-    userID int64,
+	ctx context.Context,
+	userID int64,
 ) error {
 
-    assets := []string{
-        "USDT",
-        "BTC",
-        "ETH",
-    }
+	assets := []string{
+		"USDT",
+		"BTC",
+		"ETH",
+	}
 
-    for _, asset := range assets {
+	for _, asset := range assets {
 
-        _, err := s.GetOrCreateWallet(
-            ctx,
-            userID,
-            asset,
-        )
+		_, err := s.GetOrCreateWallet(
+			ctx,
+			userID,
+			asset,
+		)
 
-        if err != nil {
-            return err
-        }
-    }
+		if err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }

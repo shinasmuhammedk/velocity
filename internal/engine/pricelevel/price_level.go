@@ -75,7 +75,6 @@ func (p *PriceLevel) Remove(target *order.Order) {
 	}
 }
 
-
 // FindFirstExcludingUser walks the queue front-to-back and returns the
 // first order NOT belonging to userID, skipping any that are. Equivalent
 // to FindFirst with a same-user exclusion predicate, but avoids the

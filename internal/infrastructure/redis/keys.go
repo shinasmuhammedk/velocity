@@ -23,3 +23,15 @@ func MarketTickerKey(symbol string) string {
 func MarketOrderBookKey(symbol string) string {
 	return KeyPrefix + ":market:orderbook:" + symbol
 }
+
+func UserSubmitRateLimitKey(userID string) string {
+	return RateLimitKey("submit:user:" + userID)
+}
+
+func UserCancelRateLimitKey(userID string) string {
+	return RateLimitKey("cancel:user:" + userID)
+}
+
+func UserModifyRateLimitKey(userID string) string {
+	return "velocity:rate_limit:modify:user:" + userID
+}

@@ -1,5 +1,5 @@
 package command
 
-type Command interface{
-    isCommand()
+type Command interface {
+	isCommand()
 }

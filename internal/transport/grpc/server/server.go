@@ -16,7 +16,7 @@ type Server struct {
 }
 
 func New(
-    userService *userservice.Service,
+	userService *userservice.Service,
 ) (*Server, error) {
 
 	lis, err := net.Listen("tcp", ":50053")
@@ -33,7 +33,7 @@ func New(
 
 	return &Server{
 		grpcServer: grpcServer,
-		listener: lis,
+		listener:   lis,
 	}, nil
 }
 

@@ -26,11 +26,11 @@ func TestOrderRepository(t *testing.T) {
 	_, err := tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
-			ID:           userID,
-			Email:        uuid.New().String() + "@test.com",
+			ID:    userID,
+			Email: uuid.New().String() + "@test.com",
 			// PasswordHash: "password",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	)
 	require.NoError(t, err)

@@ -4,4 +4,3 @@ type ValidationResult struct {
 	Allowed bool
 	Reason  string
 }
-

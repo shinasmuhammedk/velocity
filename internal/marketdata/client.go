@@ -1,12 +1,11 @@
 package marketdata
 
 import (
-
 	"github.com/gofiber/contrib/websocket"
 )
 
 type Client struct {
-    Conn *websocket.Conn
+	Conn *websocket.Conn
 }
 
 // func (c *Client) Send(v any) {
@@ -21,5 +20,5 @@ type Client struct {
 // }
 
 func (c *Client) Send(v any) error {
-    return c.Conn.WriteJSON(v)
+	return c.Conn.WriteJSON(v)
 }

@@ -3,7 +3,6 @@ package riskservice
 import (
 	"context"
 
-
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/walletservice"
 	"velocity/pkg/constants"

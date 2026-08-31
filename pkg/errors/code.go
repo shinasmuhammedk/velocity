@@ -53,11 +53,11 @@ const (
 	CodeInsufficientBalance Code = "INSUFFICIENT_BALANCE"
 
 	// Wallet
-	CodeWalletNotFound      Code = "WALLET_NOT_FOUND"
-	CodeInvalidAsset        Code = "INVALID_ASSET"
-	CodeNegativeBalance     Code = "NEGATIVE_BALANCE"
-    CodeInsufficientLockedBalance Code = "INSUFFICIENT_LOCKED_BALANCE"
-    
-    CodeInvalidOrderID Code = "INVALID_ORDER_ID"
-    CodeOrderNotSettleable Code = "ORDER_IS_NOT_IN_A_SETTLEABLE_FORM"
+	CodeWalletNotFound            Code = "WALLET_NOT_FOUND"
+	CodeInvalidAsset              Code = "INVALID_ASSET"
+	CodeNegativeBalance           Code = "NEGATIVE_BALANCE"
+	CodeInsufficientLockedBalance Code = "INSUFFICIENT_LOCKED_BALANCE"
+
+	CodeInvalidOrderID     Code = "INVALID_ORDER_ID"
+	CodeOrderNotSettleable Code = "ORDER_IS_NOT_IN_A_SETTLEABLE_FORM"
 )

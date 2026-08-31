@@ -1,5 +1,5 @@
 package constants
 
 const (
-    WALFolder = "./wal"
+	WALFolder = "./wal"
 )

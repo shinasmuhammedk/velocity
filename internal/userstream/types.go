@@ -25,7 +25,7 @@ const (
 	// Account Events
 	// -------------------------
 
-	EventBalanceUpdated EventType = "balance.updated"
+	EventBalanceUpdated  EventType = "balance.updated"
 	EventPositionUpdated EventType = "position.updated"
 
 	// -------------------------
