@@ -44,7 +44,7 @@ func NewTradeConsumer(
 
 func (c *TradeConsumer) Start(
 	ctx context.Context,
-	trades <-chan *trade.Trade,
+	trades <-chan trade.Trade,
 ) {
 	go func() {
 		for {
@@ -54,10 +54,10 @@ func (c *TradeConsumer) Start(
 
 			case t := <-trades:
 
-				if t == nil {
-					c.logger.Warn("trade consumer received nil trade")
-					continue
-				}
+				// if t == nil {
+				// 	c.logger.Warn("trade consumer received nil trade")
+				// 	continue
+				// }
 
 				c.logger.Debug(
 					"trade received by consumer",

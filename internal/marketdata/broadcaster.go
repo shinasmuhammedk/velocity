@@ -24,7 +24,7 @@ func NewBroadcaster(
 }
 
 func (d *Broadcaster) DispatchTrade(
-	trade *trade.Trade,
+	trade trade.Trade,
 	book *orderbook.OrderBook,
 ) {
 
