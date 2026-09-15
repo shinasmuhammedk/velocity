@@ -35,6 +35,15 @@ type Engine struct {
 	lastTradePrice atomic.Int64
 	sequence       atomic.Uint64
 
+	// snapshotMu guards SnapshotState() against racing with a
+	// recovery-time WAL replay (see ApplyReplayedEvent). Normal live
+	// trading never touches it — commands are already serialized through
+	// commandQueue — this exists solely to make "apply event, then
+	// advance sequence" atomic with respect to a concurrently-running
+	// periodic snapshot, since those two calls happen on different
+	// goroutines with nothing else linking them.
+	snapshotMu sync.Mutex
+
 	done chan struct{} // new
 }
 
@@ -429,6 +438,14 @@ func (e *Engine) incrementSequence() uint64 {
 }
 
 func (e *Engine) SnapshotState() *snapshot.Snapshot {
+	// Held for the whole read so this can never observe a state where an
+	// event has been applied to the book but the sequence counter hasn't
+	// been advanced to match yet (see ApplyReplayedEvent) - that
+	// half-applied window is exactly what let a replayed event get
+	// double-counted after the next recovery.
+	e.snapshotMu.Lock()
+	defer e.snapshotMu.Unlock()
+
 	return &snapshot.Snapshot{
 		Symbol:         e.symbol,
 		Sequence:       e.Sequence(),
@@ -437,6 +454,32 @@ func (e *Engine) SnapshotState() *snapshot.Snapshot {
 		StopOrders:     e.stopBook.Orders(),
 		CreatedAt:      timeutil.UTCNow(),
 	}
+}
+
+// ApplyReplayedEvent applies a single WAL event to the engine's book during
+// recovery and advances the sequence counter to match, as one atomic step.
+// SnapshotRecovery.Restore must use this - not applier.Apply followed by a
+// separate SetSequence call - because the periodic snapshot goroutine
+// (started the moment registry.Get creates this engine, possibly before
+// recovery finishes) can otherwise capture a snapshot in the gap between
+// the two: one whose ActiveOrders already reflects the event but whose
+// declared Sequence hasn't caught up. That snapshot understates its own
+// sequence, so the same event gets replayed - and reapplied - on the next
+// recovery. See test/chaos/snapshot_race_test.go for the full failure mode.
+func (e *Engine) ApplyReplayedEvent(
+	applier *wal.Applier,
+	event *wal.Event,
+) error {
+	e.snapshotMu.Lock()
+	defer e.snapshotMu.Unlock()
+
+	if err := applier.Apply(event); err != nil {
+		return err
+	}
+
+	e.SetSequence(event.Sequence)
+
+	return nil
 }
 
 func (e *Engine) RestoreSnapshot(

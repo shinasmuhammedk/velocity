@@ -43,6 +43,29 @@ func (a *Applier) applySubmit(event *Event) error {
 		return nil
 	}
 
+	// Idempotency guard: a SUBMIT event replayed a second time for an
+	// order ID already resting in the book must be a no-op, not a
+	// second physical entry. orderbook.AddOrder / stopBook.Add have no
+	// such guard themselves (they're the hot path and shouldn't pay for
+	// a lookup on every live order), so this is the one place a replay
+	// - from any cause, not just the snapshot-recovery race this was
+	// written for - can't silently duplicate a resting order.
+	switch event.Order.Type {
+
+	case constants.StopMarketOrder,
+		constants.StopLimitOrder:
+
+		if a.stopBook.Contains(event.Order.ID) {
+			return nil
+		}
+
+	default:
+
+		if a.book.GetOrder(event.Order.ID) != nil {
+			return nil
+		}
+	}
+
 	switch event.Order.Type {
 
 	case constants.StopMarketOrder,

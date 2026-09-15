@@ -38,6 +38,14 @@ func (s *StopBook) Add(o *order.Order) {
 	s.orderIndex[o.ID] = o
 }
 
+func (s *StopBook) Contains(orderID int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, exists := s.orderIndex[orderID]
+	return exists
+}
+
 func (s *StopBook) Trigger(price int64) []*order.Order {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -39,13 +39,41 @@ func (r *Reader) ReadAll() ([]*Event, error) {
 		1024*1024,
 	)
 
-	for scanner.Scan() {
+	// We look one line ahead so that a deserialize failure can be
+	// classified correctly: a malformed *last* line followed by a clean
+	// EOF is a torn write (the process crashed mid-Write, before the
+	// record - and its trailing newline - fully reached disk), and a
+	// write that never definitely completed is a write that never
+	// happened. That single trailing record is discarded; everything
+	// before it is the durable prefix of the log and is returned
+	// normally. A malformed line anywhere else - with more lines still
+	// following it - is not a torn write, it's corruption in the middle
+	// of an otherwise-complete file, and that must still be a hard
+	// error rather than something recovery silently papers over.
+	haveLine := scanner.Scan()
 
-		event, err := r.serializer.Deserialize(
-			scanner.Bytes(),
-		)
+	var line []byte
+	if haveLine {
+		line = append([]byte(nil), scanner.Bytes()...)
+	}
+
+	for haveLine {
+
+		haveNext := scanner.Scan()
+
+		var nextLine []byte
+		if haveNext {
+			nextLine = append([]byte(nil), scanner.Bytes()...)
+		}
+
+		event, err := r.serializer.Deserialize(line)
 
 		if err != nil {
+			if !haveNext && scanner.Err() == nil {
+				// Torn trailing record: discard it and stop here.
+				break
+			}
+
 			return nil, err
 		}
 
@@ -53,6 +81,9 @@ func (r *Reader) ReadAll() ([]*Event, error) {
 			events,
 			event,
 		)
+
+		line = nextLine
+		haveLine = haveNext
 	}
 
 	if err := scanner.Err(); err != nil {
