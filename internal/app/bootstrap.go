@@ -33,6 +33,7 @@ import (
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
+	"velocity/pkg/idgen"
 	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
@@ -57,6 +58,11 @@ func Bootstrap() (*Container, error) {
 
 	container.ShutdownContext, container.ShutdownCancel =
 		context.WithCancel(context.Background())
+
+	// idgen's package-level trade-ID generator must be seeded before the
+	// engine registry (further below) starts any matcher, since matchers
+	// call idgen.Next() directly on the hot path.
+	idgen.Init(container.Config.Snowflake.TradeNodeID)
 
 	// --------------------------------------------------
 	// Redis
@@ -96,10 +102,10 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("redis rate limiter initialized")
 
-	container.IDGenerator = snowflake.New(1)
+	container.IDGenerator = snowflake.New(container.Config.Snowflake.OrderNodeID)
 	container.Logger.Info("snowflake id generator initialized")
 
-	identityClient, err := identityclient.New("localhost:50052")
+	identityClient, err := identityclient.New(container.Config.Identity.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +377,7 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("user service initialized")
 
-	grpcServer, err := grpcserver.New(container.UserService)
+	grpcServer, err := grpcserver.New(container.UserService, container.Config.GRPC.ListenAddress)
 	if err != nil {
 		return nil, err
 	}

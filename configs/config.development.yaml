@@ -79,3 +79,13 @@ rate_limit:
   
   modify_rate: 5
   modify_burst: 10
+
+grpc:
+  listen_address: ":50053"
+
+identity:
+  address: "localhost:50052"
+
+snowflake:
+  order_node_id: 1
+  trade_node_id: 0

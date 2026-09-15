@@ -112,12 +112,12 @@ jobs:
         run: go build ./...
 
       - name: Run database migrations
-        # cmd/migrate/main.go hardcodes its DSN as a literal string
-        # (postgres://postgres:Shinas@localhost:5432/velocity), matching
-        # the Postgres service block above - so no DATABASE_URL or
-        # similar env var actually needs to be set here. Worth knowing:
-        # this also means there's currently no way to point `go run
-        # ./cmd/migrate` at a different database without editing source.
+        # cmd/migrate/main.go reads DATABASE_URL, falling back to a
+        # hardcoded dev DSN only when it's unset. Set it explicitly here
+        # so CI doesn't depend on that fallback matching the Postgres
+        # service block above by coincidence.
+        env:
+          DATABASE_URL: postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable
         run: go run ./cmd/migrate up
 
       - name: Run full test suite

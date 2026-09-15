@@ -13,8 +13,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// devDSN is used only when DATABASE_URL is unset. It matches the
+// throwaway credentials in configs/config.development.yaml and the
+// Postgres service block in .github/workflows/ci.yml — never point this
+// at anything beyond a local/CI throwaway database.
+const devDSN = "postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable"
+
 func main() {
-	dsn := "postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable"
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = devDSN
+	}
 
 	m, err := migrate.New(
 		"file://migrations",

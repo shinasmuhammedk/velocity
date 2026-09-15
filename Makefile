@@ -1,4 +1,10 @@
+# Override with: make migrate-up DB_URL=postgres://...
+# or: export DATABASE_URL=postgres://... first (DB_URL picks it up below).
+ifdef DATABASE_URL
+DB_URL=$(DATABASE_URL)
+else
 DB_URL=postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable
+endif
 
 test:
 	go test ./... -v

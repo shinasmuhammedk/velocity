@@ -17,6 +17,9 @@ type Config struct {
 	Kafka     KafkaConfig     `mapstructure:"kafka"`
 	Tracing   TracingConfig   `mapstructure:"tracing"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	GRPC      GRPCConfig      `mapstructure:"grpc"`
+	Identity  IdentityConfig  `mapstructure:"identity"`
+	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 }
 
 //
@@ -154,4 +157,46 @@ type RateLimitConfig struct {
 
 	ModifyRate  float64 `mapstructure:"modify_rate"`
 	ModifyBurst int     `mapstructure:"modify_burst"`
+}
+
+//
+// gRPC (Velocity's own server, which the Identity Service calls to
+// provision users via VelocityService.CreateUser)
+//
+
+type GRPCConfig struct {
+	// ListenAddress is where Velocity's own gRPC server binds, e.g. ":50053".
+	ListenAddress string `mapstructure:"listen_address"`
+}
+
+//
+// Identity Service (external, delegated auth - see README "Auth is
+// delegated")
+//
+
+type IdentityConfig struct {
+	// Address is the Identity Service's gRPC address that Velocity
+	// dials to validate bearer tokens (AuthService.ValidateToken).
+	Address string `mapstructure:"address"`
+}
+
+//
+// Snowflake ID generation
+//
+// There are two independent generators in this codebase, seeded
+// separately because they produce IDs for different tables (orders vs.
+// trades) and there is no reason to force them onto the same node ID:
+//   - OrderNodeID seeds container.IDGenerator (internal/app/bootstrap.go),
+//     used for order IDs.
+//   - TradeNodeID seeds the package-level generator in pkg/idgen, used
+//     for trade IDs generated inside the matcher hot path.
+//
+// Every process that generates IDs concurrently (each cmd/api replica,
+// each cmd/matchnode instance) MUST use distinct values here, or IDs can
+// collide across instances. There is currently no automatic per-instance
+// assignment (e.g. from a StatefulSet pod ordinal) - this must be set
+// explicitly per deployment.
+type SnowflakeConfig struct {
+	OrderNodeID int64 `mapstructure:"order_node_id"`
+	TradeNodeID int64 `mapstructure:"trade_node_id"`
 }

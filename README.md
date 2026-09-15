@@ -68,7 +68,6 @@ Key architectural decisions:
 cmd/
   api/        entry point: gRPC + HTTP servers (order intake, market data, wallets, positions, admin)
   worker/     entry point: Kafka consumer that runs settlement and analytics
-  matchnode/  standalone matching-node entry point
   migrate/    database migration CLI
   seed/       development data seeder
 
@@ -196,7 +195,14 @@ You'll additionally need a PostgreSQL instance reachable with the credentials in
 
 ### Database setup
 
+`cmd/migrate` reads its connection string from `DATABASE_URL`. If unset, it
+falls back to a hardcoded local dev DSN matching the placeholder credentials
+in `configs/config.development.yaml` — set `DATABASE_URL` explicitly for
+anything beyond a throwaway local database.
+
 ```bash
+export DATABASE_URL="postgres://postgres:Shinas@localhost:5432/velocity?sslmode=disable"
+
 make migrate-up      # apply all migrations
 make migrate-down     # roll back one migration
 make migrate-reset    # drop everything and reapply from scratch
@@ -225,7 +231,7 @@ Integration, load, stress, and chaos tests live under `test/` alongside unit tes
 
 ## Deployment
 
-Dockerfiles are provided per service (`deployments/docker/api.Dockerfile`, `worker.Dockerfile`, `matchnode.Dockerfile`), along with base and overlay Kubernetes manifests under `deployments/kubernetes/` and a GitHub Actions CI workflow under `deployments/ci/github-actions/`.
+Dockerfiles are provided per service (`deployments/docker/api.Dockerfile`, `worker.Dockerfile`), along with base and overlay Kubernetes manifests under `deployments/kubernetes/` and a GitHub Actions CI workflow under `deployments/ci/github-actions/`.
 
 ## Notes on Persisted Data
 

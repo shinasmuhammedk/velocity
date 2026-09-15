@@ -17,9 +17,10 @@ type Server struct {
 
 func New(
 	userService *userservice.Service,
+	listenAddress string,
 ) (*Server, error) {
 
-	lis, err := net.Listen("tcp", ":50053")
+	lis, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func New(
 }
 
 func (s *Server) Start() error {
-	fmt.Println("Velocity gRPC listening on :50053")
+	fmt.Printf("Velocity gRPC listening on %s\n", s.listener.Addr())
 	return s.grpcServer.Serve(s.listener)
 }
 
