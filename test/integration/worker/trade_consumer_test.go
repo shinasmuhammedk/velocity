@@ -616,7 +616,19 @@ func TestEngineTradeReachesTradeConsumerAndSettles(t *testing.T) {
 
 	tc.CleanupTrades(t)
 
-	symbol := "BTCUSDT"
+	symbol := "BTCUSDT-" + uuid.NewString()[:8]
+
+	_, err := tc.SymbolRepo.Create(
+		tc.Ctx,
+		generated.CreateSymbolParams{
+			Symbol:      symbol,
+			DisplayName: "Bitcoin",
+			TickSize:    1,
+			LotSize:     1,
+			IsActive:    true,
+		},
+	)
+	require.NoError(t, err)
 
 	buyerID := testhelpers.NextID()
 	sellerID := testhelpers.NextID()
@@ -626,7 +638,7 @@ func TestEngineTradeReachesTradeConsumerAndSettles(t *testing.T) {
 	// tradeID := testhelpers.NextID()
 
 	// Create buyer and seller.
-	_, err := tc.UserRepo.Create(
+	_, err = tc.UserRepo.Create(
 		tc.Ctx,
 		generated.CreateUserParams{
 			ID:        buyerID,
