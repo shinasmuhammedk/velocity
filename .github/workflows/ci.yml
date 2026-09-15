@@ -1,0 +1,134 @@
+name: CI
+
+# NOTE: GitHub only discovers workflows under .github/workflows/ at the
+# repo root - a file anywhere else (including the
+# deployments/ci/github-actions/ path referenced in the README) is never
+# picked up automatically. This is the one location that actually runs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Service containers are reachable at localhost:<port> from the job
+    # below because this job runs directly on the runner VM (no `container:`
+    # key here) - matching configs/config.development.yaml, which the
+    # integration tests load directly and which points at localhost.
+    services:
+
+      postgres:
+        # No Postgres version is pinned anywhere else in this repo
+        # (deployments/compose/docker-compose.yml only defines Kafka).
+        # 16-alpine is a reasonable modern default - change this to match
+        # whatever version production actually runs, if that's ever
+        # decided.
+        image: postgres:16-alpine
+        env:
+          # Must match configs/config.development.yaml exactly - that's
+          # the file test/integration/setup.go loads to connect.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Shinas
+          POSTGRES_DB: velocity
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      kafka:
+        # Mirrors deployments/compose/docker-compose.yml's Kafka service
+        # (KRaft mode, single node, auto-create-topics disabled) so CI
+        # behaves the same as local dev - including the chaos tests that
+        # rely on EnsureTopics rather than auto-creation.
+        image: apache/kafka:4.0.0
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          # docker-compose.yml uses 1@kafka:9093 (the container's
+          # service-name hostname, resolvable via Docker Compose's
+          # network). GitHub Actions service containers don't get a
+          # matching hostname the same way, so this uses localhost
+          # instead - correct for a single-node KRaft setup where the
+          # same container is both broker and controller, but this is
+          # the one part of this workflow I could not actually run and
+          # confirm (this sandbox can't pull Docker images to test it).
+          # If Kafka fails to become ready in CI, this line is the first
+          # place to check.
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        ports:
+          - 9092:9092
+        # apache/kafka has no simple built-in --health-cmd, so readiness
+        # is checked with an explicit wait step below instead.
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Wait for Kafka to accept connections
+        # Kafka's own startup (KRaft init, controller election) can take
+        # longer than Postgres's, and there's no --health-cmd for it
+        # above - so this polls the port directly instead of assuming a
+        # fixed sleep is long enough (or wastefully longer than needed).
+        run: |
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/localhost/9092) >/dev/null 2>&1; then
+              echo "Kafka is accepting connections"
+              exit 0
+            fi
+            echo "Waiting for Kafka... ($i/30)"
+            sleep 2
+          done
+          echo "Kafka did not become ready in time"
+          exit 1
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run database migrations
+        # cmd/migrate/main.go hardcodes its DSN as a literal string
+        # (postgres://postgres:Shinas@localhost:5432/velocity), matching
+        # the Postgres service block above - so no DATABASE_URL or
+        # similar env var actually needs to be set here. Worth knowing:
+        # this also means there's currently no way to point `go run
+        # ./cmd/migrate` at a different database without editing source.
+        run: go run ./cmd/migrate up
+
+      - name: Run full test suite
+        run: go test ./... -v -timeout 20m
+        # Everything test/load, test/bench, and test/stress measure takes
+        # real wall-clock time (observed locally: ~90s for test/load
+        # alone, ~85s for the Kafka package). Running the full suite on
+        # every push/PR is the simplest correct starting point and
+        # mirrors the existing `make test` target exactly. If CI feedback
+        # time becomes a problem, a reasonable next step is splitting
+        # this into a fast job (unit + integration + chaos) that runs on
+        # every push, and a slower one (load + bench + stress) that runs
+        # on a schedule or only on merge to main - not done here since
+        # that's a workflow-design decision, not something to guess at.
