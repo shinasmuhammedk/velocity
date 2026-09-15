@@ -7,6 +7,7 @@ import (
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/walletservice"
 	"velocity/pkg/errors"
+	testhelpers "velocity/test/helpers"
 	"velocity/test/integration"
 
 	"github.com/google/uuid"
@@ -14,7 +15,7 @@ import (
 )
 
 func createWalletForServiceTest(t *testing.T, tc *integration.TestContext) (int64, string) {
-	userID := time.Now().UnixNano()
+	userID := testhelpers.NextID()
 
 	_, err := tc.UserRepo.Create(
 		tc.Ctx,

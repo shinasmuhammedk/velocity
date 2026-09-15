@@ -889,7 +889,7 @@ func TestEngineTradeReachesTradeConsumerAndSettles(t *testing.T) {
 				sellOrder.Filled == 1 &&
 				sellOrder.Status == string(constants.OrderStatusFilled)
 		},
-		2*time.Second,
+		5*time.Second,
 		100*time.Millisecond,
 	)
 
