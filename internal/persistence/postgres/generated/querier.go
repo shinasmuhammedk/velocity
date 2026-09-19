@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CancelOrder(ctx context.Context, id int64) error
+	ConsumeWalletLockedFunds(ctx context.Context, arg ConsumeWalletLockedFundsParams) (int64, error)
 	CreateFailedSettlement(ctx context.Context, arg CreateFailedSettlementParams) (FailedSettlement, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	CreatePosition(ctx context.Context, arg CreatePositionParams) (Position, error)
@@ -78,6 +79,7 @@ type Querier interface {
 	RejectOrder(ctx context.Context, id int64) error
 	ResolveFailedSettlement(ctx context.Context, id uuid.UUID) error
 	TradeExists(ctx context.Context, id int64) (bool, error)
+	UnlockWalletFunds(ctx context.Context, arg UnlockWalletFundsParams) (int64, error)
 	UpdateOrderAfterTrade(ctx context.Context, arg UpdateOrderAfterTradeParams) error
 	UpdateOrderForModify(ctx context.Context, arg UpdateOrderForModifyParams) error
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) error

@@ -34,7 +34,6 @@ func (r *walletRepository) Get(
 	asset string,
 ) (generated.Wallet, error) {
 
-
 	wallet, err := r.q.GetWallet(
 		ctx,
 		generated.GetWalletParams{
@@ -42,7 +41,6 @@ func (r *walletRepository) Get(
 			Asset:  asset,
 		},
 	)
-
 
 	return wallet, err
 }
@@ -104,6 +102,70 @@ func (r *walletRepository) LockFunds(
 
 	if rows == 0 {
 		return errors.ErrInsufficientBalance
+	}
+
+	return nil
+}
+
+// UnlockFunds atomically moves amount from locked back to available in a
+// single conditional UPDATE, the same pattern as LockFunds above.
+//
+// This intentionally does NOT read the wallet first and write back a
+// computed absolute value: a read-then-write-absolute-value sequence
+// is only safe if every other writer of the same row participates in
+// the same locking protocol, and historically not every caller did.
+// A single atomic, guarded UPDATE is safe under concurrent callers
+// with no such coordination required — Postgres serialises writers to
+// the same row automatically.
+func (r *walletRepository) UnlockFunds(
+	ctx context.Context,
+	walletID uuid.UUID,
+	amount int64,
+) error {
+
+	rows, err := r.q.UnlockWalletFunds(
+		ctx,
+		generated.UnlockWalletFundsParams{
+			ID:        walletID,
+			Available: amount,
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return errors.ErrInsufficientLockedBalance
+	}
+
+	return nil
+}
+
+// ConsumeLockedFunds atomically removes amount from locked (it has left
+// the wallet entirely, e.g. paid out in a trade) in a single guarded
+// UPDATE. See UnlockFunds's comment for why this is atomic rather than
+// read-then-write.
+func (r *walletRepository) ConsumeLockedFunds(
+	ctx context.Context,
+	walletID uuid.UUID,
+	amount int64,
+) error {
+
+	rows, err := r.q.ConsumeWalletLockedFunds(
+		ctx,
+		generated.ConsumeWalletLockedFundsParams{
+			ID:     walletID,
+			Locked: amount,
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return errors.ErrInsufficientLockedBalance
 	}
 
 	return nil

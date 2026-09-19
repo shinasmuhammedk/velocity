@@ -74,6 +74,10 @@ func (s *Service) UnlockFunds(
 		return errors.ErrInvalidQuantity
 	}
 
+	// A plain (non-locking) Get is still needed here purely to resolve
+	// the wallet's UUID from (userID, asset) — the actual balance
+	// mutation below is a single atomic, guarded UPDATE, so nothing
+	// about correctness depends on this read being fresh or exclusive.
 	wallet, err := s.walletRepo.Get(
 		ctx,
 		userID,
@@ -83,18 +87,10 @@ func (s *Service) UnlockFunds(
 		return err
 	}
 
-	if wallet.Locked < amount {
-		return errors.ErrInsufficientLockedBalance
-	}
-
-	return s.walletRepo.Update(
+	return s.walletRepo.UnlockFunds(
 		ctx,
-		generated.UpdateWalletParams{
-			ID: wallet.ID,
-
-			Available: wallet.Available + amount,
-			Locked:    wallet.Locked - amount,
-		},
+		wallet.ID,
+		amount,
 	)
 }
 
@@ -196,7 +192,9 @@ func (s *Service) ConsumeLockedFunds(
 		return errors.ErrInvalidQuantity
 	}
 
-	wallet, err := s.walletRepo.GetForUpdate(
+	// See UnlockFunds above: the Get here only resolves the wallet's
+	// UUID. The balance change itself is one atomic, guarded UPDATE.
+	wallet, err := s.walletRepo.Get(
 		ctx,
 		userID,
 		asset,
@@ -205,17 +203,10 @@ func (s *Service) ConsumeLockedFunds(
 		return err
 	}
 
-	if wallet.Locked < amount {
-		return errors.ErrInsufficientLockedBalance
-	}
-
-	return s.walletRepo.Update(
+	return s.walletRepo.ConsumeLockedFunds(
 		ctx,
-		generated.UpdateWalletParams{
-			ID:        wallet.ID,
-			Available: wallet.Available,
-			Locked:    wallet.Locked - amount,
-		},
+		wallet.ID,
+		amount,
 	)
 }
 
@@ -395,6 +386,14 @@ func (s *Service) ConsumeLockedFundsFromTrade(
 		return errors.ErrInvalidQuantity
 	}
 
+	// See UnlockFunds's comment: GetForUpdate is kept here (rather than
+	// a plain Get) not because the balance change needs it — that's
+	// now a single atomic, guarded UPDATE — but because Settle() calls
+	// this while already holding buyer and seller order row locks in
+	// one transaction, and taking the wallet row lock here too keeps
+	// every row this settlement touches locked for its duration,
+	// which matters for the transaction's overall atomicity even
+	// though it's no longer load-bearing for this specific update.
 	wallet, err := s.walletRepo.GetForUpdate(
 		ctx,
 		userID,
@@ -402,10 +401,6 @@ func (s *Service) ConsumeLockedFundsFromTrade(
 	)
 	if err != nil {
 		return err
-	}
-
-	if wallet.Locked < amount {
-		return errors.ErrInsufficientLockedBalance
 	}
 
 	_, err = s.transactionRepo.Create(
@@ -425,12 +420,9 @@ func (s *Service) ConsumeLockedFundsFromTrade(
 		return err
 	}
 
-	return s.walletRepo.Update(
+	return s.walletRepo.ConsumeLockedFunds(
 		ctx,
-		generated.UpdateWalletParams{
-			ID:        wallet.ID,
-			Available: wallet.Available,
-			Locked:    wallet.Locked - amount,
-		},
+		wallet.ID,
+		amount,
 	)
 }
