@@ -4,6 +4,8 @@ import (
 	"log"
 	"sync/atomic"
 	"time"
+
+	"velocity/internal/infrastructure/metrics"
 )
 
 type Snapshotable interface {
@@ -55,9 +57,13 @@ func (m *Manager) Start(target Snapshotable) {
 					continue
 				}
 
+				start := time.Now()
+
 				snapshot := target.SnapshotState()
 
 				if err := m.writer.Write(snapshot); err != nil {
+					metrics.SnapshotFailures.Inc()
+
 					log.Printf(
 						"snapshot write failed: %v",
 						err,
@@ -67,6 +73,19 @@ func (m *Manager) Start(target Snapshotable) {
 
 				m.lastSnapshotSequence.Store(
 					currentSequence,
+				)
+
+				metrics.SnapshotsTotal.Inc()
+				metrics.SnapshotDuration.Observe(
+					time.Since(start).Seconds(),
+				)
+				// Exported as a timestamp rather than an age so that
+				// staleness is computed at query time:
+				// time() - velocity_snapshot_last_success_timestamp_seconds
+				// keeps rising if the process wedges, whereas a
+				// process-computed age would freeze with it.
+				metrics.SnapshotLastSuccessTimestamp.Set(
+					float64(time.Now().Unix()),
 				)
 
 			case <-m.stop:

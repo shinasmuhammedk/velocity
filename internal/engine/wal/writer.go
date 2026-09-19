@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
+
+	"velocity/internal/infrastructure/metrics"
 )
 
 type Writer struct {
@@ -70,7 +73,15 @@ func (w *Writer) Write(event *Event) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// Timed from inside the lock so the histogram measures the append
+	// and fsync themselves. Lock contention between concurrent writers
+	// is a separate concern and would otherwise be folded into what
+	// looks like disk latency.
+	start := time.Now()
+
 	if event.Sequence <= w.sequence {
+		metrics.WALWriteFailures.WithLabelValues("sequence").Inc()
+
 		return fmt.Errorf(
 			"invalid WAL sequence: got %d, expected > %d",
 			event.Sequence,
@@ -80,20 +91,31 @@ func (w *Writer) Write(event *Event) error {
 
 	data, err := w.serializer.Serialize(event)
 	if err != nil {
+		metrics.WALWriteFailures.WithLabelValues("serialize").Inc()
 		return err
 	}
 
 	data = append(data, '\n')
 
 	if _, err := w.file.Write(data); err != nil {
+		metrics.WALWriteFailures.WithLabelValues("write").Inc()
 		return err
 	}
 
 	if err := w.file.Sync(); err != nil {
+		// A failed fsync means the record may or may not be durable.
+		// Counting it separately from a failed write matters: this is
+		// the case where recovery can legitimately disagree with what
+		// the caller was told.
+		metrics.WALWriteFailures.WithLabelValues("fsync").Inc()
 		return err
 	}
 
 	w.sequence = event.Sequence
+
+	metrics.WALWritesTotal.Inc()
+	metrics.WALBytesWritten.Add(float64(len(data)))
+	metrics.WALWriteDuration.Observe(time.Since(start).Seconds())
 
 	return nil
 }

@@ -1,0 +1,303 @@
+{
+  "id": null,
+  "uid": "velocity-overview",
+  "title": "Velocity Overview",
+  "tags": ["velocity"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Engine",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Engines Active",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [
+        { "expr": "velocity_engines_active", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Engine Queue Depth vs Capacity",
+      "description": "Per-symbol command queue depth. Sustained closeness to capacity means the matching loop is falling behind submissions.",
+      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 1 },
+      "targets": [
+        { "expr": "velocity_engine_queue_depth", "legendFormat": "{{symbol}} depth", "refId": "A" },
+        { "expr": "max(velocity_engine_queue_capacity)", "legendFormat": "capacity", "refId": "B" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Submit Latency (p50 / p99)",
+      "description": "End-to-end command latency including queue wait, from Engine.SubmitOrder.",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 1 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(velocity_engine_command_duration_seconds_bucket{kind=\"submit\"}[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(velocity_engine_command_duration_seconds_bucket{kind=\"submit\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Command Throughput by Kind",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "targets": [
+        {
+          "expr": "sum by (kind, outcome) (rate(velocity_engine_commands_total[1m]))",
+          "legendFormat": "{{kind}} - {{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Orders & Trades",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Orders Submitted",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 18 },
+      "targets": [{ "expr": "velocity_orders_submitted_total", "refId": "A" }]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Orders Cancelled",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 18 },
+      "targets": [{ "expr": "velocity_orders_cancelled_total", "refId": "A" }]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Orders Modified",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 18 },
+      "targets": [{ "expr": "velocity_orders_modified_total", "refId": "A" }]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Trades Executed",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 18 },
+      "targets": [{ "expr": "velocity_trades_executed_total", "refId": "A" }]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Resting Orders by Side (Top 10 Symbols)",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 22 },
+      "targets": [
+        {
+          "expr": "topk(10, velocity_orderbook_resting_orders)",
+          "legendFormat": "{{symbol}} - {{side}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Untriggered Stop Orders (Total)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
+      "targets": [
+        { "expr": "sum(velocity_stopbook_resting_orders)", "refId": "A" }
+      ]
+    },
+
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Durability: WAL, Snapshots, Recovery",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "WAL Write Rate & Failures",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
+      "targets": [
+        { "expr": "rate(velocity_wal_writes_total[1m])", "legendFormat": "writes/sec", "refId": "A" },
+        { "expr": "rate(velocity_wal_write_failures_total[1m])", "legendFormat": "failures/sec ({{stage}})", "refId": "B" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "WAL Write Duration (p99)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(velocity_wal_write_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Time Since Last Successful Snapshot",
+      "description": "Alerts if this exceeds 5 minutes (see VelocitySnapshotsStale).",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 39 },
+      "targets": [
+        { "expr": "time() - velocity_snapshot_last_success_timestamp_seconds", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Snapshot Failures (Total)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 39 },
+      "targets": [{ "expr": "velocity_snapshot_failures_total", "refId": "A" }]
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Orders Recovered (Last Restart)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 39 },
+      "targets": [{ "expr": "velocity_recovered_orders_total", "refId": "A" }]
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Recovery Duration",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 39 },
+      "targets": [
+        {
+          "expr": "velocity_recovery_duration_seconds_sum / velocity_recovery_duration_seconds_count",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Settlement",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Settlement Attempts vs Failures",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "targets": [
+        { "expr": "rate(velocity_settlements_total[5m])", "legendFormat": "attempts/sec", "refId": "A" },
+        { "expr": "rate(velocity_settlement_failures_total[5m])", "legendFormat": "failures/sec", "refId": "B" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Failed Settlements (Current Backlog)",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 44 },
+      "targets": [{ "expr": "velocity_failed_settlements_current", "refId": "A" }]
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Failed Settlements Recovered",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 44 },
+      "targets": [{ "expr": "velocity_failed_settlements_recovered_total", "refId": "A" }]
+    },
+    {
+      "id": 34,
+      "type": "stat",
+      "title": "Dead-Lettered Settlements",
+      "description": "Retries exhausted. Requires manual intervention — see VelocityFailedSettlementsDead alert.",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 44 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "expr": "velocity_failed_settlements_dead_total", "refId": "A" }]
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Settlement Duration (p99)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(velocity_settlement_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Kafka",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 }
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Kafka Health by Component",
+      "description": "1 = healthy, 0 = unhealthy. See VelocityKafkaUnhealthy alert.",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 57 },
+      "targets": [
+        { "expr": "velocity_kafka_health", "legendFormat": "{{component}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Produced / Consumed Rate",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 57 },
+      "targets": [
+        { "expr": "rate(velocity_kafka_messages_produced_total[1m])", "legendFormat": "produced/sec", "refId": "A" },
+        { "expr": "rate(velocity_kafka_messages_consumed_total[1m])", "legendFormat": "consumed/sec", "refId": "B" }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Failures / DLQ / Dropped",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 57 },
+      "targets": [
+        { "expr": "rate(velocity_kafka_produce_failures_total[5m])", "legendFormat": "produce failures/sec", "refId": "A" },
+        { "expr": "rate(velocity_kafka_consume_failures_total[5m])", "legendFormat": "consume failures/sec", "refId": "B" },
+        { "expr": "rate(velocity_kafka_dlq_messages_total[5m])", "legendFormat": "DLQ/sec", "refId": "C" },
+        { "expr": "rate(velocity_kafka_event_queue_dropped_total[5m])", "legendFormat": "dropped/sec", "refId": "D" }
+      ]
+    }
+  ]
+}

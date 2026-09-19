@@ -1,4 +1,4 @@
-# Staging configuration.
+# Production configuration.
 #
 # Every secret and endpoint here is expected to come from the
 # environment, not from this file. Viper is configured with
@@ -9,11 +9,11 @@
 #   VELOCITY_JWT_SECRET
 #   VELOCITY_METRICS_PORT
 #
-# Select this file with VELOCITY_ENV=staging.
+# Select this file with VELOCITY_ENV=production.
 
 app:
   name: Velocity
-  environment: staging
+  environment: production
   version: "0.1.0"
 
 server:
@@ -36,7 +36,7 @@ database:
   conn_max_lifetime: 30m
 
 logger:
-  level: info
+  level: warn
   encoding: json
   development: false
 

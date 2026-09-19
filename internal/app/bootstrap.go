@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/analytics/stats"
@@ -41,8 +42,7 @@ import (
 
 	grpcserver "velocity/internal/transport/grpc/server"
 
-	"github.com/gofiber/adaptor/v2"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 // Bootstrap creates and initializes the application.
@@ -168,11 +168,40 @@ func Bootstrap() (*Container, error) {
 	// Register HTTP handlers
 	//
 
-	//metrics
+	// Metrics
+	//
+	// Collectors are registered before anything that increments them is
+	// constructed, and the scrape endpoint is served on its own
+	// listener from cfg.Metrics rather than being mounted on the public
+	// API app.
 	metrics.Register()
-	container.Logger.Info(
-		"prometheus metrics registered",
+	metrics.SetBuildInfo(
+		container.Config.App.Version,
+		container.Config.App.Environment,
+		"api",
 	)
+
+	container.MetricsServer = metrics.NewServer(metrics.Options{
+		Enabled: container.Config.Metrics.Enabled,
+		Host:    container.Config.Metrics.Host,
+		Port:    container.Config.Metrics.Port,
+		Path:    container.Config.Metrics.Path,
+	})
+
+	if err := container.MetricsServer.Start(); err != nil {
+		return nil, fmt.Errorf("start metrics server: %w", err)
+	}
+
+	if container.MetricsServer.Enabled() {
+		container.Logger.Info(
+			"prometheus metrics registered and exposed",
+			zap.String("endpoint", container.MetricsServer.Address()),
+		)
+	} else {
+		container.Logger.Info(
+			"prometheus metrics registered but endpoint disabled (metrics.enabled=false)",
+		)
+	}
 
 	// Register WebSocket hub
 	//
@@ -509,11 +538,6 @@ func Bootstrap() (*Container, error) {
 		container.AuthMiddleware.Authenticate,
 		httpmiddleware.RequireRole(constants.RoleAdmin),
 		container.RateLimitMiddleware,
-	)
-
-	container.HTTP.Get(
-		"/metrics",
-		adaptor.HTTPHandler(promhttp.Handler()),
 	)
 
 	// WebSocket Routes

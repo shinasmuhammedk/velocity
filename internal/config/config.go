@@ -15,7 +15,6 @@ type Config struct {
 	Metrics   MetricsConfig   `mapstructure:"metrics"`
 	Redis     RedisConfig     `mapstructure:"redis"`
 	Kafka     KafkaConfig     `mapstructure:"kafka"`
-	Tracing   TracingConfig   `mapstructure:"tracing"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 	GRPC      GRPCConfig      `mapstructure:"grpc"`
 	Identity  IdentityConfig  `mapstructure:"identity"`
@@ -107,11 +106,21 @@ type WebSocketConfig struct {
 // Metrics
 //
 
+// MetricsConfig controls the Prometheus scrape endpoint.
+//
+// The endpoint is served on its own listener (see
+// internal/infrastructure/metrics.Server), not on the public API port,
+// so Host should normally stay on loopback or a private interface.
+//
+// Port applies to cmd/api. WorkerPort applies to cmd/worker, which runs
+// as a separate process and therefore cannot share a port with the API
+// when both are deployed on one host.
 type MetricsConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	Path    string `mapstructure:"path"`
+	Enabled    bool   `mapstructure:"enabled"`
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	WorkerPort int    `mapstructure:"worker_port"`
+	Path       string `mapstructure:"path"`
 }
 
 //
@@ -134,16 +143,6 @@ type KafkaConfig struct {
 	Topic    string   `mapstructure:"topic"`
 	DLQTopic string   `mapstructure:"dlq_topic"`
 	GroupID  string   `mapstructure:"group_id"`
-}
-
-//
-// Distributed Tracing
-//
-
-type TracingConfig struct {
-	Enabled  bool   `mapstructure:"enabled"`
-	Exporter string `mapstructure:"exporter"`
-	Endpoint string `mapstructure:"endpoint"`
 }
 
 type RateLimitConfig struct {

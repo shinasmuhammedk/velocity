@@ -10,6 +10,7 @@ import (
 	"velocity/internal/engine/events"
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/wal"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/worker"
 )
 
@@ -111,6 +112,8 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 
 	r.engines[symbol] = e
 
+	metrics.EnginesActive.Set(float64(len(r.engines)))
+
 	return e
 }
 
@@ -139,6 +142,8 @@ func (r *Registry) Remove(symbol string) {
 		manager.Stop()
 		delete(r.snapshotManagers, symbol)
 	}
+
+	metrics.EnginesActive.Set(float64(len(r.engines)))
 }
 
 // Count returns the total number of engines.

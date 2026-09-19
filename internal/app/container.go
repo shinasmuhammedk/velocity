@@ -14,6 +14,7 @@ import (
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/wal"
 	"velocity/internal/infrastructure/kafka"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/infrastructure/redis"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
@@ -61,6 +62,7 @@ type Container struct {
 	KafkaProducer       *kafka.Producer
 	KafkaEventPublisher *kafka.EventPublisher
 	KafkaHealth         *kafka.HealthChecker
+	MetricsServer       *metrics.Server
 
 	// --------------------------------------------------
 	// Utilities

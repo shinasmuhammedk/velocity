@@ -46,8 +46,9 @@ websocket:
 
 metrics:
   enabled: true
-  host: localhost
-  port: 9090
+  host: 0.0.0.0
+  port: 9464
+  worker_port: 9465
   path: /metrics
 
 redis:
@@ -63,11 +64,6 @@ kafka:
   dlq_topic: velocity-events-dlq
   group_id: velocity-group
 
-tracing:
-  enabled: false
-  exporter: jaeger
-  endpoint: http://localhost:14268/api/traces
-  
 rate_limit:
   enabled: true
 
@@ -84,7 +80,7 @@ grpc:
   listen_address: ":50053"
 
 identity:
-  address: "localhost:50052"
+  address: "localhost:50051"
 
 snowflake:
   order_node_id: 1

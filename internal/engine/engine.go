@@ -3,6 +3,7 @@ package engine
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 	"velocity/internal/domain/order"
 	"velocity/internal/domain/trade"
 	"velocity/internal/engine/command"
@@ -46,6 +47,11 @@ type Engine struct {
 
 	done chan struct{} // new
 }
+
+// metricsSampleInterval is how often engine state gauges are refreshed.
+// Kept comfortably below a typical 15s scrape interval so no scrape
+// ever sees a stale sample.
+const metricsSampleInterval = 5 * time.Second
 
 var submitResultPool = sync.Pool{
 	New: func() any {
@@ -237,6 +243,7 @@ func New(
 		e.SetSequence(walWriter.Sequence())
 	}
 	e.start()
+	e.sampleMetrics(metricsSampleInterval)
 
 	return e
 }
@@ -275,6 +282,8 @@ func (e *Engine) SubmitOrder(
 		}
 	}
 
+	start := time.Now()
+
 	// resultCh := make(chan error, 1)
 	resultCh := submitResultPool.Get().(chan error)
 
@@ -286,6 +295,8 @@ func (e *Engine) SubmitOrder(
 
 	err := <-resultCh
 	submitResultPool.Put(resultCh)
+
+	e.observeCommand("submit", start, err)
 
 	// return <-resultCh
 	return err
@@ -301,13 +312,21 @@ func (e *Engine) OrderBook() *orderbook.OrderBook {
 }
 
 func (e *Engine) CancelOrder(orderID int64) error {
+	start := time.Now()
+
 	resultCh := make(chan error, 1)
 	e.commandQueue <- command.Command{
 		Kind:    command.Cancel,
 		OrderID: orderID,
 		Result:  resultCh,
 	}
-	return <-resultCh // blocks until the background goroutine actually processes it
+
+	// blocks until the background goroutine actually processes it
+	err := <-resultCh
+
+	e.observeCommand("cancel", start, err)
+
+	return err
 }
 
 func (e *Engine) ModifyOrder(
@@ -315,6 +334,8 @@ func (e *Engine) ModifyOrder(
 	newPrice int64,
 	newQuantity int64,
 ) error {
+
+	start := time.Now()
 
 	resultCh := make(chan error, 1)
 
@@ -326,7 +347,109 @@ func (e *Engine) ModifyOrder(
 		Result:      resultCh,
 	}
 
-	return <-resultCh
+	err := <-resultCh
+
+	e.observeCommand("modify", start, err)
+
+	return err
+}
+
+// observeCommand records end-to-end command latency and outcome.
+//
+// The measurement starts before the send on commandQueue, so a
+// saturated queue shows up as latency here rather than as an invisible
+// stall - which is the whole point of measuring at the caller boundary
+// instead of inside the single-threaded loop.
+func (e *Engine) observeCommand(
+	kind string,
+	start time.Time,
+	err error,
+) {
+	outcome := "ok"
+	if err != nil {
+		outcome = "error"
+	}
+
+	metrics.EngineCommandsTotal.
+		WithLabelValues(e.symbol, kind, outcome).
+		Inc()
+
+	metrics.EngineCommandDuration.
+		WithLabelValues(e.symbol, kind).
+		Observe(time.Since(start).Seconds())
+}
+
+// sampleMetrics periodically publishes gauge-style engine state.
+//
+// Gauges are sampled on a ticker rather than updated inline because
+// they describe state, not events: writing them on every command would
+// add label lookups to the hot path for no extra fidelity at a 15s
+// scrape interval.
+func (e *Engine) sampleMetrics(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		metrics.EngineQueueCapacity.
+			WithLabelValues(e.symbol).
+			Set(float64(cap(e.commandQueue)))
+
+		for {
+			select {
+			case <-ticker.C:
+				metrics.EngineQueueDepth.
+					WithLabelValues(e.symbol).
+					Set(float64(len(e.commandQueue)))
+
+				metrics.EngineTradeQueueDepth.
+					WithLabelValues(e.symbol).
+					Set(float64(len(e.tradeQueue)))
+
+				metrics.EngineSequence.
+					WithLabelValues(e.symbol).
+					Set(float64(e.Sequence()))
+
+				bids, asks := e.book.SideCounts()
+
+				metrics.OrderBookResting.
+					WithLabelValues(e.symbol, "bid").
+					Set(float64(bids))
+
+				metrics.OrderBookResting.
+					WithLabelValues(e.symbol, "ask").
+					Set(float64(asks))
+
+				metrics.OrderBookBestPrice.
+					WithLabelValues(e.symbol, "bid").
+					Set(float64(e.book.BestBidPrice()))
+
+				metrics.OrderBookBestPrice.
+					WithLabelValues(e.symbol, "ask").
+					Set(float64(e.book.BestAskPrice()))
+
+				metrics.StopBookResting.
+					WithLabelValues(e.symbol).
+					Set(float64(e.stopBook.Len()))
+
+			case <-e.done:
+				// The engine has stopped. Delete the series rather than
+				// leaving them frozen at their last value: a removed
+				// symbol whose gauges keep reporting a non-empty book
+				// would read as stuck state forever.
+				metrics.EngineQueueDepth.DeleteLabelValues(e.symbol)
+				metrics.EngineQueueCapacity.DeleteLabelValues(e.symbol)
+				metrics.EngineTradeQueueDepth.DeleteLabelValues(e.symbol)
+				metrics.EngineSequence.DeleteLabelValues(e.symbol)
+				metrics.StopBookResting.DeleteLabelValues(e.symbol)
+				metrics.OrderBookResting.DeleteLabelValues(e.symbol, "bid")
+				metrics.OrderBookResting.DeleteLabelValues(e.symbol, "ask")
+				metrics.OrderBookBestPrice.DeleteLabelValues(e.symbol, "bid")
+				metrics.OrderBookBestPrice.DeleteLabelValues(e.symbol, "ask")
+
+				return
+			}
+		}
+	}()
 }
 
 func (e *Engine) processTriggeredStops() {
