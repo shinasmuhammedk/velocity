@@ -42,6 +42,24 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        # internal/infrastructure/redis's tests and
+        # internal/transport/http/middleware's rate-limit tests dial
+        # localhost:6379 directly (see rate_limit_test.go's envOr
+        # default and configs/config.development.yaml's redis.port) -
+        # nothing in this job ever pointed them anywhere else, so
+        # without this block every one of those tests fails with
+        # "connection refused" rather than actually exercising the
+        # rate limiter or cache.
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
       kafka:
         # Mirrors deployments/compose/docker-compose.yml's Kafka service
         # (KRaft mode, single node, auto-create-topics disabled) so CI

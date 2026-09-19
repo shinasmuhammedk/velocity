@@ -171,3 +171,96 @@ When adding new benchmark results to this file, always report:
 
 so that future readers can judge how much weight to put on any given
 number, the same way the caveats above apply to this one.
+
+## WAL group commit: batching the fsync
+
+**Change:** `internal/engine/wal/writer.go` gained `WriteBatch()`, and the
+engine's command loop (`internal/engine/engine.go`) now drains whatever
+commands are already queued into one batch, writes their WAL records in a
+single append, and pays **one fsync for the whole batch** instead of one
+per command.
+
+The loop still *blocks* for the first command of each batch. That detail is
+the whole design: a command arriving at an idle engine is never held back
+waiting for company, it commits alone immediately. Batches only grow when
+commands are genuinely already queued behind a commit in progress — which
+is exactly the situation where amortizing the fsync costs nothing.
+
+### Why the 8-producer number understates this
+
+`SubmitOrder` is synchronous: a producer blocks on its result channel until
+the engine has committed *and* applied its command. So N producers means at
+most N commands in flight, which caps the batch size at N, which caps how
+many fsyncs can be amortized away.
+
+The existing `TestStress_SustainedThroughput_WithAndWithoutRealWAL` uses 8
+producers, so it can only ever show an ~8x-bounded improvement. Real submit
+concurrency against the HTTP API is set by how many clients are submitting
+at once, not by a benchmark constant.
+
+`TestStress_WALGroupCommit_ScalesWithConcurrency` was added to measure that
+directly.
+
+### Results
+
+**Source:** `test/stress/wal_group_commit_scaling_test.go` —
+`TestStress_WALGroupCommit_ScalesWithConcurrency`
+
+**What was measured:** non-crossing SELL orders, 5 seconds per concurrency
+level, real `wal.Writer` on a real file in every row. Same process, same
+machine, back to back. Only the engine/writer code differs between the two
+columns.
+
+**Environment:** Linux VM, ext4 on a virtual block device, Go 1.24.
+Not the reporter's Windows machine, so these absolute numbers are not
+comparable to the rows in the sections above — only the two columns here
+are comparable to each other.
+
+| Producers | Before (fsync per command) | After (group commit) | Speedup |
+|---:|---:|---:|---:|
+| 1 | 8,924.66 | 9,090.69 | 1.02x |
+| 8 | 8,639.73 | 15,512.06 | 1.80x |
+| 32 | 8,540.71 | 36,886.86 | 4.3x |
+| 128 | 7,888.17 | 125,079.12 | 15.9x |
+| 512 | 8,837.33 | 153,352.15 | 17.4x |
+
+The "before" column is flat at roughly 8,500 orders/sec regardless of
+concurrency, which is the signature of one fsync per order: adding
+producers cannot help when every order waits on its own disk sync. The
+"after" column climbs with concurrency because batch size climbs with it.
+
+**The 1-producer row is the important control.** At 1.02x it confirms group
+commit adds no latency in the uncontended case — a lone order still gets
+its own immediate fsync, it is not delayed waiting for a batch to fill.
+
+The same change also moved the existing 8-producer test from 8,648.96 to
+15,384.82 orders/sec (slowdown factor vs. no-WAL: 46.3x → 26.1x).
+
+### Caveats
+
+- **Concurrency-dependent, by construction.** There is no single "group
+  commit is Nx faster" number. The speedup is a function of how many
+  commands are in flight, so quote it with the concurrency attached.
+- **Virtualized disk.** fsync on this VM's ext4 may be cheaper than on the
+  target production storage. That would understate the speedup, since the
+  before column is almost entirely fsync wait.
+- **Batch size is capped at 256** (`maxCommandBatch` in `engine.go`), so
+  the curve flattens past roughly that concurrency — visible already in the
+  128 → 512 row, which gains much less than 32 → 128 did.
+- **Not yet configurable.** `maxCommandBatch` is a package constant;
+  plumbing it through the `engine` config section is a follow-up.
+
+### Durability note
+
+Group commit does not change what durability means here, but it does widen
+one pre-existing hole. A batch is durable or it isn't, as a unit: if the
+fsync fails, every command in the batch is failed and none is applied to
+the book. But a failed fsync has always meant the records *may or may not*
+have reached disk, so recovery can replay events whose callers were handed
+an error. That was true per-record before; it is now true per-batch, so the
+blast radius is up to `maxCommandBatch` commands instead of one.
+
+Closing it properly needs per-record checksums plus a commit marker so
+recovery can discard a partially-committed tail. That is a separate change
+and is not done here. `test/chaos/wal_torn_write_test.go` still passes,
+which covers the torn-write case on the read side.

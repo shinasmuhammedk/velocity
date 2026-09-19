@@ -386,6 +386,21 @@ var (
 		},
 	)
 
+	// WALBatchSize is how many records were grouped behind a single
+	// fsync. This is the metric that says whether group commit is
+	// actually doing anything: under light load it sits at 1 (each
+	// command commits alone, no added latency), and it only climbs when
+	// commands are genuinely queued up behind a commit.
+	WALBatchSize = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "velocity_wal_batch_size",
+			Help: "Number of WAL records grouped into a single fsync",
+			Buckets: []float64{
+				1, 2, 4, 8, 16, 32, 64, 128, 256,
+			},
+		},
+	)
+
 	// ------------------------------------------------------------
 	// Snapshots
 	// ------------------------------------------------------------
@@ -533,6 +548,7 @@ func Register() {
 			WALWriteFailures,
 			WALWriteDuration,
 			WALBytesWritten,
+			WALBatchSize,
 
 			SnapshotsTotal,
 			SnapshotFailures,

@@ -10,20 +10,46 @@ import (
 
 	"velocity/internal/engine/events"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEventPublisher(t *testing.T) {
+	brokers := []string{"localhost:9092"}
+	topic := "velocity-event-publisher-test-" + uuid.NewString()[:8]
+
+	// This broker has topic auto-creation disabled, so the topic must
+	// be provisioned explicitly before either the producer or the
+	// reader below can use it.
+	require.NoError(t, EnsureTopics(brokers, TopicConfig{
+		Name:              topic,
+		NumPartitions:     1,
+		ReplicationFactor: 1,
+	}))
+
+	defer func() {
+		conn, err := kafka.Dial("tcp", brokers[0])
+		if err != nil {
+			t.Logf("cleanup: failed to dial kafka: %v", err)
+			return
+		}
+		defer conn.Close()
+		if err := conn.DeleteTopics(topic); err != nil {
+			t.Logf("cleanup: failed to delete test topic %s: %v", topic, err)
+		}
+	}()
+
 	producer := NewProducer(
-		[]string{"localhost:9092"},
-		"velocity-events-test",
+		brokers,
+		topic,
 	)
 
 	defer producer.Close()
 
 	publisher := NewEventPublisher(
 		producer,
-		"velocity-events-test",
+		topic,
 		zap.NewNop(),
 	)
 
@@ -46,8 +72,8 @@ func TestEventPublisher(t *testing.T) {
 	publisher.Handle(event)
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
-		Topic:   "velocity-events-test",
+		Brokers: brokers,
+		Topic:   topic,
 
 		GroupID: "velocity-event-publisher-test-" +
 			time.Now().Format("20060102150405.000000000"),

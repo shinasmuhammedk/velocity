@@ -59,165 +59,267 @@ var submitResultPool = sync.Pool{
 	},
 }
 
+// maxCommandBatch caps how many already-queued commands are grouped
+// behind a single WAL fsync.
+//
+// The cap exists for two reasons. A batch is held entirely in memory
+// before it is written, so it bounds the append buffer; and every
+// command in a batch shares the batch's fate, so it bounds how much
+// work a single failed fsync throws away. 256 is large enough that the
+// fsync cost per command is negligible at saturation and small enough
+// that the buffer stays trivial.
+const maxCommandBatch = 256
+
 func (e *Engine) start() {
 	go func() {
-
 		defer close(e.done)
-		for cmd := range e.commandQueue {
-			switch c := cmd; c.Kind {
-			case command.Submit:
 
-				if c.Order.Type == constants.StopMarketOrder ||
-					c.Order.Type == constants.StopLimitOrder {
+		// Both slices are allocated once and reused for every batch.
+		batch := make([]command.Command, 0, maxCommandBatch)
+		walEvents := make([]*wal.Event, 0, maxCommandBatch)
 
-					e.stopBook.Add(c.Order)
-					c.Order.Status = constants.OrderStatusPending
+		for {
+			// Block for the first command. This is what keeps group
+			// commit from adding latency: a command that arrives on an
+			// idle engine is not held waiting for company, it commits
+			// immediately in a batch of one. Batches only grow when
+			// commands are genuinely already queued behind a commit in
+			// progress, which is exactly when amortizing the fsync is
+			// free.
+			first, ok := <-e.commandQueue
+			if !ok {
+				return
+			}
 
-					e.incrementSequence()
+			batch = append(batch[:0], first)
+			closed := false
 
-					c.Result <- nil
-					continue
-				}
-
-				seq := e.incrementSequence()
-
-				if e.walWriter != nil {
-					event := wal.NewSubmitEvent(
-						seq,
-						e.symbol,
-						c.Order,
-					)
-
-					if err := e.walWriter.Write(event); err != nil {
-						c.Result <- err
-						continue
+		drain:
+			for len(batch) < maxCommandBatch {
+				select {
+				case next, ok := <-e.commandQueue:
+					if !ok {
+						// Stop() closed the queue. Finish this batch,
+						// then exit.
+						closed = true
+						break drain
 					}
+
+					batch = append(batch, next)
+
+				default:
+					// Nothing else queued right now. Commit what we have
+					// rather than waiting for more.
+					break drain
 				}
+			}
 
-				trades, err := e.matcher.Match(c.Order)
-				if err != nil {
-					c.Result <- err
-					continue
-				}
+			walEvents = e.processBatch(batch, walEvents[:0])
 
-				for _, t := range trades {
-
-					e.lastTradePrice.Store(t.Price)
-					metrics.TradesExecuted.Inc()
-
-					e.tradeQueue <- t
-					if e.publisher != nil {
-						e.publish(events.TradeExecutedEvent{
-							BaseEvent: events.NewBaseEvent(),
-
-							TradeID: t.ID,
-
-							BuyOrderID:  t.BuyOrderID,
-							SellOrderID: t.SellOrderID,
-
-							BuyerID:  t.BuyerID,
-							SellerID: t.SellerID,
-
-							Symbol: t.Symbol,
-
-							Price:    t.Price,
-							Quantity: t.Quantity,
-						})
-					}
-				}
-
-				e.processTriggeredStops()
-
-				c.Result <- nil
-
-			case command.Cancel:
-
-				seq := e.incrementSequence()
-
-				if e.walWriter != nil {
-					event := wal.NewCancelEvent(
-						seq,
-						e.symbol,
-						c.OrderID,
-					)
-
-					if err := e.walWriter.Write(event); err != nil {
-						c.Result <- err
-						continue
-					}
-				}
-
-				// First try stop orders.
-				err := e.stopBook.CancelOrder(c.OrderID)
-
-				if err == nil {
-					c.Result <- nil
-					continue
-				}
-
-				// Otherwise cancel from the normal order book.
-				cancelledOrder, err := e.book.CancelOrder(c.OrderID)
-
-				if err != nil {
-					c.Result <- err
-					continue
-				}
-
-				// Publish only after successful cancellation.
-				e.publish(events.OrderCancelledEvent{
-					BaseEvent: events.NewBaseEvent(),
-
-					OrderID: cancelledOrder.ID,
-					Symbol:  cancelledOrder.Symbol,
-					UserID:  cancelledOrder.UserID,
-				})
-
-				c.Result <- nil
-
-				// in engine.go's start()
-			case command.Modify:
-
-				seq := e.incrementSequence()
-
-				if e.walWriter != nil {
-					event := wal.NewModifyEvent(
-						seq,
-						e.symbol,
-						c.OrderID,
-						c.NewPrice,
-						c.NewQuantity,
-					)
-
-					if err := e.walWriter.Write(event); err != nil {
-						c.Result <- err
-						continue
-					}
-				}
-
-				err := e.book.ModifyOrder(
-					c.OrderID,
-					c.NewPrice,
-					c.NewQuantity,
-				)
-
-				if err != nil {
-					c.Result <- err
-					continue
-				}
-
-				e.publish(events.OrderModifiedEvent{
-					BaseEvent: events.NewBaseEvent(),
-
-					OrderID:     c.OrderID,
-					Symbol:      e.symbol,
-					NewPrice:    c.NewPrice,
-					NewQuantity: c.NewQuantity,
-				})
-
-				c.Result <- nil
+			if closed {
+				return
 			}
 		}
 	}()
+}
+
+// processBatch runs one group commit: assign sequence numbers, write the
+// batch's WAL records with a single fsync, then apply each command to
+// the book in arrival order.
+//
+// It returns the WAL event slice so the caller can reuse its backing
+// array across batches.
+func (e *Engine) processBatch(
+	batch []command.Command,
+	walEvents []*wal.Event,
+) []*wal.Event {
+
+	// Phase 1 — assign sequence numbers in arrival order and build the
+	// WAL records.
+	//
+	// Every command consumes a sequence number here, including ones that
+	// produce no WAL record, so the numbering is identical to what the
+	// old one-command-at-a-time loop produced. Sequence must track
+	// arrival order because snapshots use it to decide which WAL records
+	// they already contain.
+	for i := range batch {
+		c := &batch[i]
+
+		seq := e.incrementSequence()
+
+		if e.walWriter == nil {
+			continue
+		}
+
+		switch c.Kind {
+		case command.Submit:
+			// Stop orders rest in the stop book and are not written to
+			// the WAL today; they consume a sequence number and nothing
+			// more. (That they aren't durable is a pre-existing gap,
+			// unchanged here.)
+			if isStopOrder(c.Order) {
+				continue
+			}
+
+			walEvents = append(walEvents, wal.NewSubmitEvent(
+				seq,
+				e.symbol,
+				c.Order,
+			))
+
+		case command.Cancel:
+			walEvents = append(walEvents, wal.NewCancelEvent(
+				seq,
+				e.symbol,
+				c.OrderID,
+			))
+
+		case command.Modify:
+			walEvents = append(walEvents, wal.NewModifyEvent(
+				seq,
+				e.symbol,
+				c.OrderID,
+				c.NewPrice,
+				c.NewQuantity,
+			))
+		}
+	}
+
+	// Phase 2 — one append, one fsync, for the whole batch.
+	if e.walWriter != nil && len(walEvents) > 0 {
+		if err := e.walWriter.WriteBatch(walEvents); err != nil {
+			// The batch is durable or it isn't, as a unit. Fail every
+			// command in it and apply none of them, so the book never
+			// diverges from what the WAL says happened.
+			for i := range batch {
+				batch[i].Result <- err
+			}
+
+			return walEvents
+		}
+	}
+
+	// Phase 3 — apply. Everything below here is already durable.
+	for i := range batch {
+		e.applyCommand(&batch[i])
+	}
+
+	return walEvents
+}
+
+// applyCommand applies a single already-WAL'd command to the book and
+// reports the outcome on its result channel.
+func (e *Engine) applyCommand(c *command.Command) {
+	switch c.Kind {
+
+	case command.Submit:
+
+		if isStopOrder(c.Order) {
+			e.stopBook.Add(c.Order)
+			c.Order.Status = constants.OrderStatusPending
+
+			c.Result <- nil
+			return
+		}
+
+		trades, err := e.matcher.Match(c.Order)
+		if err != nil {
+			c.Result <- err
+			return
+		}
+
+		for _, t := range trades {
+
+			e.lastTradePrice.Store(t.Price)
+			metrics.TradesExecuted.Inc()
+
+			e.tradeQueue <- t
+			if e.publisher != nil {
+				e.publish(events.TradeExecutedEvent{
+					BaseEvent: events.NewBaseEvent(),
+
+					TradeID: t.ID,
+
+					BuyOrderID:  t.BuyOrderID,
+					SellOrderID: t.SellOrderID,
+
+					BuyerID:  t.BuyerID,
+					SellerID: t.SellerID,
+
+					Symbol: t.Symbol,
+
+					Price:    t.Price,
+					Quantity: t.Quantity,
+				})
+			}
+		}
+
+		e.processTriggeredStops()
+
+		c.Result <- nil
+
+	case command.Cancel:
+
+		// First try stop orders.
+		if err := e.stopBook.CancelOrder(c.OrderID); err == nil {
+			c.Result <- nil
+			return
+		}
+
+		// Otherwise cancel from the normal order book.
+		cancelledOrder, err := e.book.CancelOrder(c.OrderID)
+
+		if err != nil {
+			c.Result <- err
+			return
+		}
+
+		// Publish only after successful cancellation.
+		e.publish(events.OrderCancelledEvent{
+			BaseEvent: events.NewBaseEvent(),
+
+			OrderID: cancelledOrder.ID,
+			Symbol:  cancelledOrder.Symbol,
+			UserID:  cancelledOrder.UserID,
+		})
+
+		c.Result <- nil
+
+	case command.Modify:
+
+		err := e.book.ModifyOrder(
+			c.OrderID,
+			c.NewPrice,
+			c.NewQuantity,
+		)
+
+		if err != nil {
+			c.Result <- err
+			return
+		}
+
+		e.publish(events.OrderModifiedEvent{
+			BaseEvent: events.NewBaseEvent(),
+
+			OrderID:     c.OrderID,
+			Symbol:      e.symbol,
+			NewPrice:    c.NewPrice,
+			NewQuantity: c.NewQuantity,
+		})
+
+		c.Result <- nil
+	}
+}
+
+// isStopOrder reports whether an order rests in the stop book rather
+// than the order book.
+func isStopOrder(o *order.Order) bool {
+	if o == nil {
+		return false
+	}
+
+	return o.Type == constants.StopMarketOrder ||
+		o.Type == constants.StopLimitOrder
 }
 
 func New(
