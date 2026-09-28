@@ -292,3 +292,38 @@ func (h *MarketDataHandler) GetCandles(
 
 	return c.JSON(candleData)
 }
+
+func (h *MarketDataHandler) GetSymbol(c *fiber.Ctx) error {
+
+	symbol := c.Params("symbol")
+
+	if symbol == "" {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid symbol",
+			"symbol is required",
+		)
+	}
+
+	symbolData, err := h.marketService.GetSymbol(
+		c.Context(),
+		symbol,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusNotFound,
+			"symbol not found",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"symbol retrieved successfully",
+		symbolData,
+	)
+}

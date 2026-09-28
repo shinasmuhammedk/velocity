@@ -1,0 +1,105 @@
+# Production configuration.
+#
+# Every secret and endpoint here is expected to come from the
+# environment, not from this file. Viper is configured with
+# SetEnvPrefix("VELOCITY") and a "." -> "_" key replacer, so any value
+# below can be overridden with VELOCITY_<SECTION>_<KEY>, for example:
+#
+#   VELOCITY_DATABASE_PASSWORD
+#   VELOCITY_JWT_SECRET
+#   VELOCITY_METRICS_PORT
+#
+# Select this file with VELOCITY_ENV=production.
+
+app:
+  name: Velocity
+  environment: production
+  version: "0.1.0"
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 60s
+  shutdown_timeout: 15s
+
+database:
+  host: postgres
+  port: 5432
+  user: velocity
+  password: ""
+  name: velocity
+  ssl_mode: require
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+
+logger:
+  level: warn
+  encoding: json
+  development: false
+
+engine:
+  queue_size: 10000
+  worker_count: 4
+  snapshot_interval: 1000
+  persistence_buffer: 1000
+  recovery_enabled: true
+
+jwt:
+  secret: ""
+  issuer: "velocity"
+  expiry: 24h
+
+websocket:
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  max_connections: 10000
+
+metrics:
+  enabled: true
+  # Bind to all interfaces so a sidecar or node-local Prometheus can
+  # scrape the container. Keep this port off the public load balancer -
+  # /metrics has no authentication.
+  host: 0.0.0.0
+  port: 9464
+  worker_port: 9465
+  path: /metrics
+
+redis:
+  host: redis
+  port: 6379
+  password: ""
+  database: 0
+
+kafka:
+  brokers:
+    - kafka:9092
+  topic: velocity-events
+  dlq_topic: velocity-events-dlq
+  group_id: velocity-group
+
+rate_limit:
+  enabled: true
+
+  submit_rate: 10
+  submit_burst: 20
+
+  cancel_rate: 5
+  cancel_burst: 10
+
+  modify_rate: 5
+  modify_burst: 10
+
+grpc:
+  listen_address: ":50053"
+
+identity:
+  address: "identity:50051"
+
+snowflake:
+  # MUST be unique per running instance, or IDs collide across
+  # replicas. See SnowflakeConfig in internal/config/config.go.
+  order_node_id: 1
+  trade_node_id: 0

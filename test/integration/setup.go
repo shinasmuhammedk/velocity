@@ -30,6 +30,7 @@ type TestContext struct {
 	SymbolRepo           repository.SymbolRepository
 	FailedSettlementRepo repository.FailedSettlementRepository
 
+	Hub            *userstream.Hub
 	UserDispatcher *userstream.Dispatcher
 }
 
@@ -76,7 +77,18 @@ func NewTestContext(t *testing.T) *TestContext {
 		WalletRepo:           repository.NewWalletRepository(db),
 		PositionRepo:         repository.NewPositionRepository(db),
 		SymbolRepo:           repository.NewSymbolRepository(db),
+		Hub:                  hub,
 		UserDispatcher:       dispatcher,
 		FailedSettlementRepo: repository.NewFailedSettlementRepository(db),
 	}
+}
+
+func (tc *TestContext) CleanupTrades(t *testing.T) {
+	t.Helper()
+
+	_, err := tc.DB.Exec(
+		tc.Ctx,
+		`TRUNCATE TABLE trades, wallet_transactions`,
+	)
+	require.NoError(t, err)
 }

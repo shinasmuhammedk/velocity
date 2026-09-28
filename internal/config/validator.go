@@ -40,6 +40,10 @@ func Validate(cfg *Config) error {
 		return err
 	}
 
+	if err := validateMetrics(cfg.Metrics, cfg.Server); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -195,6 +199,65 @@ func validateKafka(cfg KafkaConfig) error {
 
 	if strings.TrimSpace(cfg.GroupID) == "" {
 		return errors.NewConfigMissing("kafka.group_id is required")
+	}
+
+	return nil
+}
+
+// ----------------------------------------------------
+// Metrics
+// ----------------------------------------------------
+
+// validateMetrics checks the Prometheus listener settings.
+//
+// Nothing is validated when metrics are disabled, since the remaining
+// fields are then unused. When enabled, the API metrics port must not
+// collide with the API's own HTTP port or with the worker's metrics
+// port - both are silent misconfigurations that would otherwise only
+// surface as a bind failure at startup, or worse, as a metrics endpoint
+// accidentally sharing the public listener.
+func validateMetrics(cfg MetricsConfig, server ServerConfig) error {
+	if !cfg.Enabled {
+		return nil
+	}
+
+	if strings.TrimSpace(cfg.Host) == "" {
+		return errors.NewConfigMissing("metrics.host")
+	}
+
+	if cfg.Port < 1 || cfg.Port > 65535 {
+		return errors.NewConfigInvalid(
+			"metrics.port",
+			"must be between 1 and 65535",
+		)
+	}
+
+	if cfg.WorkerPort < 1 || cfg.WorkerPort > 65535 {
+		return errors.NewConfigInvalid(
+			"metrics.worker_port",
+			"must be between 1 and 65535",
+		)
+	}
+
+	if cfg.Port == cfg.WorkerPort {
+		return errors.NewConfigInvalid(
+			"metrics.worker_port",
+			"must differ from metrics.port",
+		)
+	}
+
+	if cfg.Port == server.Port {
+		return errors.NewConfigInvalid(
+			"metrics.port",
+			"must differ from server.port - metrics are served on a separate, non-public listener",
+		)
+	}
+
+	if !strings.HasPrefix(strings.TrimSpace(cfg.Path), "/") {
+		return errors.NewConfigInvalid(
+			"metrics.path",
+			"must start with /",
+		)
 	}
 
 	return nil

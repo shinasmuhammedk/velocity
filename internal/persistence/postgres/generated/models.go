@@ -11,6 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Candle struct {
+	Symbol      string    `json:"symbol"`
+	Interval    string    `json:"interval"`
+	OpenTime    time.Time `json:"open_time"`
+	CloseTime   time.Time `json:"close_time"`
+	Open        int64     `json:"open"`
+	High        int64     `json:"high"`
+	Low         int64     `json:"low"`
+	Close       int64     `json:"close"`
+	Volume      int64     `json:"volume"`
+	QuoteVolume int64     `json:"quote_volume"`
+	TradeCount  int64     `json:"trade_count"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type FailedSettlement struct {
 	ID           uuid.UUID          `json:"id"`
 	TradeID      int64              `json:"trade_id"`
@@ -27,6 +42,7 @@ type FailedSettlement struct {
 	CreatedAt    time.Time          `json:"created_at"`
 	ResolvedAt   pgtype.Timestamptz `json:"resolved_at"`
 	IsDead       bool               `json:"is_dead"`
+	ExecutedAt   time.Time          `json:"executed_at"`
 }
 
 type Order struct {
@@ -100,4 +116,14 @@ type Wallet struct {
 	Available int64     `json:"available"`
 	Locked    int64     `json:"locked"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type WalletTransaction struct {
+	ID        uuid.UUID   `json:"id"`
+	UserID    int64       `json:"user_id"`
+	Asset     string      `json:"asset"`
+	Amount    int64       `json:"amount"`
+	Type      string      `json:"type"`
+	TradeID   pgtype.Int8 `json:"trade_id"`
+	CreatedAt time.Time   `json:"created_at"`
 }

@@ -70,10 +70,9 @@ func (r *SnapshotRecovery) Restore(symbol string) (bool, error) {
 	)
 
 	for _, event := range events {
-		if err := applier.Apply(event); err != nil {
+		if err := engine.ApplyReplayedEvent(applier, event); err != nil {
 			return false, err
 		}
-		engine.SetSequence(event.Sequence)
 	}
 
 	return true, nil

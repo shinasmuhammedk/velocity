@@ -25,6 +25,7 @@ type Service struct {
 	orderRepo  repository.OrderRepository
 	symbolRepo repository.SymbolRepository
 	userRepo   repository.UserRepository
+	tradeRepo  repository.TradeRepository
 
 	risk   *riskservice.Service
 	wallet *walletservice.Service
@@ -40,6 +41,7 @@ func New(
 	orderRepo repository.OrderRepository,
 	symbolRepo repository.SymbolRepository,
 	userRepo repository.UserRepository,
+	tradeRepo repository.TradeRepository,
 
 	risk *riskservice.Service,
 	wallet *walletservice.Service,
@@ -54,6 +56,7 @@ func New(
 		orderRepo:      orderRepo,
 		symbolRepo:     symbolRepo,
 		userRepo:       userRepo,
+		tradeRepo:      tradeRepo,
 		risk:           risk,
 		wallet:         wallet,
 		registry:       registry,
@@ -316,6 +319,67 @@ func (s *Service) Modify(
 		return errors.ErrQuantityTooLow
 	}
 
+	// ---------------------------------------------------------------
+	// Reconcile the wallet lock for this order's unfilled remainder
+	// BEFORE touching the engine or the DB row.
+	//
+	// The lock taken at Submit covers exactly this order's price and
+	// quantity at that moment. If a modify raises the price and/or
+	// quantity, the amount actually needed to cover the still-open
+	// remainder grows too — but nothing here used to move any
+	// additional funds from available into locked to cover that
+	// growth. The order would then rest on the book able to match at
+	// a size the wallet was never actually reserved for, and
+	// settlement would legitimately fail with "insufficient locked
+	// balance" once a trade tried to consume more than was ever
+	// locked for it.
+	//
+	// Doing this first, and failing the whole modify if the wallet
+	// can't cover an increase, mirrors Submit's own fail-fast
+	// behaviour: a modify that can't be paid for is rejected outright
+	// rather than accepted and left to break at settlement time,
+	// possibly minutes later and much harder to trace back to its
+	// cause.
+	newRemaining := req.Quantity - dbOrder.Filled
+
+	symbol, err := s.symbolRepo.Get(ctx, dbOrder.Symbol)
+	if err != nil {
+		return errors.ErrSymbolNotFound
+	}
+
+	var asset string
+	var oldRequiredLock int64
+	var newRequiredLock int64
+
+	switch constants.OrderSide(dbOrder.Side) {
+	case constants.OrderSideBuy:
+		asset = symbol.QuoteAsset
+		oldRequiredLock = dbOrder.Price.Int64 * dbOrder.Remaining
+		newRequiredLock = req.Price * newRemaining
+
+	case constants.OrderSideSell:
+		asset = symbol.BaseAsset
+		oldRequiredLock = dbOrder.Remaining
+		newRequiredLock = newRemaining
+	}
+
+	if delta := newRequiredLock - oldRequiredLock; delta > 0 {
+		// Price and/or quantity increased: reserve the difference.
+		// If the user doesn't have enough available balance to cover
+		// it, the modify is rejected here, before anything else
+		// changes.
+		if err := s.wallet.LockFunds(ctx, userID, asset, delta); err != nil {
+			return err
+		}
+	} else if delta < 0 {
+		// Price and/or quantity decreased: the excess that was
+		// reserved for the old terms is no longer needed, so it's
+		// released back to available.
+		if err := s.wallet.UnlockFunds(ctx, userID, asset, -delta); err != nil {
+			return err
+		}
+	}
+
 	eng := s.registry.Get(dbOrder.Symbol)
 
 	err = eng.ModifyOrder(
@@ -325,6 +389,20 @@ func (s *Service) Modify(
 	)
 
 	if err != nil {
+		// The engine rejected the modify after the wallet was already
+		// adjusted above. Best-effort compensate by reversing exactly
+		// what was just done, so a rejected modify doesn't leave funds
+		// stuck in the wrong bucket. This mirrors the fact that engine
+		// mutation, the wallet, and the DB row are three separate
+		// stores here with no shared transaction across them — a
+		// pre-existing constraint of this code path, not something
+		// this fix attempts to fully solve.
+		if delta := newRequiredLock - oldRequiredLock; delta > 0 {
+			_ = s.wallet.UnlockFunds(ctx, userID, asset, delta)
+		} else if delta < 0 {
+			_ = s.wallet.LockFunds(ctx, userID, asset, -delta)
+		}
+
 		return err
 	}
 
@@ -445,4 +523,102 @@ func (s *Service) GetUserOrderByID(
 	}
 
 	return mapper.ToDomainOrder(dbOrder), nil
+}
+
+func (s *Service) CancelAll(
+	ctx context.Context,
+	userID int64,
+	symbol string,
+) (int, error) {
+
+	_, err := s.userRepo.GetByID(
+		ctx,
+		userID,
+	)
+	if err != nil {
+		return 0, errors.ErrUserNotFound
+	}
+
+	var orders []generated.Order
+
+	if symbol == "" {
+		orders, err = s.orderRepo.ListCancelableOrdersByUser(
+			ctx,
+			userID,
+		)
+	} else {
+		_, err = s.symbolRepo.Get(
+			ctx,
+			symbol,
+		)
+		if err != nil {
+			return 0, errors.ErrSymbolNotFound
+		}
+
+		orders, err = s.orderRepo.ListCancelableOrdersByUserAndSymbol(
+			ctx,
+			generated.ListCancelableOrdersByUserAndSymbolParams{
+				UserID: userID,
+				Symbol: symbol,
+			},
+		)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	cancelled := 0
+
+	for _, dbOrder := range orders {
+		err := s.Cancel(
+			ctx,
+			dbOrder.ID,
+			userID,
+		)
+
+		if err != nil {
+			switch err {
+			case errors.ErrOrderNotCancelable,
+				errors.ErrOrderFilled,
+				errors.ErrOrderCancelled,
+				errors.ErrOrderNotFound:
+
+				// The order may have changed state
+				// between the initial query and cancellation.
+				continue
+
+			default:
+				return cancelled, err
+			}
+		}
+
+		cancelled++
+	}
+
+	return cancelled, nil
+}
+
+func (s *Service) GetOrderTrades(
+	ctx context.Context,
+	orderID int64,
+	userID int64,
+) ([]generated.Trade, error) {
+
+	dbOrder, err := s.orderRepo.GetByID(
+		ctx,
+		orderID,
+	)
+	if err != nil {
+		return nil, errors.ErrOrderNotFound
+	}
+
+	if dbOrder.UserID != userID {
+		return nil, errors.ErrOrderNotFound
+	}
+
+	return s.tradeRepo.ListByOrder(
+		ctx,
+		orderID,
+	)
 }

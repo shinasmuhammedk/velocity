@@ -339,3 +339,20 @@ func (s *Service) UpdateSymbolStatus(
 		},
 	)
 }
+
+func (s *Service) GetSymbol(
+	ctx context.Context,
+	symbol string,
+) (generated.Symbol, error) {
+
+	symbolData, err := s.symbolRepo.GetBySymbol(
+		ctx,
+		symbol,
+	)
+
+	if err != nil {
+		return generated.Symbol{}, errors.ErrSymbolNotFound
+	}
+
+	return symbolData, nil
+}

@@ -19,6 +19,14 @@ FROM wallets
 WHERE user_id = $1
   AND asset = $2;
 
+
+-- name: GetWalletForUpdate :one
+SELECT *
+FROM wallets
+WHERE user_id = $1
+  AND asset = $2
+FOR UPDATE;
+
 -- name: UpdateWallet :exec
 UPDATE wallets
 SET
@@ -40,3 +48,20 @@ SET
     updated_at = NOW()
 WHERE id = $1
   AND available >= $2;
+
+-- name: UnlockWalletFunds :execrows
+UPDATE wallets
+SET
+    available = available + $2,
+    locked = locked - $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND locked >= $2;
+
+-- name: ConsumeWalletLockedFunds :execrows
+UPDATE wallets
+SET
+    locked = locked - $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND locked >= $2;

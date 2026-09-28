@@ -1,7 +1,6 @@
 package marketdata
 
 import (
-	"fmt"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/domain/trade"
 
@@ -24,15 +23,12 @@ func NewBroadcaster(
 }
 
 func (d *Broadcaster) DispatchTrade(
-	trade *trade.Trade,
+	trade trade.Trade,
 	book *orderbook.OrderBook,
 ) {
 
-	fmt.Println("BROADCASTER: DispatchTrade")
-
 	// Publish executed trade
 	d.publisher.PublishTrade(trade)
-	fmt.Println("Trade published")
 
 	// Publish updated ticker
 	d.publisher.PublishTicker(
@@ -40,14 +36,12 @@ func (d *Broadcaster) DispatchTrade(
 		trade.Price,
 		book,
 	)
-	fmt.Println("Ticker published")
 
 	// Publish updated orderbook
 	d.publisher.PublishDepth(
 		trade.Symbol,
 		book,
 	)
-	fmt.Println("Depth published")
 
 	if candle, ok := d.candleService.Latest(
 		trade.Symbol,
@@ -58,6 +52,5 @@ func (d *Broadcaster) DispatchTrade(
 			trade.Symbol,
 			candle,
 		)
-		fmt.Println("Kline published")
 	}
 }

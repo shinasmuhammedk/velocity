@@ -10,12 +10,23 @@ import (
 	"velocity/internal/engine/events"
 	"velocity/internal/engine/snapshot"
 	"velocity/internal/engine/wal"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/worker"
 )
 
 type Registry struct {
 	engines map[string]*engine.Engine
 	mu      sync.RWMutex
+
+	// snapshotManagers mirrors `engines` by symbol - one entry per
+	// engine, holding the periodic snapshot.Manager started for it in
+	// Get(). Without this, Remove() and Shutdown() had no reference to
+	// stop that manager's goroutine: it would keep ticking every 5
+	// seconds forever, for every symbol ever loaded, holding a live
+	// reference to the engine (so it could never be garbage collected
+	// either) even after the registry believed it had been removed. See
+	// test/stress/registry_churn_test.go.
+	snapshotManagers map[string]*snapshot.Manager
 
 	dispatcher *events.Dispatcher
 
@@ -36,6 +47,8 @@ func New(
 
 	return &Registry{
 		engines: make(map[string]*engine.Engine),
+
+		snapshotManagers: make(map[string]*snapshot.Manager),
 
 		dispatcher: events.NewDispatcher(),
 
@@ -88,6 +101,8 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 
 	manager.Start(e)
 
+	r.snapshotManagers[symbol] = manager
+
 	if r.consumer != nil {
 		r.consumer.Start(
 			r.ctx,
@@ -96,6 +111,8 @@ func (r *Registry) Get(symbol string) *engine.Engine {
 	}
 
 	r.engines[symbol] = e
+
+	metrics.EnginesActive.Set(float64(len(r.engines)))
 
 	return e
 }
@@ -120,6 +137,13 @@ func (r *Registry) Remove(symbol string) {
 		e.Stop()
 		delete(r.engines, symbol)
 	}
+
+	if manager, ok := r.snapshotManagers[symbol]; ok {
+		manager.Stop()
+		delete(r.snapshotManagers, symbol)
+	}
+
+	metrics.EnginesActive.Set(float64(len(r.engines)))
 }
 
 // Count returns the total number of engines.
@@ -165,6 +189,11 @@ func (r *Registry) Shutdown() error {
 	for symbol, e := range r.engines {
 		e.Stop()
 		delete(r.engines, symbol)
+	}
+
+	for symbol, manager := range r.snapshotManagers {
+		manager.Stop()
+		delete(r.snapshotManagers, symbol)
 	}
 
 	if r.walManager != nil {

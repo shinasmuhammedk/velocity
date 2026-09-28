@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 	"velocity/internal/persistence/postgres/generated"
 
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ type UserRepository interface {
 type OrderRepository interface {
 	Create(ctx context.Context, params generated.CreateOrderParams) (generated.Order, error)
 	GetByID(ctx context.Context, id int64) (generated.Order, error)
+	GetByIDForUpdate(ctx context.Context, id int64) (generated.Order, error)
 	UpdateStatus(ctx context.Context, params generated.UpdateOrderStatusParams) error
 	ListByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	ListOpenOrders(ctx context.Context, symbol string) ([]generated.Order, error)
@@ -29,14 +31,18 @@ type OrderRepository interface {
 	ListOpenOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	ListOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
 	GetByUserAndID(ctx context.Context, params generated.GetOrderByUserAndIDParams) (generated.Order, error)
+	ListCancelableOrdersByUser(ctx context.Context, userID int64) ([]generated.Order, error)
+	ListCancelableOrdersByUserAndSymbol(ctx context.Context, params generated.ListCancelableOrdersByUserAndSymbolParams) ([]generated.Order, error)
 }
 
 type TradeRepository interface {
 	Create(ctx context.Context, params generated.CreateTradeParams) (generated.Trade, error)
 	CreateIfNotExists(ctx context.Context, params generated.CreateTradeIfNotExistsParams) (generated.Trade, error)
 	ListByUser(ctx context.Context, userID int64) ([]generated.Trade, error)
+	ListByOrder(ctx context.Context, orderID int64) ([]generated.Trade, error)
 	ListBySymbol(ctx context.Context, symbol string) ([]generated.Trade, error)
 	ListBySymbolAsc(ctx context.Context, symbol string) ([]generated.Trade, error)
+	ListBySymbolSinceAsc(ctx context.Context, symbol string, since time.Time) ([]generated.Trade, error)
 	GetByID(ctx context.Context, id int64) (generated.Trade, error)
 	WithTx(tx pgx.Tx) TradeRepository
 	TradeExists(ctx context.Context, id int64) (bool, error)
@@ -61,8 +67,11 @@ type PositionRepository interface {
 type WalletRepository interface {
 	Create(ctx context.Context, params generated.CreateWalletParams) (generated.Wallet, error)
 	Get(ctx context.Context, userID int64, asset string) (generated.Wallet, error)
+	GetForUpdate(ctx context.Context, userID int64, asset string) (generated.Wallet, error)
 	Update(ctx context.Context, params generated.UpdateWalletParams) error
 	LockFunds(ctx context.Context, walletID uuid.UUID, amount int64) error
+	UnlockFunds(ctx context.Context, walletID uuid.UUID, amount int64) error
+	ConsumeLockedFunds(ctx context.Context, walletID uuid.UUID, amount int64) error
 	List(ctx context.Context, userID int64) ([]generated.Wallet, error)
 	WithTx(tx pgx.Tx) WalletRepository
 }
@@ -74,4 +83,17 @@ type FailedSettlementRepository interface {
 	IncrementRetryCount(ctx context.Context, id uuid.UUID) error
 	Resolve(ctx context.Context, id uuid.UUID) error
 	MarkDead(ctx context.Context, id uuid.UUID) error
+}
+
+type CandleRepository interface {
+	Upsert(ctx context.Context, params generated.UpsertCandleParams) (generated.Candle, error)
+	ListBySymbolInterval(ctx context.Context, symbol string, interval string, limit int32) ([]generated.Candle, error)
+	ListBySymbolIntervalRange(ctx context.Context, symbol string, interval string, start time.Time, end time.Time, limit int32) ([]generated.Candle, error)
+}
+
+type WalletTransactionRepository interface {
+	Create(ctx context.Context, params generated.CreateWalletTransactionParams) (generated.WalletTransaction, error)
+	ListByUser(ctx context.Context, userID int64) ([]generated.WalletTransaction, error)
+	ListByUserAndAsset(ctx context.Context, params generated.ListWalletTransactionsByUserAndAssetParams) ([]generated.WalletTransaction, error)
+	WithTx(tx pgx.Tx) WalletTransactionRepository
 }

@@ -1,0 +1,40 @@
+# Normalize all text files to LF in the repository.
+# Git decides what's text by inspection; the overrides below correct it
+# where inspection guesses wrong.
+* text=auto eol=lf
+
+# Source and config — explicitly text, always LF.
+*.go        text eol=lf
+*.mod       text eol=lf
+*.sum       text eol=lf
+*.sql       text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.proto     text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.sh        text eol=lf
+Makefile    text eol=lf
+Dockerfile  text eol=lf
+*.Dockerfile text eol=lf
+
+# PowerShell scripts under scripts/ are run on Windows. PowerShell 5.1+
+# reads LF fine, so LF keeps them consistent with everything else.
+*.ps1       text eol=lf
+
+# Generated protobuf Go code — text, but exclude from diffs so
+# regenerating it doesn't bury real changes in review.
+*.pb.go     text eol=lf linguist-generated=true -diff
+
+# Binary: never touch these.
+*.exe       binary
+*.dll       binary
+*.so        binary
+*.dylib     binary
+*.prof      binary
+*.wal       binary
+*.png       binary
+*.jpg       binary
+*.gz        binary
+*.zip       binary

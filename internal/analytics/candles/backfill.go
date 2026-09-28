@@ -3,6 +3,7 @@ package candles
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
@@ -33,9 +34,22 @@ func (s *BackfillService) BackfillSymbol(
 	symbol string,
 ) error {
 
-	trades, err := s.tradeRepo.ListBySymbolAsc(
+	now := time.Now().UTC()
+	todayStart := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		0,
+		0,
+		0,
+		0,
+		time.UTC,
+	)
+
+	trades, err := s.tradeRepo.ListBySymbolSinceAsc(
 		ctx,
 		symbol,
+		todayStart,
 	)
 	if err != nil {
 		return fmt.Errorf(

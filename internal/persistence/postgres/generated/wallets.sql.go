@@ -11,6 +11,28 @@ import (
 	"github.com/google/uuid"
 )
 
+const consumeWalletLockedFunds = `-- name: ConsumeWalletLockedFunds :execrows
+UPDATE wallets
+SET
+    locked = locked - $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND locked >= $2
+`
+
+type ConsumeWalletLockedFundsParams struct {
+	ID     uuid.UUID `json:"id"`
+	Locked int64     `json:"locked"`
+}
+
+func (q *Queries) ConsumeWalletLockedFunds(ctx context.Context, arg ConsumeWalletLockedFundsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, consumeWalletLockedFunds, arg.ID, arg.Locked)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createWallet = `-- name: CreateWallet :one
 INSERT INTO wallets (
     user_id,
@@ -79,6 +101,33 @@ func (q *Queries) GetWallet(ctx context.Context, arg GetWalletParams) (Wallet, e
 	return i, err
 }
 
+const getWalletForUpdate = `-- name: GetWalletForUpdate :one
+SELECT id, user_id, asset, available, locked, updated_at
+FROM wallets
+WHERE user_id = $1
+  AND asset = $2
+FOR UPDATE
+`
+
+type GetWalletForUpdateParams struct {
+	UserID int64  `json:"user_id"`
+	Asset  string `json:"asset"`
+}
+
+func (q *Queries) GetWalletForUpdate(ctx context.Context, arg GetWalletForUpdateParams) (Wallet, error) {
+	row := q.db.QueryRow(ctx, getWalletForUpdate, arg.UserID, arg.Asset)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Asset,
+		&i.Available,
+		&i.Locked,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listWallets = `-- name: ListWallets :many
 SELECT id, user_id, asset, available, locked, updated_at
 FROM wallets
@@ -129,6 +178,29 @@ type LockWalletFundsParams struct {
 
 func (q *Queries) LockWalletFunds(ctx context.Context, arg LockWalletFundsParams) (int64, error) {
 	result, err := q.db.Exec(ctx, lockWalletFunds, arg.ID, arg.Available)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const unlockWalletFunds = `-- name: UnlockWalletFunds :execrows
+UPDATE wallets
+SET
+    available = available + $2,
+    locked = locked - $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND locked >= $2
+`
+
+type UnlockWalletFundsParams struct {
+	ID        uuid.UUID `json:"id"`
+	Available int64     `json:"available"`
+}
+
+func (q *Queries) UnlockWalletFunds(ctx context.Context, arg UnlockWalletFundsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, unlockWalletFunds, arg.ID, arg.Available)
 	if err != nil {
 		return 0, err
 	}

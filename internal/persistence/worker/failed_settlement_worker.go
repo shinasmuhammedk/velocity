@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/internal/persistence/postgres/repository"
 	"velocity/internal/service/settlementservice"
@@ -76,6 +77,8 @@ func (w *FailedSettlementWorker) process(ctx context.Context) {
 		return
 	}
 
+	metrics.FailedSettlementsCurrent.Set(float64(len(failures)))
+
 	if len(failures) == 0 {
 		return
 	}
@@ -99,6 +102,8 @@ func (w *FailedSettlementWorker) process(ctx context.Context) {
 			w.markDead(ctx, failed)
 			continue
 		}
+
+		metrics.SettlementRetries.Inc()
 
 		if err := w.retry(ctx, failed); err != nil {
 			w.logger.Error(
@@ -148,6 +153,8 @@ func (w *FailedSettlementWorker) process(ctx context.Context) {
 			continue
 		}
 
+		metrics.FailedSettlementsRecovered.Inc()
+
 		w.logger.Info(
 			"failed settlement successfully recovered",
 			zap.String("failure_id", failed.ID.String()),
@@ -175,6 +182,8 @@ func (w *FailedSettlementWorker) markDead(
 
 		return
 	}
+
+	metrics.FailedSettlementsDead.Inc()
 
 	w.logger.Error(
 		"FAILED SETTLEMENT MOVED TO DEAD LETTER STATE",
@@ -206,6 +215,8 @@ func (w *FailedSettlementWorker) markDeadAfterRetry(
 		return
 	}
 
+	metrics.FailedSettlementsDead.Inc()
+
 	w.logger.Error(
 		"FAILED SETTLEMENT RETRY LIMIT EXCEEDED - MOVED TO DEAD LETTER STATE",
 		zap.String("failure_id", failed.ID.String()),
@@ -231,7 +242,8 @@ func (w *FailedSettlementWorker) retry(
 	return w.settlement.Settle(
 		ctx,
 		settlementservice.SettlementRequest{
-			TradeID: failed.TradeID,
+			TradeID:    failed.TradeID,
+			ExecutedAt: failed.ExecutedAt,
 
 			BuyOrderID:  failed.BuyOrderID,
 			SellOrderID: failed.SellOrderID,

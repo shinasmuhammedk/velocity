@@ -15,8 +15,10 @@ type Config struct {
 	Metrics   MetricsConfig   `mapstructure:"metrics"`
 	Redis     RedisConfig     `mapstructure:"redis"`
 	Kafka     KafkaConfig     `mapstructure:"kafka"`
-	Tracing   TracingConfig   `mapstructure:"tracing"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	GRPC      GRPCConfig      `mapstructure:"grpc"`
+	Identity  IdentityConfig  `mapstructure:"identity"`
+	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 }
 
 //
@@ -104,11 +106,21 @@ type WebSocketConfig struct {
 // Metrics
 //
 
+// MetricsConfig controls the Prometheus scrape endpoint.
+//
+// The endpoint is served on its own listener (see
+// internal/infrastructure/metrics.Server), not on the public API port,
+// so Host should normally stay on loopback or a private interface.
+//
+// Port applies to cmd/api. WorkerPort applies to cmd/worker, which runs
+// as a separate process and therefore cannot share a port with the API
+// when both are deployed on one host.
 type MetricsConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	Path    string `mapstructure:"path"`
+	Enabled    bool   `mapstructure:"enabled"`
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	WorkerPort int    `mapstructure:"worker_port"`
+	Path       string `mapstructure:"path"`
 }
 
 //
@@ -133,16 +145,6 @@ type KafkaConfig struct {
 	GroupID  string   `mapstructure:"group_id"`
 }
 
-//
-// Distributed Tracing
-//
-
-type TracingConfig struct {
-	Enabled  bool   `mapstructure:"enabled"`
-	Exporter string `mapstructure:"exporter"`
-	Endpoint string `mapstructure:"endpoint"`
-}
-
 type RateLimitConfig struct {
 	Enabled bool `mapstructure:"enabled"`
 
@@ -154,4 +156,46 @@ type RateLimitConfig struct {
 
 	ModifyRate  float64 `mapstructure:"modify_rate"`
 	ModifyBurst int     `mapstructure:"modify_burst"`
+}
+
+//
+// gRPC (Velocity's own server, which the Identity Service calls to
+// provision users via VelocityService.CreateUser)
+//
+
+type GRPCConfig struct {
+	// ListenAddress is where Velocity's own gRPC server binds, e.g. ":50053".
+	ListenAddress string `mapstructure:"listen_address"`
+}
+
+//
+// Identity Service (external, delegated auth - see README "Auth is
+// delegated")
+//
+
+type IdentityConfig struct {
+	// Address is the Identity Service's gRPC address that Velocity
+	// dials to validate bearer tokens (AuthService.ValidateToken).
+	Address string `mapstructure:"address"`
+}
+
+//
+// Snowflake ID generation
+//
+// There are two independent generators in this codebase, seeded
+// separately because they produce IDs for different tables (orders vs.
+// trades) and there is no reason to force them onto the same node ID:
+//   - OrderNodeID seeds container.IDGenerator (internal/app/bootstrap.go),
+//     used for order IDs.
+//   - TradeNodeID seeds the package-level generator in pkg/idgen, used
+//     for trade IDs generated inside the matcher hot path.
+//
+// Every process that generates IDs concurrently (each cmd/api replica,
+// each cmd/matchnode instance) MUST use distinct values here, or IDs can
+// collide across instances. There is currently no automatic per-instance
+// assignment (e.g. from a StatefulSet pod ordinal) - this must be set
+// explicitly per deployment.
+type SnowflakeConfig struct {
+	OrderNodeID int64 `mapstructure:"order_node_id"`
+	TradeNodeID int64 `mapstructure:"trade_node_id"`
 }

@@ -44,7 +44,7 @@ func NewTradeConsumer(
 
 func (c *TradeConsumer) Start(
 	ctx context.Context,
-	trades <-chan *trade.Trade,
+	trades <-chan trade.Trade,
 ) {
 	go func() {
 		for {
@@ -52,17 +52,22 @@ func (c *TradeConsumer) Start(
 			case <-ctx.Done():
 				return
 
-			case t := <-trades:
-
-				if t == nil {
-					c.logger.Warn("trade consumer received nil trade")
-					continue
+			case t, ok := <-trades:
+				if !ok {
+					c.logger.Info("trade channel closed")
+					return
 				}
 
 				c.logger.Debug(
 					"trade received by consumer",
 					zap.String("symbol", t.Symbol),
 					zap.Int64("trade_id", t.ID),
+					zap.Int64("buy_order_id", t.BuyOrderID),
+					zap.Int64("sell_order_id", t.SellOrderID),
+					zap.Int64("buyer_id", t.BuyerID),
+					zap.Int64("seller_id", t.SellerID),
+					zap.Int64("price", t.Price),
+					zap.Int64("quantity", t.Quantity),
 				)
 
 				symbol, err := c.symbolRepo.GetBySymbol(
@@ -79,10 +84,18 @@ func (c *TradeConsumer) Start(
 					continue
 				}
 
+				c.logger.Debug("settling trade",
+					zap.Int64("trade_id", t.ID),
+					zap.Int64("buy_order_id", t.BuyOrderID),
+					zap.Int64("sell_order_id", t.SellOrderID),
+					zap.String("symbol", t.Symbol),
+				)
+
 				if err := c.settlement.Settle(
 					ctx,
 					settlementservice.SettlementRequest{
 						TradeID:     t.ID,
+						ExecutedAt:  t.ExecutedAt,
 						BuyOrderID:  t.BuyOrderID,
 						SellOrderID: t.SellOrderID,
 						BuyerID:     t.BuyerID,

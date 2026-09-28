@@ -888,3 +888,40 @@ func TestPostOnlyAcceptedOnEmptyBook(t *testing.T) {
 		incoming.Status,
 	)
 }
+
+func TestSellLimitDoesNotMatchBelowLimitPrice(t *testing.T) {
+	book := orderbook.New("BTCUSDT")
+	m := matcher.New(book)
+
+	buy := testhelpers.NewOrder(
+		1,
+		101,
+		constants.OrderSideBuy,
+		210022,
+		1,
+	)
+
+	book.AddOrder(buy)
+
+	sell := testhelpers.NewOrder(
+		2,
+		201,
+		constants.OrderSideSell,
+		300000,
+		1,
+	)
+
+	trades, err := m.Match(sell)
+
+	require.NoError(t, err)
+	require.Empty(t, trades)
+
+	assert.Equal(t, int64(1), sell.Remaining)
+	assert.Equal(t, constants.OrderStatusOpen, sell.Status)
+
+	assert.Equal(t, int64(1), buy.Remaining)
+	assert.Equal(t, constants.OrderStatusOpen, buy.Status)
+
+	assert.NotNil(t, book.BestBid())
+	assert.Equal(t, int64(210022), book.BestBid().Price)
+}

@@ -38,6 +38,13 @@ func (r *orderRepository) GetByID(
 	return r.queries.GetOrderByID(ctx, id)
 }
 
+func (r *orderRepository) GetByIDForUpdate(
+	ctx context.Context,
+	id int64,
+) (generated.Order, error) {
+	return r.queries.GetOrderByIDForUpdate(ctx, id)
+}
+
 func (r *orderRepository) UpdateStatus(
 	ctx context.Context,
 	params generated.UpdateOrderStatusParams,
@@ -119,6 +126,28 @@ func (r *orderRepository) GetByUserAndID(
 ) (generated.Order, error) {
 
 	return r.queries.GetOrderByUserAndID(
+		ctx,
+		params,
+	)
+}
+
+func (r *orderRepository) ListCancelableOrdersByUser(
+	ctx context.Context,
+	userID int64,
+) ([]generated.Order, error) {
+
+	return r.queries.ListCancelableOrdersByUser(
+		ctx,
+		userID,
+	)
+}
+
+func (r *orderRepository) ListCancelableOrdersByUserAndSymbol(
+	ctx context.Context,
+	params generated.ListCancelableOrdersByUserAndSymbolParams,
+) ([]generated.Order, error) {
+
+	return r.queries.ListCancelableOrdersByUserAndSymbol(
 		ctx,
 		params,
 	)

@@ -56,3 +56,31 @@ UPDATE failed_settlements
 SET is_dead = true
 WHERE id = $1
   AND resolved = false;
+  
+  
+  -- name: CreateFailedSettlement :one
+INSERT INTO failed_settlements (
+    trade_id,
+    buy_order_id,
+    sell_order_id,
+    buyer_id,
+    seller_id,
+    symbol,
+    price,
+    quantity,
+    executed_at,
+    error_message
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10
+)
+RETURNING *;

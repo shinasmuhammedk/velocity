@@ -2,9 +2,11 @@ package recovery
 
 import (
 	"context"
+	"time"
 
 	"velocity/internal/domain/order"
 	"velocity/internal/engine/registry"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/persistence/postgres/generated"
 	"velocity/pkg/constants"
 
@@ -45,8 +47,11 @@ func (r *Recovery) Load(
 	alreadyRestored map[string]bool,
 ) error {
 
+	start := time.Now()
+
 	orders, err := r.orderRepo.RecoveryOrders(ctx)
 	if err != nil {
+		metrics.RecoveryFailures.Inc()
 		return err
 	}
 
@@ -68,6 +73,9 @@ func (r *Recovery) Load(
 
 		recoveredCount++
 	}
+
+	metrics.RecoveredOrders.Add(float64(recoveredCount))
+	metrics.RecoveryDuration.Observe(time.Since(start).Seconds())
 
 	r.logger.Info(
 		"recovery completed",

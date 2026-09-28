@@ -1,8 +1,6 @@
 package candles
 
 import (
-	"fmt"
-
 	"velocity/internal/engine/events"
 )
 
@@ -17,16 +15,12 @@ func NewSubscriber(manager *Manager) *Subscriber {
 }
 
 func (s *Subscriber) Handle(event events.Event) {
-	fmt.Printf("EVENT TYPE: %T\n", event)
 
 	tradeEvent, ok := event.(events.TradeExecutedEvent)
-	fmt.Println("Type assertion:", ok)
 
 	if !ok {
 		return
 	}
-
-	fmt.Println("Updating candle:", tradeEvent.Symbol)
 
 	s.manager.Update(
 		tradeEvent.Symbol,

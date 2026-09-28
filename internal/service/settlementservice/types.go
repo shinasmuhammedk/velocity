@@ -1,7 +1,10 @@
 package settlementservice
 
+import "time"
+
 type SettlementRequest struct {
-	TradeID int64
+	TradeID    int64
+	ExecutedAt time.Time
 
 	BuyOrderID  int64
 	SellOrderID int64

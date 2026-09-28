@@ -345,3 +345,89 @@ func (h *OrderHandler) GetByID(
 		resp,
 	)
 }
+
+func (h *OrderHandler) CancelAll(c *fiber.Ctx) error {
+
+	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
+
+	symbol := c.Query("symbol")
+
+	cancelled, err := h.orderService.CancelAll(
+		c.Context(),
+		userID,
+		symbol,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"failed to cancel orders",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"orders cancelled successfully",
+		dtoresponse.CancelAllOrdersResponse{
+			Cancelled: cancelled,
+		},
+	)
+}
+
+
+func (h *OrderHandler) GetOrderTrades(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
+
+	orderID, err := c.ParamsInt("id")
+	if err != nil || orderID <= 0 {
+		return response.Error(
+			c,
+			fiber.StatusBadRequest,
+			"invalid order id",
+			"order id must be a positive integer",
+		)
+	}
+
+	trades, err := h.orderService.GetOrderTrades(
+		c.Context(),
+		int64(orderID),
+		userID,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusNotFound,
+			"failed to retrieve order trades",
+			err.Error(),
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"order trades retrieved successfully",
+		trades,
+	)
+}

@@ -1,7 +1,6 @@
 package events
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -23,12 +22,6 @@ func (d *Dispatcher) Subscribe(eventType EventType, sub Subscriber) {
 
 	d.subscribers[eventType] = append(d.subscribers[eventType], sub)
 
-	fmt.Printf(
-		"REGISTERED: %T for %s (total=%d)\n",
-		sub,
-		eventType,
-		len(d.subscribers[eventType]),
-	)
 }
 
 func (d *Dispatcher) Publish(event Event) {
@@ -36,11 +29,7 @@ func (d *Dispatcher) Publish(event Event) {
 	subs := d.subscribers[event.Type()]
 	d.mu.RUnlock()
 
-	fmt.Println("PUBLISH:", event.Type())
-	fmt.Println("Subscribers:", len(subs))
-
-	for i, sub := range subs {
-		fmt.Printf("Dispatching #%d -> %T\n", i+1, sub)
+	for _, sub := range subs {
 		sub.Handle(event)
 	}
 }

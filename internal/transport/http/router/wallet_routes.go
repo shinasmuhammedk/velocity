@@ -14,6 +14,8 @@ func RegisterWalletRoutes(
 
 	wallet.Get("/", walletHandler.List)
 
+	wallet.Get("/:asset/transactions", walletHandler.ListTransactionsByAsset)
+
 	wallet.Get("/:asset", walletHandler.GetByAsset)
 
 	wallet.Post("/deposit", walletHandler.Deposit)

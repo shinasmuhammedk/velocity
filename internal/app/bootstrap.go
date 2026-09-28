@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 	"velocity/internal/analytics/candles"
 	"velocity/internal/analytics/stats"
@@ -33,6 +34,7 @@ import (
 	wsRouter "velocity/internal/transport/ws/router"
 	"velocity/internal/userstream"
 	"velocity/pkg/constants"
+	"velocity/pkg/idgen"
 	"velocity/pkg/snowflake"
 
 	identityclient "velocity/internal/transport/grpc/client/identity"
@@ -40,8 +42,7 @@ import (
 
 	grpcserver "velocity/internal/transport/grpc/server"
 
-	"github.com/gofiber/adaptor/v2"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 // Bootstrap creates and initializes the application.
@@ -57,6 +58,11 @@ func Bootstrap() (*Container, error) {
 
 	container.ShutdownContext, container.ShutdownCancel =
 		context.WithCancel(context.Background())
+
+	// idgen's package-level trade-ID generator must be seeded before the
+	// engine registry (further below) starts any matcher, since matchers
+	// call idgen.Next() directly on the hot path.
+	idgen.Init(container.Config.Snowflake.TradeNodeID)
 
 	// --------------------------------------------------
 	// Redis
@@ -96,10 +102,10 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("redis rate limiter initialized")
 
-	container.IDGenerator = snowflake.New(1)
+	container.IDGenerator = snowflake.New(container.Config.Snowflake.OrderNodeID)
 	container.Logger.Info("snowflake id generator initialized")
 
-	identityClient, err := identityclient.New("localhost:50051")
+	identityClient, err := identityclient.New(container.Config.Identity.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +129,7 @@ func Bootstrap() (*Container, error) {
 	container.PositionRepository = repository.NewPositionRepository(container.DB)
 	container.SymbolRepository = repository.NewSymbolRepository(container.DB)
 	container.WalletRepository = repository.NewWalletRepository(container.DB)
+	container.WalletTransactionRepository = repository.NewWalletTransactionRepository(container.DB)
 	container.FailedSettlementRepository = repository.NewFailedSettlementRepository(container.DB)
 
 	container.Logger.Info("repositories initialized")
@@ -161,11 +168,40 @@ func Bootstrap() (*Container, error) {
 	// Register HTTP handlers
 	//
 
-	//metrics
+	// Metrics
+	//
+	// Collectors are registered before anything that increments them is
+	// constructed, and the scrape endpoint is served on its own
+	// listener from cfg.Metrics rather than being mounted on the public
+	// API app.
 	metrics.Register()
-	container.Logger.Info(
-		"prometheus metrics registered",
+	metrics.SetBuildInfo(
+		container.Config.App.Version,
+		container.Config.App.Environment,
+		"api",
 	)
+
+	container.MetricsServer = metrics.NewServer(metrics.Options{
+		Enabled: container.Config.Metrics.Enabled,
+		Host:    container.Config.Metrics.Host,
+		Port:    container.Config.Metrics.Port,
+		Path:    container.Config.Metrics.Path,
+	})
+
+	if err := container.MetricsServer.Start(); err != nil {
+		return nil, fmt.Errorf("start metrics server: %w", err)
+	}
+
+	if container.MetricsServer.Enabled() {
+		container.Logger.Info(
+			"prometheus metrics registered and exposed",
+			zap.String("endpoint", container.MetricsServer.Address()),
+		)
+	} else {
+		container.Logger.Info(
+			"prometheus metrics registered but endpoint disabled (metrics.enabled=false)",
+		)
+	}
 
 	// Register WebSocket hub
 	//
@@ -262,6 +298,16 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("candle backfill service initialized")
 
+	container.CandleRepository = repository.NewCandleRepository(container.DB)
+
+	container.CandlePersister = candles.NewCandlePersister(
+		container.CandleManager,
+		container.CandleRepository,
+		container.Logger,
+	)
+
+	container.CandlePersister.Start(container.ShutdownContext)
+
 	container.MarketBroadcaster = marketdata.NewBroadcaster(
 		container.MarketPublisher,
 		container.CandleService,
@@ -350,6 +396,7 @@ func Bootstrap() (*Container, error) {
 
 	container.WalletService = walletservice.New(
 		container.WalletRepository,
+		container.WalletTransactionRepository,
 	)
 
 	container.UserService = userservice.New(
@@ -359,7 +406,7 @@ func Bootstrap() (*Container, error) {
 
 	container.Logger.Info("user service initialized")
 
-	grpcServer, err := grpcserver.New(container.UserService)
+	grpcServer, err := grpcserver.New(container.UserService, container.Config.GRPC.ListenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -434,6 +481,7 @@ func Bootstrap() (*Container, error) {
 		container.OrderRepository,
 		container.SymbolRepository,
 		container.UserRepository,
+		container.TradeRepository,
 		container.RiskService,
 		container.WalletService,
 		container.Registry,
@@ -490,11 +538,6 @@ func Bootstrap() (*Container, error) {
 		container.AuthMiddleware.Authenticate,
 		httpmiddleware.RequireRole(constants.RoleAdmin),
 		container.RateLimitMiddleware,
-	)
-
-	container.HTTP.Get(
-		"/metrics",
-		adaptor.HTTPHandler(promhttp.Handler()),
 	)
 
 	// WebSocket Routes

@@ -58,8 +58,8 @@ func TestRateLimiter_AllowsUpToBurstThenBlocks(t *testing.T) {
 	t.Cleanup(func() { client.Client.Del(context.Background(), key) })
 
 	ctx := context.Background()
-	rate := 1.0   // 1 token/sec refill
-	burst := 5    // bucket holds 5
+	rate := 1.0 // 1 token/sec refill
+	burst := 5  // bucket holds 5
 
 	// First `burst` requests should all be allowed.
 	for i := 0; i < burst; i++ {

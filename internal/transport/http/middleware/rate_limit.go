@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"velocity/internal/config"
+	"velocity/internal/infrastructure/metrics"
 	redisinfra "velocity/internal/infrastructure/redis"
 	"velocity/pkg/response"
 
@@ -116,6 +117,8 @@ func (m *RateLimitMiddleware) limit(
 	)
 
 	if err != nil {
+		metrics.RateLimitErrors.WithLabelValues(action).Inc()
+
 		return response.Error(
 			c,
 			fiber.StatusServiceUnavailable,
@@ -135,6 +138,8 @@ func (m *RateLimitMiddleware) limit(
 	)
 
 	if !result.Allowed {
+		metrics.RateLimitRejected.WithLabelValues(action).Inc()
+
 		retrySeconds := int(result.RetryAfter.Seconds())
 
 		if retrySeconds < 1 {
@@ -153,6 +158,8 @@ func (m *RateLimitMiddleware) limit(
 			"too many requests",
 		)
 	}
+
+	metrics.RateLimitAllowed.WithLabelValues(action).Inc()
 
 	return c.Next()
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/require"
 )
 
 var errTestMessage = errors.New(
@@ -305,6 +306,22 @@ func TestKafkaDLQ_EndToEnd(t *testing.T) {
 		"symbol":  "BTCUSDT",
 		"message": "this message should go to the DLQ",
 	}
+
+	conn, err := kafka.Dial("tcp", brokers[0])
+	require.NoError(t, err)
+
+	partitions, err := conn.ReadPartitions(sourceTopic)
+	require.NoError(t, err)
+
+	t.Logf(
+		"source topic immediately before publish: topic=%s partitions=%d",
+		sourceTopic,
+		len(partitions),
+	)
+
+	require.NotEmpty(t, partitions)
+
+	conn.Close()
 
 	// ------------------------------------------------------------
 	// Publish source message

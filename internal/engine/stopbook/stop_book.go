@@ -23,6 +23,14 @@ func New() *StopBook {
 	}
 }
 
+// Len returns the number of untriggered stop orders currently held.
+func (s *StopBook) Len() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.orderIndex)
+}
+
 func (s *StopBook) Add(o *order.Order) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -36,6 +44,14 @@ func (s *StopBook) Add(o *order.Order) {
 	}
 
 	s.orderIndex[o.ID] = o
+}
+
+func (s *StopBook) Contains(orderID int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, exists := s.orderIndex[orderID]
+	return exists
 }
 
 func (s *StopBook) Trigger(price int64) []*order.Order {

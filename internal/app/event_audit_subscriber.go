@@ -1,9 +1,10 @@
 package app
 
 import (
-	"fmt"
-
 	"velocity/internal/engine/events"
+	"velocity/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // EventAuditSubscriber listens for events delivered via Kafka and logs them.
@@ -14,10 +15,14 @@ import (
 // works end-to-end for every event type, and as a seam for future consumers
 // (audit logging, notifications, analytics) that don't touch the database
 // of record.
-type EventAuditSubscriber struct{}
+type EventAuditSubscriber struct {
+	log *zap.Logger
+}
 
 func NewEventAuditSubscriber() *EventAuditSubscriber {
-	return &EventAuditSubscriber{}
+	return &EventAuditSubscriber{
+		log: logger.Logger(),
+	}
 }
 
 // Handle implements events.Subscriber.
@@ -25,58 +30,61 @@ func (s *EventAuditSubscriber) Handle(event events.Event) {
 	switch e := event.(type) {
 
 	case events.TradeExecutedEvent:
-		fmt.Println(
-			"WORKER AUDIT: trade.executed",
-			"tradeID:", e.TradeID,
-			"symbol:", e.Symbol,
-			"price:", e.Price,
-			"quantity:", e.Quantity,
+		s.log.Info(
+			"worker audit: trade.executed",
+			zap.Int64("trade_id", e.TradeID),
+			zap.String("symbol", e.Symbol),
+			zap.Int64("price", e.Price),
+			zap.Int64("quantity", e.Quantity),
 		)
 
 	case events.OrderAcceptedEvent:
-		fmt.Println(
-			"WORKER AUDIT: order.accepted",
-			"orderID:", e.OrderID,
-			"userID:", e.UserID,
-			"symbol:", e.Symbol,
-			"price:", e.Price,
-			"quantity:", e.Quantity,
+		s.log.Info(
+			"worker audit: order.accepted",
+			zap.String("order_id", e.OrderID),
+			zap.String("user_id", e.UserID),
+			zap.String("symbol", e.Symbol),
+			zap.Int64("price", e.Price),
+			zap.Int64("quantity", e.Quantity),
 		)
 
 	case events.OrderRejectedEvent:
-		fmt.Println(
-			"WORKER AUDIT: order.rejected",
-			"orderID:", e.OrderID,
-			"userID:", e.UserID,
-			"symbol:", e.Symbol,
-			"reason:", e.Reason,
+		s.log.Info(
+			"worker audit: order.rejected",
+			zap.String("order_id", e.OrderID),
+			zap.String("user_id", e.UserID),
+			zap.String("symbol", e.Symbol),
+			zap.String("reason", e.Reason),
 		)
 
 	case events.OrderCancelledEvent:
-		fmt.Println(
-			"WORKER AUDIT: order.cancelled",
-			"orderID:", e.OrderID,
-			"userID:", e.UserID,
-			"symbol:", e.Symbol,
+		s.log.Info(
+			"worker audit: order.cancelled",
+			zap.Int64("order_id", e.OrderID),
+			zap.Int64("user_id", e.UserID),
+			zap.String("symbol", e.Symbol),
 		)
 
 	case events.OrderModifiedEvent:
-		fmt.Println(
-			"WORKER AUDIT: order.modified",
-			"orderID:", e.OrderID,
-			"symbol:", e.Symbol,
-			"newPrice:", e.NewPrice,
-			"newQuantity:", e.NewQuantity,
+		s.log.Info(
+			"worker audit: order.modified",
+			zap.Int64("order_id", e.OrderID),
+			zap.String("symbol", e.Symbol),
+			zap.Int64("new_price", e.NewPrice),
+			zap.Int64("new_quantity", e.NewQuantity),
 		)
 
 	case events.OrderTriggeredEvent:
-		fmt.Println(
-			"WORKER AUDIT: order.triggered",
-			"orderID:", e.OrderID,
-			"symbol:", e.Symbol,
+		s.log.Info(
+			"worker audit: order.triggered",
+			zap.String("order_id", e.OrderID),
+			zap.String("symbol", e.Symbol),
 		)
 
 	default:
-		fmt.Println("WORKER AUDIT: unrecognized event type received:", event.Type())
+		s.log.Warn(
+			"worker audit: unrecognized event type received",
+			zap.String("event_type", string(event.Type())),
+		)
 	}
 }

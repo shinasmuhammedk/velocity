@@ -18,11 +18,13 @@ type Manager struct {
 	mu sync.RWMutex
 
 	candles map[string]map[Interval][]*Candle
+	closed  chan *Candle
 }
 
 func NewManager() *Manager {
 	return &Manager{
 		candles: make(map[string]map[Interval][]*Candle),
+		closed:  make(chan *Candle, 1024),
 	}
 }
 
@@ -128,5 +130,10 @@ func (m *Manager) Latest(
 		return nil, false
 	}
 
-	return candles[len(candles)-1], true
+	latest := *candles[len(candles)-1]
+	return &latest, true
+}
+
+func (m *Manager) Closed() <-chan *Candle {
+	return m.closed
 }

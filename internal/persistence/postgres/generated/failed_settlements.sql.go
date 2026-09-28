@@ -34,7 +34,7 @@ VALUES (
     $8,
     $9
 )
-RETURNING id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
+RETURNING id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead, executed_at
 `
 
 type CreateFailedSettlementParams struct {
@@ -78,12 +78,13 @@ func (q *Queries) CreateFailedSettlement(ctx context.Context, arg CreateFailedSe
 		&i.CreatedAt,
 		&i.ResolvedAt,
 		&i.IsDead,
+		&i.ExecutedAt,
 	)
 	return i, err
 }
 
 const getFailedSettlement = `-- name: GetFailedSettlement :one
-SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
+SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead, executed_at
 FROM failed_settlements
 WHERE id = $1
 `
@@ -107,6 +108,7 @@ func (q *Queries) GetFailedSettlement(ctx context.Context, id uuid.UUID) (Failed
 		&i.CreatedAt,
 		&i.ResolvedAt,
 		&i.IsDead,
+		&i.ExecutedAt,
 	)
 	return i, err
 }
@@ -123,7 +125,7 @@ func (q *Queries) IncrementFailedSettlementRetryCount(ctx context.Context, id uu
 }
 
 const listUnresolvedFailedSettlements = `-- name: ListUnresolvedFailedSettlements :many
-SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead
+SELECT id, trade_id, buy_order_id, sell_order_id, buyer_id, seller_id, symbol, price, quantity, error_message, retry_count, resolved, created_at, resolved_at, is_dead, executed_at
 FROM failed_settlements
 WHERE resolved = false
   AND is_dead = false
@@ -155,6 +157,7 @@ func (q *Queries) ListUnresolvedFailedSettlements(ctx context.Context) ([]Failed
 			&i.CreatedAt,
 			&i.ResolvedAt,
 			&i.IsDead,
+			&i.ExecutedAt,
 		); err != nil {
 			return nil, err
 		}

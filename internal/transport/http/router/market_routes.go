@@ -13,6 +13,7 @@ func RegisterMarketRoutes(
 	market := api.Group("/market")
 
 	market.Get("/symbols", marketHandler.Symbols)
+	market.Get("/symbols/:symbol", marketHandler.GetSymbol)
 	market.Get("/orderbook/:symbol", marketHandler.GetOrderBook)
 	market.Get("/ticker/:symbol", marketHandler.GetTicker)
 	market.Get("/trades/:symbol", marketHandler.GetRecentTrades)

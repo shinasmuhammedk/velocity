@@ -14,6 +14,7 @@ import (
 	"velocity/internal/engine/registry"
 	"velocity/internal/engine/wal"
 	"velocity/internal/infrastructure/kafka"
+	"velocity/internal/infrastructure/metrics"
 	"velocity/internal/infrastructure/redis"
 	"velocity/internal/marketdata"
 	"velocity/internal/persistence/postgres/repository"
@@ -61,6 +62,7 @@ type Container struct {
 	KafkaProducer       *kafka.Producer
 	KafkaEventPublisher *kafka.EventPublisher
 	KafkaHealth         *kafka.HealthChecker
+	MetricsServer       *metrics.Server
 
 	// --------------------------------------------------
 	// Utilities
@@ -82,13 +84,15 @@ type Container struct {
 	// Repositories
 	// --------------------------------------------------
 
-	UserRepository             repository.UserRepository
-	OrderRepository            repository.OrderRepository
-	TradeRepository            repository.TradeRepository
-	PositionRepository         repository.PositionRepository
-	SymbolRepository           repository.SymbolRepository
-	WalletRepository           repository.WalletRepository
-	FailedSettlementRepository repository.FailedSettlementRepository
+	UserRepository              repository.UserRepository
+	OrderRepository             repository.OrderRepository
+	TradeRepository             repository.TradeRepository
+	PositionRepository          repository.PositionRepository
+	SymbolRepository            repository.SymbolRepository
+	WalletRepository            repository.WalletRepository
+	WalletTransactionRepository repository.WalletTransactionRepository
+	FailedSettlementRepository  repository.FailedSettlementRepository
+	CandleRepository            repository.CandleRepository
 	// --------------------------------------------------
 	// Transactions
 	// --------------------------------------------------
@@ -101,6 +105,7 @@ type Container struct {
 
 	TradeConsumer          *worker.TradeConsumer
 	FailedSettlementWorker *worker.FailedSettlementWorker
+	CandlePersister        *candles.CandlePersister
 
 	// --------------------------------------------------
 	// Market Data

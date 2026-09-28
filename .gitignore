@@ -35,3 +35,10 @@ snapshots/
 # OS
 .DS_Store
 Thumbs.db
+
+# Debug / scratch output
+velocity-tree.txt
+velocitytree.txt
+
+# Local load test artifacts
+test/load/

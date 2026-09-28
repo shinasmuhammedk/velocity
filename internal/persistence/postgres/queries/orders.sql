@@ -39,6 +39,12 @@ SELECT *
 FROM orders
 WHERE id = $1;
 
+-- name: GetOrderByIDForUpdate :one
+SELECT *
+FROM orders
+WHERE id = $1
+FOR UPDATE;
+
 
 -- name: GetOrdersByUser :many
 SELECT *
@@ -161,3 +167,30 @@ FROM orders
 WHERE id = $1
   AND user_id = $2
 LIMIT 1;
+
+
+-- name: ListCancelableOrdersByUser :many
+
+SELECT *
+FROM orders
+WHERE user_id = $1
+  AND status IN (
+      'OPEN',
+      'PARTIALLY_FILLED',
+      'PENDING'
+  )
+ORDER BY created_at ASC;
+
+
+-- name: ListCancelableOrdersByUserAndSymbol :many
+
+SELECT *
+FROM orders
+WHERE user_id = $1
+  AND symbol = $2
+  AND status IN (
+      'OPEN',
+      'PARTIALLY_FILLED',
+      'PENDING'
+  )
+ORDER BY created_at ASC;

@@ -20,7 +20,7 @@ func NewPublisher(
 }
 
 func (p *Publisher) PublishTrade(
-	t *trade.Trade,
+	t trade.Trade,
 ) {
 
 	fmt.Println("PUBLISH TRADE:", t.Symbol)

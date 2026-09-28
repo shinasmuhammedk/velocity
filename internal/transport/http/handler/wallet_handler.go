@@ -234,3 +234,54 @@ func (h *WalletHandler) Withdraw(
 		mapper.ToWalletResponse(wallet),
 	)
 }
+
+func (h *WalletHandler) ListTransactionsByAsset(
+	c *fiber.Ctx,
+) error {
+
+	userID := middleware.GetUserID(c)
+
+	if userID == 0 {
+		return response.Error(
+			c,
+			fiber.StatusUnauthorized,
+			"invalid user",
+			"user not found in authentication context",
+		)
+	}
+
+	asset := c.Params("asset")
+
+	transactions, err := h.service.ListTransactionsByAsset(
+		c.Context(),
+		userID,
+		asset,
+	)
+
+	if err != nil {
+		return response.Error(
+			c,
+			fiber.StatusInternalServerError,
+			"failed to retrieve wallet transactions",
+			err.Error(),
+		)
+	}
+
+	transactionResponses := make(
+		[]dtoresponse.WalletTransactionResponse,
+		len(transactions),
+	)
+
+	for i, transaction := range transactions {
+		transactionResponses[i] = mapper.ToWalletTransactionResponse(
+			transaction,
+		)
+	}
+
+	return response.Success(
+		c,
+		fiber.StatusOK,
+		"wallet transactions retrieved successfully",
+		transactionResponses,
+	)
+}

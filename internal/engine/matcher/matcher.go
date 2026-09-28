@@ -54,6 +54,7 @@ func (m *Matcher) Match(order *order.Order) ([]trade.Trade, error) {
 func (m *Matcher) matchBuyOrder(incoming *order.Order) []trade.Trade {
 
 	trades := make([]trade.Trade, 0, 1)
+	// var trades []trade.Trade
 	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {
@@ -148,6 +149,7 @@ func (m *Matcher) matchBuyOrder(incoming *order.Order) []trade.Trade {
 func (m *Matcher) matchSellOrder(incoming *order.Order) []trade.Trade {
 
 	trades := make([]trade.Trade, 0, 1)
+	// var trades []trade.Trade
 	clear(m.exhausted)
 
 	for incoming.Remaining > 0 {

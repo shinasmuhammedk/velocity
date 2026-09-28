@@ -1,7 +1,6 @@
 package marketdata
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -25,39 +24,47 @@ func (h *Hub) Subscribe(symbol string, client *Client) {
 	}
 
 	h.clients[symbol][client] = true
-
-	fmt.Println("SUBSCRIBED:", symbol)
-	fmt.Println("CLIENT COUNT:", len(h.clients[symbol]))
 }
 
 func (h *Hub) Unsubscribe(
 	symbol string,
 	client *Client,
 ) {
-
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	delete(h.clients[symbol], client)
+	clients, exists := h.clients[symbol]
+	if !exists {
+		return
+	}
+
+	delete(clients, client)
+
+	if len(clients) == 0 {
+		delete(h.clients, symbol)
+	}
 }
 
 func (h *Hub) Broadcast(
 	symbol string,
 	message any,
 ) {
+	// Take a snapshot of the subscribed clients.
 	h.mu.RLock()
-	defer h.mu.RUnlock()
 
 	clients := h.clients[symbol]
-
-	fmt.Println("BROADCAST:", symbol)
-	fmt.Println("CLIENTS:", len(clients))
+	snapshot := make([]*Client, 0, len(clients))
 
 	for client := range clients {
-		fmt.Println("Sending to client...")
-		// client.Send(message)
+		snapshot = append(snapshot, client)
+	}
+
+	h.mu.RUnlock()
+
+	// Network I/O happens outside the Hub lock.
+	for _, client := range snapshot {
 		if err := client.Send(message); err != nil {
-			delete(clients, client)
+			h.Unsubscribe(symbol, client)
 		}
 	}
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"velocity/internal/persistence/postgres/generated"
 
@@ -46,6 +47,16 @@ func (r *tradeRepository) ListByUser(
 	return r.queries.ListTradesByUser(ctx, userID)
 }
 
+func (r *tradeRepository) ListByOrder(
+	ctx context.Context,
+	orderID int64,
+) ([]generated.Trade, error) {
+	return r.queries.ListTradesByOrder(
+		ctx,
+		orderID,
+	)
+}
+
 func (r *tradeRepository) ListBySymbol(
 	ctx context.Context,
 	symbol string,
@@ -60,6 +71,20 @@ func (r *tradeRepository) ListBySymbolAsc(
 	return r.queries.ListTradesBySymbolAsc(
 		ctx,
 		symbol,
+	)
+}
+
+func (r *tradeRepository) ListBySymbolSinceAsc(
+	ctx context.Context,
+	symbol string,
+	since time.Time,
+) ([]generated.Trade, error) {
+	return r.queries.ListTradesBySymbolSinceAsc(
+		ctx,
+		generated.ListTradesBySymbolSinceAscParams{
+			Symbol: symbol,
+			ExecutedAt:  since,
+		},
 	)
 }
 

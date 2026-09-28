@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConsumer(t *testing.T) {
@@ -15,12 +17,40 @@ func TestConsumer(t *testing.T) {
 	)
 	defer cancel()
 
+	brokers := []string{"localhost:9092"}
+	topic := "velocity-consumer-test-" + uuid.NewString()[:8]
+
+	// This broker has topic auto-creation disabled (see
+	// deployments/compose/docker-compose.yml and the CI workflow), so
+	// the topic must be provisioned explicitly - same helper the chaos
+	// and DLQ tests in this package already use. A test-unique topic
+	// (rather than a fixed shared name) also means this test can never
+	// see a stale message left behind by a previous run or by
+	// TestEventPublisher/TestProducerPublish racing against it.
+	require.NoError(t, EnsureTopics(brokers, TopicConfig{
+		Name:              topic,
+		NumPartitions:     1,
+		ReplicationFactor: 1,
+	}))
+
+	defer func() {
+		conn, err := kafka.Dial("tcp", brokers[0])
+		if err != nil {
+			t.Logf("cleanup: failed to dial kafka: %v", err)
+			return
+		}
+		defer conn.Close()
+		if err := conn.DeleteTopics(topic); err != nil {
+			t.Logf("cleanup: failed to delete test topic %s: %v", topic, err)
+		}
+	}()
+
 	received := make(chan kafka.Message, 1)
 
 	consumer := NewConsumer(
-		[]string{"localhost:9092"},
-		"velocity-events-test",
-		"velocity-test-group",
+		brokers,
+		topic,
+		"velocity-test-group-"+uuid.NewString()[:8],
 		func(ctx context.Context, message kafka.Message) error {
 			received <- message
 			return nil
@@ -40,8 +70,8 @@ func TestConsumer(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	producer := NewProducer(
-		[]string{"localhost:9092"},
-		"velocity-events-test",
+		brokers,
+		topic,
 	)
 
 	defer producer.Close()

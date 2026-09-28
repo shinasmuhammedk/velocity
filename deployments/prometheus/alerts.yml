@@ -1,0 +1,126 @@
+# Alert rules for Velocity.
+#
+# These target the failure modes the codebase already has machinery for
+# but no alerting on: settlement falling behind, the WAL failing to
+# fsync, snapshots going stale, and the engine command queue backing up.
+
+groups:
+  - name: velocity-engine
+    rules:
+      - alert: VelocityEngineQueueBackedUp
+        expr: >
+          velocity_engine_queue_depth
+            / clamp_min(velocity_engine_queue_capacity, 1) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Engine command queue over 50% full for {{ $labels.symbol }}"
+          description: >
+            The single-threaded matching loop is not keeping up with
+            submissions. Sustained growth here ends in blocked writers,
+            since SubmitOrder blocks on a full queue.
+
+      - alert: VelocitySubmitLatencyHigh
+        expr: >
+          histogram_quantile(
+            0.99,
+            sum by (le, symbol) (
+              rate(velocity_engine_command_duration_seconds_bucket{kind="submit"}[5m])
+            )
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p99 submit latency above 50ms for {{ $labels.symbol }}"
+
+  - name: velocity-durability
+    rules:
+      - alert: VelocityWALWriteFailures
+        expr: increase(velocity_wal_write_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WAL write failures ({{ $labels.stage }})"
+          description: >
+            Orders are being accepted without a durable log record.
+            Recovery after a crash will be incomplete.
+
+      - alert: VelocitySnapshotsStale
+        expr: >
+          time() - velocity_snapshot_last_success_timestamp_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No successful engine snapshot in over 5 minutes"
+          description: >
+            Recovery will have to replay a growing WAL tail, lengthening
+            startup time after a restart.
+
+  - name: velocity-settlement
+    rules:
+      - alert: VelocitySettlementFailureRate
+        expr: >
+          rate(velocity_settlement_failures_total[5m])
+            / clamp_min(rate(velocity_settlements_total[5m]), 0.001) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Over 1% of settlements are failing"
+
+      - alert: VelocityFailedSettlementsBacklog
+        expr: velocity_failed_settlements_current > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Failed settlement backlog above 100"
+
+      - alert: VelocityFailedSettlementsDead
+        expr: increase(velocity_failed_settlements_dead_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Settlements have exhausted retries and gone dead"
+          description: >
+            These will never be retried automatically. Trades exist with
+            no corresponding balance movement until someone intervenes.
+
+  - name: velocity-infrastructure
+    rules:
+      - alert: VelocityKafkaUnhealthy
+        expr: velocity_kafka_health == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka health check failing on {{ $labels.component }}"
+
+      - alert: VelocityKafkaEventsDropped
+        expr: increase(velocity_kafka_event_queue_dropped_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Engine events dropped before reaching Kafka"
+
+      - alert: VelocityDLQGrowing
+        expr: increase(velocity_kafka_dlq_messages_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Messages are landing in the DLQ"
+
+      - alert: VelocityTargetDown
+        expr: up{job=~"velocity-.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is not scrapable"

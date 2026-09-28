@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CancelOrder(ctx context.Context, id int64) error
+	ConsumeWalletLockedFunds(ctx context.Context, arg ConsumeWalletLockedFundsParams) (int64, error)
 	CreateFailedSettlement(ctx context.Context, arg CreateFailedSettlementParams) (FailedSettlement, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	CreatePosition(ctx context.Context, arg CreatePositionParams) (Position, error)
@@ -20,6 +21,7 @@ type Querier interface {
 	CreateTradeIfNotExists(ctx context.Context, arg CreateTradeIfNotExistsParams) (Trade, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error)
+	CreateWalletTransaction(ctx context.Context, arg CreateWalletTransactionParams) (WalletTransaction, error)
 	DeletePosition(ctx context.Context, arg DeletePositionParams) error
 	DeleteSymbol(ctx context.Context, symbol string) error
 	DeleteUser(ctx context.Context, id int64) error
@@ -29,6 +31,7 @@ type Querier interface {
 	GetLongPositions(ctx context.Context) ([]Position, error)
 	GetOpenOrdersBySymbol(ctx context.Context, symbol string) ([]Order, error)
 	GetOrderByID(ctx context.Context, id int64) (Order, error)
+	GetOrderByIDForUpdate(ctx context.Context, id int64) (Order, error)
 	GetOrderByUserAndID(ctx context.Context, arg GetOrderByUserAndIDParams) (Order, error)
 	GetOrdersBySymbol(ctx context.Context, arg GetOrdersBySymbolParams) ([]Order, error)
 	GetOrdersByUser(ctx context.Context, arg GetOrdersByUserParams) ([]Order, error)
@@ -48,18 +51,27 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetWallet(ctx context.Context, arg GetWalletParams) (Wallet, error)
+	GetWalletForUpdate(ctx context.Context, arg GetWalletForUpdateParams) (Wallet, error)
 	IncrementFailedSettlementRetryCount(ctx context.Context, id uuid.UUID) error
 	ListActiveSymbols(ctx context.Context) ([]Symbol, error)
+	ListCancelableOrdersByUser(ctx context.Context, userID int64) ([]Order, error)
+	ListCancelableOrdersByUserAndSymbol(ctx context.Context, arg ListCancelableOrdersByUserAndSymbolParams) ([]Order, error)
+	ListCandlesBySymbolInterval(ctx context.Context, arg ListCandlesBySymbolIntervalParams) ([]Candle, error)
+	ListCandlesBySymbolIntervalRange(ctx context.Context, arg ListCandlesBySymbolIntervalRangeParams) ([]Candle, error)
 	ListOpenOrders(ctx context.Context, symbol string) ([]Order, error)
 	ListOpenOrdersByUser(ctx context.Context, userID int64) ([]Order, error)
 	ListOrdersByUser(ctx context.Context, userID int64) ([]Order, error)
 	ListPositionsByUser(ctx context.Context, userID int64) ([]Position, error)
 	ListSymbols(ctx context.Context) ([]Symbol, error)
+	ListTradesByOrder(ctx context.Context, buyOrderID int64) ([]Trade, error)
 	ListTradesBySymbol(ctx context.Context, symbol string) ([]Trade, error)
 	ListTradesBySymbolAsc(ctx context.Context, symbol string) ([]Trade, error)
+	ListTradesBySymbolSinceAsc(ctx context.Context, arg ListTradesBySymbolSinceAscParams) ([]Trade, error)
 	ListTradesByUser(ctx context.Context, buyerID int64) ([]Trade, error)
 	ListUnresolvedFailedSettlements(ctx context.Context) ([]FailedSettlement, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	ListWalletTransactionsByUser(ctx context.Context, userID int64) ([]WalletTransaction, error)
+	ListWalletTransactionsByUserAndAsset(ctx context.Context, arg ListWalletTransactionsByUserAndAssetParams) ([]WalletTransaction, error)
 	ListWallets(ctx context.Context, userID int64) ([]Wallet, error)
 	LockWalletFunds(ctx context.Context, arg LockWalletFundsParams) (int64, error)
 	MarkFailedSettlementDead(ctx context.Context, id uuid.UUID) error
@@ -67,12 +79,14 @@ type Querier interface {
 	RejectOrder(ctx context.Context, id int64) error
 	ResolveFailedSettlement(ctx context.Context, id uuid.UUID) error
 	TradeExists(ctx context.Context, id int64) (bool, error)
+	UnlockWalletFunds(ctx context.Context, arg UnlockWalletFundsParams) (int64, error)
 	UpdateOrderAfterTrade(ctx context.Context, arg UpdateOrderAfterTradeParams) error
 	UpdateOrderForModify(ctx context.Context, arg UpdateOrderForModifyParams) error
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) error
 	UpdatePosition(ctx context.Context, arg UpdatePositionParams) error
 	UpdateSymbolStatus(ctx context.Context, arg UpdateSymbolStatusParams) error
 	UpdateWallet(ctx context.Context, arg UpdateWalletParams) error
+	UpsertCandle(ctx context.Context, arg UpsertCandleParams) (Candle, error)
 	UpsertPosition(ctx context.Context, arg UpsertPositionParams) error
 }
 

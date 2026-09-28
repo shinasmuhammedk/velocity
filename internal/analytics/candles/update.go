@@ -1,7 +1,6 @@
 package candles
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -11,13 +10,8 @@ func (m *Manager) Update(
 	quantity int64,
 	now time.Time,
 ) {
-	fmt.Println("UPDATE CALLED")
-	fmt.Println("symbol:", symbol)
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	fmt.Println("before:", len(m.candles))
 
 	intervals, ok := m.candles[symbol]
 	if !ok {
@@ -35,7 +29,6 @@ func (m *Manager) Update(
 			now,
 		)
 	}
-	fmt.Println("after:", len(m.candles))
 }
 
 func (m *Manager) updateInterval(
@@ -46,7 +39,6 @@ func (m *Manager) updateInterval(
 	quantity int64,
 	now time.Time,
 ) {
-
 	candles := intervals[interval]
 
 	current := last(candles)
@@ -55,6 +47,18 @@ func (m *Manager) updateInterval(
 	end := start.Add(interval.Duration())
 
 	if current == nil || !current.OpenTime.Equal(start) {
+		// The previous candle is now closed because the new trade
+		// belongs to a different interval.
+		if current != nil {
+			closed := *current
+
+			select {
+			case m.closed <- &closed:
+			default:
+				// Never block the candle update path.
+				// Persistence must not slow down trade processing.
+			}
+		}
 
 		current = &Candle{
 			Symbol: symbol,
