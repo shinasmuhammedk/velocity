@@ -17,6 +17,8 @@ import (
 	"velocity/pkg/constants"
 	"velocity/pkg/errors"
 	"velocity/pkg/timeutil"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Engine struct {
@@ -46,6 +48,20 @@ type Engine struct {
 	snapshotMu sync.Mutex
 
 	done chan struct{} // new
+
+	// cmdMetrics holds pre-resolved Prometheus metric handles, one entry
+	// per command kind. It is built once in New() before any goroutine
+	// starts and never written afterwards, so concurrent reads on the
+	// hot path need no locking and skip the per-call WithLabelValues
+	// label hashing.
+	cmdMetrics map[string]*commandMetrics
+}
+
+// commandMetrics is the set of metric handles for one command kind.
+type commandMetrics struct {
+	okTotal  prometheus.Counter
+	errTotal prometheus.Counter
+	duration prometheus.Observer
 }
 
 // metricsSampleInterval is how often engine state gauges are refreshed.
@@ -341,6 +357,11 @@ func New(
 		done:         make(chan struct{}),
 	}
 
+	// Must run before e.start(): the engine goroutine and callers read
+	// cmdMetrics without synchronization, which is safe only because the
+	// map is fully built before either exists.
+	e.initCmdMetrics()
+
 	if walWriter != nil {
 		e.SetSequence(walWriter.Sequence())
 	}
@@ -456,6 +477,29 @@ func (e *Engine) ModifyOrder(
 	return err
 }
 
+// initCmdMetrics resolves the labeled Prometheus metrics for every
+// command kind once, so observeCommand can skip WithLabelValues (label
+// validation + hashing + map lookup) on every call. pprof showed that
+// lookup costing more than the Inc/Observe calls themselves.
+//
+// The kinds below must match the strings passed to observeCommand.
+func (e *Engine) initCmdMetrics() {
+	kinds := []string{"submit", "cancel", "modify"}
+
+	e.cmdMetrics = make(map[string]*commandMetrics, len(kinds))
+
+	for _, kind := range kinds {
+		e.cmdMetrics[kind] = &commandMetrics{
+			okTotal: metrics.EngineCommandsTotal.
+				WithLabelValues(e.symbol, kind, "ok"),
+			errTotal: metrics.EngineCommandsTotal.
+				WithLabelValues(e.symbol, kind, "error"),
+			duration: metrics.EngineCommandDuration.
+				WithLabelValues(e.symbol, kind),
+		}
+	}
+}
+
 // observeCommand records end-to-end command latency and outcome.
 //
 // The measurement starts before the send on commandQueue, so a
@@ -467,18 +511,35 @@ func (e *Engine) observeCommand(
 	start time.Time,
 	err error,
 ) {
-	outcome := "ok"
-	if err != nil {
-		outcome = "error"
+	elapsed := time.Since(start).Seconds()
+
+	cm, ok := e.cmdMetrics[kind]
+	if !ok {
+		// Unknown kind: fall back to the original label-lookup path so
+		// a new command kind is still recorded, just not optimized.
+		outcome := "ok"
+		if err != nil {
+			outcome = "error"
+		}
+
+		metrics.EngineCommandsTotal.
+			WithLabelValues(e.symbol, kind, outcome).
+			Inc()
+
+		metrics.EngineCommandDuration.
+			WithLabelValues(e.symbol, kind).
+			Observe(elapsed)
+
+		return
 	}
 
-	metrics.EngineCommandsTotal.
-		WithLabelValues(e.symbol, kind, outcome).
-		Inc()
+	if err != nil {
+		cm.errTotal.Inc()
+	} else {
+		cm.okTotal.Inc()
+	}
 
-	metrics.EngineCommandDuration.
-		WithLabelValues(e.symbol, kind).
-		Observe(time.Since(start).Seconds())
+	cm.duration.Observe(elapsed)
 }
 
 // sampleMetrics periodically publishes gauge-style engine state.
