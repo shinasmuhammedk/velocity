@@ -2,6 +2,7 @@
 package bench
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -379,6 +380,17 @@ func BenchmarkEngineSubmitExistingOrder(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	// Wait until the engine has actually processed the seed order,
+	// with a deadline so a bug can't make the benchmark spin forever.
+	deadline := time.Now().Add(5 * time.Second)
+	for e.OrderBook().BestAskPrice() != 1000 {
+		if time.Now().After(deadline) {
+			e.Stop()
+			b.Fatal("seed order was not processed in time")
+		}
+		runtime.Gosched()
+	}
+
 	stopDrain := make(chan struct{})
 	done := make(chan struct{})
 
@@ -395,7 +407,8 @@ func BenchmarkEngineSubmitExistingOrder(b *testing.B) {
 		}
 	}()
 
-	b.ResetTimer()
+	b.ResetTimer() // zero any setup time already counted
+	b.StartTimer() // actually start timing (ResetTimer alone does not)
 
 	for i := 0; i < b.N; i++ {
 		buy := createBuyOrder(
