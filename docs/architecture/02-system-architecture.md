@@ -1,5 +1,7 @@
 # System Architecture
 
+> **Correction:** this document's diagrams show "Settlement" and "Persistence" as subscribers on the matching engine's event dispatcher, alongside Statistics/Candles. That's not what the code does. Settlement and persistence run on a direct channel from the engine straight into a settlement consumer inside the same `api` process, bypassing the dispatcher entirely. "Asynchronous" (never blocking the engine's own goroutine) is still accurate; "a dispatcher subscriber like the others" is not. See [`docs/architecture/05-event-driven-architecture.md`](05-event-driven-architecture.md#settlement-not-a-dispatcher-subscriber) for the full correction and [`docs/sequence-diagrams/full-fill.md`](../sequence-diagrams/full-fill.md) for the traced code path.
+
 ## Purpose
 
 This document provides a high-level overview of the Velocity architecture, its major subsystems, and how they interact to form a production-grade cryptocurrency exchange backend.
